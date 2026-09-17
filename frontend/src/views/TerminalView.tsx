@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2, Minus, Plus, RotateCcw, Search, X } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Minus,
+  Plus,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
@@ -127,7 +135,10 @@ type TerminalSessionProps = {
 
 function websocketUrl(sessionId?: string) {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const url = new URL("/api/v1/terminal/ws", `${protocol}//${window.location.host}`);
+  const url = new URL(
+    "/api/v1/terminal/ws",
+    `${protocol}//${window.location.host}`,
+  );
   if (sessionId) url.searchParams.set("sessionId", sessionId);
   return url.toString();
 }
@@ -155,7 +166,8 @@ function TerminalSession({
 
   const send = useCallback((message: Record<string, unknown>) => {
     const socket = socketRef.current;
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+    if (socket?.readyState === WebSocket.OPEN)
+      socket.send(JSON.stringify(message));
   }, []);
 
   const fitAndResize = useCallback(() => {
@@ -199,7 +211,8 @@ function TerminalSession({
       cursorBlink: true,
       cursorStyle: "block",
       disableStdin: false,
-      fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      fontFamily:
+        "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
       fontSize,
       letterSpacing: 0,
       lineHeight: 1.15,
@@ -231,11 +244,17 @@ function TerminalSession({
     fitRef.current = fit;
     searchRef.current = search;
 
-    const resizeObserver = new ResizeObserver(() => requestAnimationFrame(fitAndResize));
+    const resizeObserver = new ResizeObserver(() =>
+      requestAnimationFrame(fitAndResize),
+    );
     resizeObserver.observe(containerRef.current);
 
-    const dataDisposable = terminal.onData((data) => send({ type: "input", data }));
-    const resizeDisposable = terminal.onResize(({ cols, rows }) => send({ type: "resize", cols, rows }));
+    const dataDisposable = terminal.onData((data) =>
+      send({ type: "input", data }),
+    );
+    const resizeDisposable = terminal.onResize(({ cols, rows }) =>
+      send({ type: "resize", cols, rows }),
+    );
     const titleDisposable = terminal.onTitleChange((title) => {
       if (title.trim()) onTitle(title.trim());
     });
@@ -243,23 +262,49 @@ function TerminalSession({
     terminal.attachCustomKeyEventHandler((event) => {
       const modifier = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
-      if (modifier && event.shiftKey && key === "c" && event.type === "keydown") {
+      if (
+        modifier &&
+        event.shiftKey &&
+        key === "c" &&
+        event.type === "keydown"
+      ) {
         void copySelection();
         return false;
       }
-      if (modifier && event.shiftKey && key === "v" && event.type === "keydown") {
+      if (
+        modifier &&
+        event.shiftKey &&
+        key === "v" &&
+        event.type === "keydown"
+      ) {
         void pasteClipboard();
         return false;
       }
-      if (modifier && !event.shiftKey && key === "f" && event.type === "keydown") {
+      if (
+        modifier &&
+        !event.shiftKey &&
+        key === "f" &&
+        event.type === "keydown"
+      ) {
         setSearchOpen(true);
         return false;
       }
-      if (modifier && !event.shiftKey && key === "v" && event.type === "keydown") {
+      if (
+        modifier &&
+        !event.shiftKey &&
+        key === "v" &&
+        event.type === "keydown"
+      ) {
         void pasteClipboard();
         return false;
       }
-      if (modifier && !event.shiftKey && key === "c" && event.type === "keydown" && terminal.hasSelection()) {
+      if (
+        modifier &&
+        !event.shiftKey &&
+        key === "c" &&
+        event.type === "keydown" &&
+        terminal.hasSelection()
+      ) {
         void copySelection();
         return false;
       }
@@ -277,7 +322,10 @@ function TerminalSession({
         onStatus("Connected");
         fitAndResize();
         if (heartbeatRef.current) window.clearInterval(heartbeatRef.current);
-        heartbeatRef.current = window.setInterval(() => send({ type: "ping" }), 20_000);
+        heartbeatRef.current = window.setInterval(
+          () => send({ type: "ping" }),
+          20_000,
+        );
       };
 
       socket.onmessage = async (event) => {
@@ -292,18 +340,24 @@ function TerminalSession({
             if (message.type === "ready" && message.sessionId) {
               sessionIdRef.current = message.sessionId;
               onSessionId(message.sessionId);
-              if (message.shell) onTitle(message.shell.split("/").pop() || "Terminal");
+              if (message.shell)
+                onTitle(message.shell.split("/").pop() || "Terminal");
               return;
             }
             if (message.type === "error") {
-              terminal.write(`\r\n[CoreOps] ${message.message || "Terminal error"}\r\n`);
+              terminal.write(
+                `\r\n[CoreOps] ${message.message || "Terminal error"}\r\n`,
+              );
             }
           } catch {
             terminal.write(event.data);
           }
           return;
         }
-        const data = event.data instanceof ArrayBuffer ? event.data : await event.data.arrayBuffer();
+        const data =
+          event.data instanceof ArrayBuffer
+            ? event.data
+            : await event.data.arrayBuffer();
         terminal.write(new Uint8Array(data));
       };
 
@@ -332,10 +386,12 @@ function TerminalSession({
       dataDisposable.dispose();
       resizeDisposable.dispose();
       titleDisposable.dispose();
-      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+      if (reconnectTimerRef.current)
+        window.clearTimeout(reconnectTimerRef.current);
       if (heartbeatRef.current) window.clearInterval(heartbeatRef.current);
       const socket = socketRef.current;
-      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "close" }));
+      if (socket?.readyState === WebSocket.OPEN)
+        socket.send(JSON.stringify({ type: "close" }));
       socket?.close();
       terminal.dispose();
       terminalRef.current = null;
@@ -373,7 +429,11 @@ function TerminalSession({
 
   return (
     <div style={{ position: "relative", height: "100%", minHeight: 0 }}>
-      <div ref={containerRef} className="coreops-xterm" style={{ height: "100%", minHeight: 0 }} />
+      <div
+        ref={containerRef}
+        className="coreops-xterm"
+        style={{ height: "100%", minHeight: 0 }}
+      />
       {searchOpen && (
         <div style={searchPanelStyle}>
           <Search size={13} color={T.textDim} />
@@ -382,7 +442,8 @@ function TerminalSession({
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") runSearch(event.shiftKey ? "previous" : "next");
+              if (event.key === "Enter")
+                runSearch(event.shiftKey ? "previous" : "next");
               if (event.key === "Escape") {
                 setSearchOpen(false);
                 setSearchQuery("");
@@ -393,8 +454,22 @@ function TerminalSession({
             placeholder="Search terminal"
             style={searchInputStyle}
           />
-          <button type="button" onClick={() => runSearch("previous")} aria-label="Previous match" style={searchButtonStyle}>↑</button>
-          <button type="button" onClick={() => runSearch("next")} aria-label="Next match" style={searchButtonStyle}>↓</button>
+          <button
+            type="button"
+            onClick={() => runSearch("previous")}
+            aria-label="Previous match"
+            style={searchButtonStyle}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={() => runSearch("next")}
+            aria-label="Next match"
+            style={searchButtonStyle}
+          >
+            ↓
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -457,8 +532,16 @@ function makeTab(index: number): TerminalTab {
 }
 
 export default function TerminalView() {
-  const [fontSize, setFontSize] = useState(() => Number(localStorage.getItem("coreops-terminal-font-size")) || INITIAL_FONT_SIZE);
-  const [appearance, setAppearance] = useState<Appearance>(() => (localStorage.getItem("coreops-terminal-appearance") as Appearance) || "Black");
+  const [fontSize, setFontSize] = useState(
+    () =>
+      Number(localStorage.getItem("coreops-terminal-font-size")) ||
+      INITIAL_FONT_SIZE,
+  );
+  const [appearance, setAppearance] = useState<Appearance>(
+    () =>
+      (localStorage.getItem("coreops-terminal-appearance") as Appearance) ||
+      "Black",
+  );
   const [tabs, setTabs] = useState<TerminalTab[]>(() => [makeTab(1)]);
   const [activeTab, setActiveTab] = useState("");
   const [status, setStatus] = useState<Record<string, ConnectionStatus>>({});
@@ -494,7 +577,8 @@ export default function TerminalView() {
       if (current.length === 1) return current;
       const index = current.findIndex((tab) => tab.id === id);
       const next = current.filter((tab) => tab.id !== id);
-      if (activeTab === id) setActiveTab(next[Math.max(0, index - 1)]?.id || next[0]?.id || "");
+      if (activeTab === id)
+        setActiveTab(next[Math.max(0, index - 1)]?.id || next[0]?.id || "");
       return next;
     });
   };
@@ -514,9 +598,25 @@ export default function TerminalView() {
       }}
     >
       <div style={toolbarStyle}>
-        <div style={{ display: "flex", alignItems: "center", minWidth: 0, gap: 14 }}>
-          <span style={locationStyle}>{tabs.find((tab) => tab.id === activeTab)?.title || "Terminal"}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            minWidth: 0,
+            gap: 14,
+          }}
+        >
+          <span style={locationStyle}>
+            {tabs.find((tab) => tab.id === activeTab)?.title || "Terminal"}
+          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              minWidth: 0,
+            }}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -560,43 +660,140 @@ export default function TerminalView() {
                 )}
               </button>
             ))}
-            <button type="button" onClick={addTab} aria-label="New terminal" style={{ ...searchButtonStyle, width: 27, height: 27 }}>+</button>
+            <button
+              type="button"
+              onClick={addTab}
+              aria-label="New terminal"
+              style={{ ...searchButtonStyle, width: 27, height: 27 }}
+            >
+              +
+            </button>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, color: T.textDim, fontSize: 11, whiteSpace: "nowrap" }}>
-          <span style={{ color: status[activeTab] === "Connected" ? T.green : T.textDim }}>{status[activeTab] || "Connecting..."}</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            color: T.textDim,
+            fontSize: 11,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              color: status[activeTab] === "Connected" ? T.green : T.textDim,
+            }}
+          >
+            {status[activeTab] || "Connecting..."}
+          </span>
           <span>Font size</span>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <button type="button" onClick={() => setFontSize((size) => Math.max(MIN_FONT_SIZE, size - 1))} disabled={fontSize <= MIN_FONT_SIZE} aria-label="Decrease font size" style={toolbarButtonStyle}><Minus size={12} /></button>
-            <span style={{ width: 24, textAlign: "center", color: T.textSub, fontFamily: "JetBrains Mono, monospace" }}>{fontSize}</span>
-            <button type="button" onClick={() => setFontSize((size) => Math.min(MAX_FONT_SIZE, size + 1))} disabled={fontSize >= MAX_FONT_SIZE} aria-label="Increase font size" style={toolbarButtonStyle}><Plus size={12} /></button>
+            <button
+              type="button"
+              onClick={() =>
+                setFontSize((size) => Math.max(MIN_FONT_SIZE, size - 1))
+              }
+              disabled={fontSize <= MIN_FONT_SIZE}
+              aria-label="Decrease font size"
+              style={toolbarButtonStyle}
+            >
+              <Minus size={12} />
+            </button>
+            <span
+              style={{
+                width: 24,
+                textAlign: "center",
+                color: T.textSub,
+                fontFamily: "JetBrains Mono, monospace",
+              }}
+            >
+              {fontSize}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setFontSize((size) => Math.min(MAX_FONT_SIZE, size + 1))
+              }
+              disabled={fontSize >= MAX_FONT_SIZE}
+              aria-label="Increase font size"
+              style={toolbarButtonStyle}
+            >
+              <Plus size={12} />
+            </button>
           </div>
           <span>Appearance</span>
-          <select value={appearance} onChange={(event) => setAppearance(event.target.value as Appearance)} aria-label="Terminal appearance" style={selectStyle}>
+          <select
+            value={appearance}
+            onChange={(event) =>
+              setAppearance(event.target.value as Appearance)
+            }
+            aria-label="Terminal appearance"
+            style={selectStyle}
+          >
             <option value="Black">Black</option>
             <option value="Dark">Dark</option>
             <option value="Light">Light</option>
           </select>
-          <button type="button" onClick={reset} style={toolbarTextButtonStyle}><RotateCcw size={11} />Reset</button>
-          <button type="button" onClick={() => setFullscreen((value) => !value)} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"} style={toolbarTextButtonStyle}>
+          <button type="button" onClick={reset} style={toolbarTextButtonStyle}>
+            <RotateCcw size={11} />
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={() => setFullscreen((value) => !value)}
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            style={toolbarTextButtonStyle}
+          >
             {fullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
           </button>
         </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, padding: 12, background: T.bg }}>
-        <div style={{ height: "100%", minHeight: 0, overflow: "hidden", border: `1px solid ${T.border}`, borderRadius: 7, background: THEMES[appearance].background }}>
+        <div
+          style={{
+            height: "100%",
+            minHeight: 0,
+            overflow: "hidden",
+            border: `1px solid ${T.border}`,
+            borderRadius: 7,
+            background: THEMES[appearance].background,
+          }}
+        >
           {tabs.map((tab) => (
-            <div key={tab.id} style={{ display: tab.id === activeTab ? "block" : "none", height: "100%" }}>
+            <div
+              key={tab.id}
+              style={{
+                display: tab.id === activeTab ? "block" : "none",
+                height: "100%",
+              }}
+            >
               <TerminalSession
                 active={tab.id === activeTab}
                 fontSize={fontSize}
                 appearance={appearance}
                 sessionId={tab.sessionId}
-                onSessionId={(sessionId) => setTabs((current) => current.map((item) => (item.id === tab.id ? { ...item, sessionId } : item)))}
-                onTitle={(title) => setTabs((current) => current.map((item) => (item.id === tab.id ? { ...item, title: title || item.title } : item)))}
-                onStatus={(nextStatus) => setStatus((current) => ({ ...current, [tab.id]: nextStatus }))}
+                onSessionId={(sessionId) =>
+                  setTabs((current) =>
+                    current.map((item) =>
+                      item.id === tab.id ? { ...item, sessionId } : item,
+                    ),
+                  )
+                }
+                onTitle={(title) =>
+                  setTabs((current) =>
+                    current.map((item) =>
+                      item.id === tab.id
+                        ? { ...item, title: title || item.title }
+                        : item,
+                    ),
+                  )
+                }
+                onStatus={(nextStatus) =>
+                  setStatus((current) => ({ ...current, [tab.id]: nextStatus }))
+                }
               />
             </div>
           ))}
