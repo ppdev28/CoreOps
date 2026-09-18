@@ -1,10 +1,10 @@
 <div align="center">
 
-# Server Control Center
+# CoreOps
 
 **A self-hosted control plane for servers, containers and infrastructure.**
 
-SCP brings day-to-day infrastructure operations into one focused web interface, combining the ideas of tools such as Cockpit and Portainer with a broader roadmap for DevOps, Sysadmin, SRE and homelab workflows.
+CoreOps brings day-to-day infrastructure operations into one focused web interface, combining the ideas of tools such as Cockpit and Portainer with a broader roadmap for DevOps, Sysadmin, SRE and homelab workflows.
 
 <p>
   <img src="https://img.shields.io/badge/status-active%20development-0f766e?style=for-the-badge" alt="Active development" />
@@ -17,21 +17,21 @@ SCP brings day-to-day infrastructure operations into one focused web interface, 
 
 ---
 
-## What is SCP?
+## What is CoreOps?
 
-**Server Control Center (SCP)** is a self-hosted infrastructure control panel designed to be a practical operational workstation rather than a collection of disconnected admin pages.
+**CoreOps** is a self-hosted infrastructure control panel designed to be a practical operational workstation rather than a collection of disconnected admin pages.
 
 The goal is simple:
 
 > **One place to understand, operate and troubleshoot your infrastructure.**
 
-SCP is being built around real infrastructure data and real operational actions. The project currently targets a single Linux server first, while its architecture leaves room for multi-node infrastructure and future Kubernetes/cloud integrations.
+CoreOps is being built around real infrastructure data and real operational actions. The project currently targets a single Linux server first, while its architecture leaves room for multi-node infrastructure and future Kubernetes/cloud integrations.
 
 ## Current capabilities
 
 The repository already contains UI and backend verticals for several infrastructure areas. The most mature real integration is Docker.
 
-| Area | Current state | What SCP provides |
+| Area | Current state | What CoreOps provides |
 | --- | --- | --- |
 | **Dashboard** | 🟢 UI | Infrastructure overview and operational entry points |
 | **Host** | 🟢 Backend + UI | Host/system information |
@@ -74,18 +74,18 @@ The repository already contains UI and backend verticals for several infrastruct
 
 ### Architecture
 
-SCP follows a deliberately simple boundary between the browser and privileged infrastructure:
+CoreOps follows a deliberately simple boundary between the browser and privileged infrastructure:
 
 ```text
 ┌──────────────────────────────┐
-│          SCP Web UI          │
+│          CoreOps Web UI          │
 │     React + TypeScript       │
 │   Vite + Tailwind + Charts    │
 └──────────────┬───────────────┘
                │ HTTP / API
                ▼
 ┌──────────────────────────────┐
-│          SCP API             │
+│          CoreOps API             │
 │             Go               │
 │     Domain / host layer      │
 └───────┬───────────┬──────────┘
@@ -110,7 +110,7 @@ React / Vite
   ↓
 /api
   ↓
-Go SCP API
+Go CoreOps API
   ↓
 Moby Docker client
   ↓
@@ -131,7 +131,7 @@ The frontend reconciles actions with real Docker state and does not fabricate un
 
 ## Terminal
 
-SCP includes a dedicated Terminal view and a backend command-execution foundation. The current implementation is intentionally being evolved toward a full browser terminal rather than pretending that a command/response UI is equivalent to a native terminal.
+CoreOps includes a dedicated Terminal view and a backend command-execution foundation. The current implementation is intentionally being evolved toward a full browser terminal rather than pretending that a command/response UI is equivalent to a native terminal.
 
 The planned terminal architecture is:
 
@@ -142,7 +142,7 @@ xterm.js
   ↓
 WebSocket
   ↓
-SCP backend
+CoreOps backend
   ↓
 Real PTY
   ↓
@@ -151,11 +151,11 @@ bash / zsh / shell
 Linux host
 ```
 
-The target experience is comparable to a native terminal such as Ghostty, iTerm2 or GNOME Terminal while remaining integrated into SCP.
+The target experience is comparable to a native terminal such as Ghostty, iTerm2 or GNOME Terminal while remaining integrated into CoreOps.
 
 ## Design philosophy
 
-SCP is guided by a few principles:
+CoreOps is guided by a few principles:
 
 - **Operational clarity** — quickly understand what is healthy, failing or consuming resources.
 - **Information density without chaos** — infrastructure tools need detail; hierarchy and progressive disclosure keep it usable.
@@ -166,7 +166,7 @@ SCP is guided by a few principles:
 - **Responsive from the beginning** — operational checks should remain useful on mobile as well as desktop.
 - **Consistent UX** — similar infrastructure concepts should behave consistently throughout the application.
 
-The current visual language originated in Figma Make and is being preserved as the product implementation evolves. SCP should feel like a professional infrastructure workstation, not a generic admin template.
+The current visual language originated in Figma Make and is being preserved as the product implementation evolves. CoreOps should feel like a professional infrastructure workstation, not a generic admin template.
 
 ## Getting started
 
@@ -192,20 +192,20 @@ For a production build:
 pnpm build
 ```
 
-The Vite development server proxies `/api` requests to the SCP backend on port `8082` by default.
+The Vite development server proxies `/api` requests to the CoreOps backend on port `8082` by default.
 
 ### Backend
 
 ```bash
 cd backend
 go mod tidy
-go run ./cmd/scp-api
+go run ./cmd/CoreOps-api
 ```
 
 The API listens on `:8082` by default. Override it with:
 
 ```bash
-SCP_PORT=8080 go run ./cmd/scp-api
+CoreOps_PORT=8080 go run ./cmd/CoreOps-api
 ```
 
 The backend uses the standard Docker environment and can connect to the local Docker Engine through its Unix socket on a normal Linux Docker host.
@@ -227,14 +227,14 @@ A healthy Docker-enabled host returns a response equivalent to:
 ## Repository structure
 
 ```text
-SCP/
+CoreOps/
 ├── frontend/          # React + TypeScript web application
 │   ├── src/components # Shared UI components
 │   ├── src/views      # Product views
 │   └── src/lib        # API, types, data and utilities
 │
 ├── backend/           # Go API and infrastructure integrations
-│   └── cmd/scp-api/   # SCP API server
+│   └── cmd/CoreOps-api/   # CoreOps API server
 │
 ├── docs/              # Product, architecture and development docs
 ├── AGENTS.md          # Development/Codex project instructions
@@ -259,11 +259,11 @@ The backend currently exposes operational endpoints covering:
 - security
 - updates
 
-The API is intentionally kept behind the SCP backend boundary so that infrastructure implementations can evolve without coupling the frontend directly to Docker or Linux APIs.
+The API is intentionally kept behind the CoreOps backend boundary so that infrastructure implementations can evolve without coupling the frontend directly to Docker or Linux APIs.
 
 ## Roadmap
 
-SCP is being developed in vertical slices rather than attempting to implement the entire infrastructure vision at once.
+CoreOps is being developed in vertical slices rather than attempting to implement the entire infrastructure vision at once.
 
 ### Near term
 
@@ -302,7 +302,7 @@ Before submitting a change, validate the relevant frontend build and backend tes
 
 🚧 **Early active development**
 
-SCP is functional enough to operate against a real Docker host, but it is not yet a production-ready infrastructure control plane. Authentication, authorization, audit logging, hardened deployment and multi-host support remain part of the roadmap.
+CoreOps is functional enough to operate against a real Docker host, but it is not yet a production-ready infrastructure control plane. Authentication, authorization, audit logging, hardened deployment and multi-host support remain part of the roadmap.
 
 ---
 
