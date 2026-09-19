@@ -204,6 +204,10 @@ function TerminalSession({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // React StrictMode re-runs effects in development after cleanup.
+    // Reset the lifecycle flag so the second mount can reconnect normally.
+    disposedRef.current = false;
+
     const terminal = new Terminal({
       allowTransparency: false,
       convertEol: false,
