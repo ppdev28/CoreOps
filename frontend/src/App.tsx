@@ -1149,7 +1149,11 @@ export default function App() {
             )}{" "}
             {view === "monitoring" && <MonitoringView />}{" "}
             {view === "logs" && <LogsView />}{" "}
-            {view === "terminal" && (\n              <TerminalErrorBoundary>\n                <TerminalView />\n              </TerminalErrorBoundary>\n            )}{" "}
+            {view === "terminal" && (
+              <TerminalErrorBoundary>
+                <TerminalView />
+              </TerminalErrorBoundary>
+            )}{" "}
             {view === "security" && <SecurityView addToast={addToast} />}{" "}
             {view === "updates" && <UpdatesView {...shell} />}{" "}
             {view === "settings" && <SettingsView addToast={addToast} />}
