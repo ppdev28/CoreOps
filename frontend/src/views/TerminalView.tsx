@@ -13,7 +13,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { WebglAddon } from "@xterm/addon-webgl";
 import "@xterm/xterm/css/xterm.css";
 import { T } from "../lib/tokens";
 
@@ -231,14 +230,6 @@ function TerminalSession({
     terminal.loadAddon(links);
     terminal.unicode.activeVersion = "11";
     terminal.open(containerRef.current);
-
-    try {
-      const webgl = new WebglAddon();
-      webgl.onContextLoss(() => webgl.dispose());
-      terminal.loadAddon(webgl);
-    } catch {
-      // xterm.js keeps its normal renderer when WebGL2 is unavailable.
-    }
 
     terminalRef.current = terminal;
     fitRef.current = fit;
@@ -527,42 +518,51 @@ const searchButtonStyle = {
   fontSize: 12,
 } as const;
 
+function readTerminalSetting(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeTerminalSetting(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Local storage can be unavailable in hardened/private browser contexts.
+  }
+}
+
 function makeTab(index: number): TerminalTab {
-  // crypto.randomUUID() is only available in secure contexts. CoreOps can be
-  // served over plain HTTP on a LAN, so keep tab IDs working there as well.
   const id =
     typeof globalThis.crypto?.randomUUID === "function"
       ? globalThis.crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return { id, title: `Terminal ${index}` };
 }
-
 export default function TerminalView() {
   const [fontSize, setFontSize] = useState(
     () =>
-      Number(localStorage.getItem("coreops-terminal-font-size")) ||
+      Number(readTerminalSetting("coreops-terminal-font-size")) ||
       INITIAL_FONT_SIZE,
   );
   const [appearance, setAppearance] = useState<Appearance>(
     () =>
-      (localStorage.getItem("coreops-terminal-appearance") as Appearance) ||
+      (readTerminalSetting("coreops-terminal-appearance") as Appearance) ||
       "Black",
   );
   const [tabs, setTabs] = useState<TerminalTab[]>(() => [makeTab(1)]);
-  const [activeTab, setActiveTab] = useState("");
+  const [activeTab, setActiveTab] = useState(() => tabs[0]?.id || "");
   const [status, setStatus] = useState<Record<string, ConnectionStatus>>({});
   const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
-    setActiveTab(tabs[0]?.id || "");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("coreops-terminal-font-size", String(fontSize));
+    writeTerminalSetting("coreops-terminal-font-size", String(fontSize));
   }, [fontSize]);
 
   useEffect(() => {
-    localStorage.setItem("coreops-terminal-appearance", appearance);
+    writeTerminalSetting("coreops-terminal-appearance", appearance);
   }, [appearance]);
 
   const reset = () => {
