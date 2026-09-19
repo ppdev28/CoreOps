@@ -919,7 +919,46 @@ function DashboardView({
   );
 }
 
-class TerminalErrorBoundary extends Component<\n  { children: ReactNode },\n  { error: Error | null }\n> {\n  state = { error: null as Error | null };\n\n  static getDerivedStateFromError(error: Error) {\n    return { error };\n  }\n\n  render() {\n    if (this.state.error) {\n      return (\n        <div\n          style={{\n            height: "100%",\n            display: "flex",\n            alignItems: "center",\n            justifyContent: "center",\n            padding: 24,\n            background: "#1c1e25",\n            color: "#eaecf0",\n            fontFamily: "JetBrains Mono, monospace",\n            fontSize: 12,\n          }}\n        >\n          <div style={{ maxWidth: 720 }}>\n            <div style={{ color: "#ef4444", fontWeight: 700, marginBottom: 8 }}>\n              Terminal crashed while rendering\n            </div>\n            <div>{this.state.error.message}</div>\n          </div>\n        </div>\n      );\n    }\n    return this.props.children;\n  }\n}\n\nexport default function App() {
+class TerminalErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            background: "#1c1e25",
+            color: "#eaecf0",
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 12,
+          }}
+        >
+          <div style={{ maxWidth: 720 }}>
+            <div style={{ color: "#ef4444", fontWeight: 700, marginBottom: 8 }}>
+              Terminal crashed while rendering
+            </div>
+            <div>{this.state.error.message}</div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function App() {
   const [view, setView] = useState<View>("dashboard"),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
