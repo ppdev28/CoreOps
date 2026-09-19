@@ -528,7 +528,13 @@ const searchButtonStyle = {
 } as const;
 
 function makeTab(index: number): TerminalTab {
-  return { id: crypto.randomUUID(), title: `Terminal ${index}` };
+  // crypto.randomUUID() is only available in secure contexts. CoreOps can be
+  // served over plain HTTP on a LAN, so keep tab IDs working there as well.
+  const id =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return { id, title: `Terminal ${index}` };
 }
 
 export default function TerminalView() {
