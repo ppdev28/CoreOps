@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { Component, useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   Cpu,
   MemoryStick,
@@ -919,7 +919,7 @@ function DashboardView({
   );
 }
 
-export default function App() {
+class TerminalErrorBoundary extends Component<\n  { children: ReactNode },\n  { error: Error | null }\n> {\n  state = { error: null as Error | null };\n\n  static getDerivedStateFromError(error: Error) {\n    return { error };\n  }\n\n  render() {\n    if (this.state.error) {\n      return (\n        <div\n          style={{\n            height: "100%",\n            display: "flex",\n            alignItems: "center",\n            justifyContent: "center",\n            padding: 24,\n            background: "#1c1e25",\n            color: "#eaecf0",\n            fontFamily: "JetBrains Mono, monospace",\n            fontSize: 12,\n          }}\n        >\n          <div style={{ maxWidth: 720 }}>\n            <div style={{ color: "#ef4444", fontWeight: 700, marginBottom: 8 }}>\n              Terminal crashed while rendering\n            </div>\n            <div>{this.state.error.message}</div>\n          </div>\n        </div>\n      );\n    }\n    return this.props.children;\n  }\n}\n\nexport default function App() {
   const [view, setView] = useState<View>("dashboard"),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
@@ -1110,7 +1110,7 @@ export default function App() {
             )}{" "}
             {view === "monitoring" && <MonitoringView />}{" "}
             {view === "logs" && <LogsView />}{" "}
-            {view === "terminal" && <TerminalView />}{" "}
+            {view === "terminal" && (\n              <TerminalErrorBoundary>\n                <TerminalView />\n              </TerminalErrorBoundary>\n            )}{" "}
             {view === "security" && <SecurityView addToast={addToast} />}{" "}
             {view === "updates" && <UpdatesView {...shell} />}{" "}
             {view === "settings" && <SettingsView addToast={addToast} />}
