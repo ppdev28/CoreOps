@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -53,20 +54,34 @@ var terminalUpgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 16384,
 	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
 		if origin == "" {
 			return false
 		}
-		allowed := os.Getenv("SCP_WEB_ORIGIN")
-		if allowed == "" {
-			allowed = "http://localhost:5173"
-		}
-		for _, candidate := range strings.Split(allowed, ",") {
-			if strings.TrimSpace(candidate) == origin {
-				return true
+
+		// Explicit configuration always wins and supports multiple frontend origins.
+		if allowed := os.Getenv("SCP_WEB_ORIGIN"); allowed != "" {
+			for _, candidate := range strings.Split(allowed, ",") {
+				if strings.TrimSpace(candidate) == origin {
+					return true
+				}
 			}
+			return false
 		}
-		return false
+
+		// CoreOps is commonly reached through the Vite reverse proxy on a LAN or
+		// Tailscale address. The backend sees the proxy's Host, while the browser's
+		// Origin remains the real frontend origin. When a browser supplies Referer,
+		// require it to resolve to that same origin.
+		referer := strings.TrimSpace(r.Header.Get("Referer"))
+		if referer == "" {
+			return false
+		}
+		u, err := url.Parse(referer)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return false
+		}
+		return u.Scheme + "://" + u.Host == origin
 	},
 }
 
