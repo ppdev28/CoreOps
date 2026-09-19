@@ -209,6 +209,8 @@ function TerminalSession({
     disposedRef.current = false;
 
     const terminal = new Terminal({
+      // Unicode11Addon uses xterm.js' proposed API surface.
+      allowProposedApi: true,
       allowTransparency: false,
       convertEol: false,
       cursorBlink: true,
