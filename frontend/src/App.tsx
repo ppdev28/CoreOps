@@ -928,6 +928,17 @@ export default function App() {
     [confirm, setConfirm] = useState<ConfirmDialog | null>(null),
     [settings, setSettings] = useState(loadWebSettings);
   useEffect(() => subscribeWebSettings(setSettings), []);
+  useEffect(() => {
+    const handleNativeNavigation = (event: Event) => {
+      const view = (event as CustomEvent<{ view?: View }>).detail?.view;
+      if (!view) return;
+      navigate(view);
+    };
+
+    window.addEventListener("coreops-native-navigate", handleNativeNavigation);
+    return () =>
+      window.removeEventListener("coreops-native-navigate", handleNativeNavigation);
+  }, [navigate]);
   const playNotificationSound = useCallback(() => {
     try {
       const AudioContextClass =
