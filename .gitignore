@@ -6,3 +6,12 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Capacitor native build artifacts
+frontend/android/.gradle/
+frontend/android/**/build/
+frontend/android/.idea/
+frontend/android/local.properties
+frontend/ios/Pods/
+frontend/ios/App/DerivedData/
+
