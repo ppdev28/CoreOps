@@ -84,4 +84,34 @@ func (a *API) getContainer(w http.ResponseWriter,r *http.Request){id:=r.PathValu
 func (a *API) startContainer(w http.ResponseWriter,r *http.Request){a.containerAction(w,r,func(ctx context.Context,id string)error{_,err:=a.docker.ContainerStart(ctx,id,client.ContainerStartOptions{});return err})};func (a *API) stopContainer(w http.ResponseWriter,r *http.Request){a.containerAction(w,r,func(ctx context.Context,id string)error{_,err:=a.docker.ContainerStop(ctx,id,client.ContainerStopOptions{});return err})};func (a *API) restartContainer(w http.ResponseWriter,r *http.Request){a.containerAction(w,r,func(ctx context.Context,id string)error{_,err:=a.docker.ContainerRestart(ctx,id,client.ContainerRestartOptions{});return err})}
 func (a *API) containerAction(w http.ResponseWriter,r *http.Request,action func(context.Context,string)error){id:=r.PathValue("id");if !containerIDPattern.MatchString(id){writeJSON(w,http.StatusBadRequest,ErrorResponse{Error:"invalid container ID"});return};if err:=action(r.Context(),id);err!=nil{status:=http.StatusBadGateway;if errdefs.IsNotFound(err){status=http.StatusNotFound};writeError(w,status,err);return};writeJSON(w,http.StatusOK,map[string]any{"ok":true,"id":id})}
 func summarizeContainer(c container.Summary)ContainerSummary{ports:=make([]Port,0,len(c.Ports));for _,p:=range c.Ports{ports=append(ports,Port{PrivatePort:p.PrivatePort,PublicPort:p.PublicPort,Type:p.Type,IP:p.IP.String()})};networks:=make([]string,0,len(c.NetworkSettings.Networks));for name:=range c.NetworkSettings.Networks{networks=append(networks,name)};name:="";if len(c.Names)>0{name=strings.TrimPrefix(c.Names[0],"/")};return ContainerSummary{ID:c.ID,Name:name,Image:c.Image,State:string(c.State),Status:c.Status,CreatedAt:c.Created,Ports:ports,Networks:networks}}
-func writeJSON(w http.ResponseWriter,status int,value any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(value)};func writeError(w http.ResponseWriter,status int,err error){writeJSON(w,status,ErrorResponse{Error:err.Error()})};func withCORS(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.Header().Set("Access-Control-Allow-Origin","http://localhost:5173");w.Header().Set("Access-Control-Allow-Methods","GET, POST, OPTIONS");w.Header().Set("Access-Control-Allow-Headers","Content-Type, Authorization");if r.Method==http.MethodOptions{w.WriteHeader(http.StatusNoContent);return};next.ServeHTTP(w,r)})};func withLogging(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){start:=time.Now();next.ServeHTTP(w,r);slog.Info("http request","method",r.Method,"path",r.URL.Path,"duration",time.Since(start).String())})};func envInt(name string,fallback int)int{value:=os.Getenv(name);if value==""{return fallback};parsed,err:=strconv.Atoi(value);if err!=nil||parsed<1||parsed>65535{return fallback};return parsed}
+func writeJSON(w http.ResponseWriter,status int,value any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(value)};func writeError(w http.ResponseWriter,status int,err error){writeJSON(w,status,ErrorResponse{Error:err.Error()})};func withCORS(next http.Handler)http.Handler {
+	allowedOrigins := map[string]struct{}{
+		"http://localhost:5173": {},
+		"https://localhost":     {},
+		"http://localhost":      {},
+		"capacitor://localhost": {},
+	}
+	if extra := os.Getenv("SCP_CORS_ORIGINS"); extra != "" {
+		for _, origin := range strings.Split(extra, ",") {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				allowedOrigins[origin] = struct{}{}
+			}
+		}
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if _, ok := allowedOrigins[origin]; ok {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Add("Vary", "Origin")
+		}
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+};func withLogging(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){start:=time.Now();next.ServeHTTP(w,r);slog.Info("http request","method",r.Method,"path",r.URL.Path,"duration",time.Since(start).String())})};func envInt(name string,fallback int)int{value:=os.Getenv(name);if value==""{return fallback};parsed,err:=strconv.Atoi(value);if err!=nil||parsed<1||parsed>65535{return fallback};return parsed}

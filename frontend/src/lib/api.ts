@@ -12,6 +12,7 @@ import type {
   VirtualMachine,
 } from "./types";
 import type { MonitoringOverview } from "./monitoring";
+import { Capacitor } from "@capacitor/core";
 
 type ApiPort = {
   privatePort: number;
@@ -64,7 +65,15 @@ export interface ApplyUpdatesResponse {
   packages: string[];
   output: string;
 }
-const apiBase = "/api/v1";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+// Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
+// proxy, so native builds need a direct backend address. Override this with
+// VITE_API_BASE_URL for a physical device or a different server.
+const apiBase =
+  configuredApiBase ||
+  (Capacitor.isNativePlatform()
+    ? "http://10.0.2.2:8082/api/v1"
+    : "/api/v1");
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
     case "running":
@@ -140,14 +149,44 @@ function toApplication(app: ApiApplication): AppService {
   };
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBase}${path}`, init);
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(body?.error || `SCP API returned ${response.status}`);
+  const url = `${apiBase}${path}`;
+  let response: Response;
+
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the SCP API at ${apiBase}. Check the server address and network connection.`,
+    );
   }
-  return response.json() as Promise<T>;
+
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
+
+  if (!response.ok) {
+    let body: { error?: string } | null = null;
+    try {
+      body = JSON.parse(bodyText) as { error?: string };
+    } catch {
+      // Keep the HTTP status when the server returned HTML or another non-JSON body.
+    }
+    throw new Error(
+      body?.error ||
+        `SCP API returned ${response.status} (${contentType || "unknown content type"})`,
+    );
+  }
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      `SCP API returned a non-JSON response from ${url}. Check the API base URL; the server returned ${contentType || "unknown content type"}.`,
+    );
+  }
+
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`SCP API returned invalid JSON from ${url}`);
+  }
 }
 export async function getHost(): Promise<HostOverview> {
   return request("/host");

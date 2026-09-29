@@ -37,10 +37,12 @@ public class MainActivity extends BridgeActivity {
     private static final class NativeDestination {
         final String view;
         final String title;
+        final int iconRes;
 
-        NativeDestination(String view, String title) {
+        NativeDestination(String view, String title, int iconRes) {
             this.view = view;
             this.title = title;
+            this.iconRes = iconRes;
         }
     }
 
@@ -155,20 +157,20 @@ public class MainActivity extends BridgeActivity {
     private void populateNavigation() {
         destinations.clear();
 
-        addDestination("Dashboard", "dashboard");
-        addDestination("Host", "host");
-        addDestination("Containers", "containers");
-        addDestination("Applications", "applications");
-        addDestination("Services", "services");
-        addDestination("Storage", "storage");
-        addDestination("Network", "network");
-        addDestination("Virtual machines", "virtual-machines");
-        addDestination("Monitoring", "monitoring");
-        addDestination("Logs", "logs");
-        addDestination("Terminal", "terminal");
-        addDestination("Security", "security");
-        addDestination("Updates", "updates");
-        addDestination("Settings", "settings");
+        addDestination("Dashboard", "dashboard", android.R.drawable.ic_menu_view);
+        addDestination("Host", "host", android.R.drawable.ic_menu_info_details);
+        addDestination("Containers", "containers", android.R.drawable.ic_menu_manage);
+        addDestination("Applications", "applications", android.R.drawable.ic_menu_agenda);
+        addDestination("Services", "services", android.R.drawable.ic_menu_rotate);
+        addDestination("Storage", "storage", android.R.drawable.ic_menu_save);
+        addDestination("Network", "network", android.R.drawable.ic_menu_share);
+        addDestination("Virtual machines", "virtual-machines", android.R.drawable.ic_menu_slideshow);
+        addDestination("Monitoring", "monitoring", android.R.drawable.ic_menu_recent_history);
+        addDestination("Logs", "logs", android.R.drawable.ic_menu_edit);
+        addDestination("Terminal", "terminal", android.R.drawable.ic_menu_set_as);
+        addDestination("Security", "security", android.R.drawable.ic_lock_lock);
+        addDestination("Updates", "updates", android.R.drawable.ic_popup_sync);
+        addDestination("Settings", "settings", android.R.drawable.ic_menu_preferences);
 
         navigationView.setNavigationItemSelectedListener(item -> {
             NativeDestination destination = destinations.get(item.getItemId());
@@ -184,10 +186,12 @@ public class MainActivity extends BridgeActivity {
         navigationView.setCheckedItem(findDestinationId("dashboard"));
     }
 
-    private void addDestination(String title, String view) {
+    private void addDestination(String title, String view, int iconRes) {
         int id = View.generateViewId();
-        destinations.put(id, new NativeDestination(view, title));
-        navigationView.getMenu().add(android.view.Menu.NONE, id, android.view.Menu.NONE, title);
+        destinations.put(id, new NativeDestination(view, title, iconRes));
+        navigationView.getMenu()
+                .add(android.view.Menu.NONE, id, android.view.Menu.NONE, title)
+                .setIcon(iconRes);
     }
 
     private int findDestinationId(String view) {
