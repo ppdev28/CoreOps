@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   Cpu,
   MemoryStick,
@@ -920,6 +921,9 @@ function DashboardView({
 }
 
 export default function App() {
+  // The Android shell owns the top bar and drawer when running inside Capacitor.
+  // Keep the existing React shell for the browser/PWA so the web app is unchanged.
+  const isNative = Capacitor.isNativePlatform();
   const [view, setView] = useState<View>("dashboard"),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
@@ -1028,45 +1032,49 @@ export default function App() {
           />
         )}
         <ToastStack toasts={toasts} onRemove={removeToast} />
-        <div
-          className="sidebar-desktop"
-          style={{ flexShrink: 0, position: "relative" }}
-        >
-          <Sidebar
-            view={view}
-            onNavigate={navigate}
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((v) => !v)}
-          />
-        </div>
-        {mobileOpen && (
+        {!isNative && (
           <>
             <div
-              onClick={() => setMobileOpen(false)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,.55)",
-                zIndex: 100,
-              }}
-            />
-            <div
-              style={{
-                position: "fixed",
-                left: 0,
-                top: 0,
-                height: "100%",
-                zIndex: 101,
-                display: "flex",
-              }}
+              className="sidebar-desktop"
+              style={{ flexShrink: 0, position: "relative" }}
             >
               <Sidebar
                 view={view}
                 onNavigate={navigate}
-                collapsed={false}
-                onToggle={() => setMobileOpen(false)}
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((v) => !v)}
               />
             </div>
+            {mobileOpen && (
+              <>
+                <div
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    background: "rgba(0,0,0,.55)",
+                    zIndex: 100,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "fixed",
+                    left: 0,
+                    top: 0,
+                    height: "100%",
+                    zIndex: 101,
+                    display: "flex",
+                  }}
+                >
+                  <Sidebar
+                    view={view}
+                    onNavigate={navigate}
+                    collapsed={false}
+                    onToggle={() => setMobileOpen(false)}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
         <div
@@ -1078,10 +1086,12 @@ export default function App() {
             minWidth: 0,
           }}
         >
-          <Header
-            onCmd={() => setShowCmd(true)}
-            onMenuToggle={() => setMobileOpen((v) => !v)}
-          />
+          {!isNative && (
+            <Header
+              onCmd={() => setShowCmd(true)}
+              onMenuToggle={() => setMobileOpen((v) => !v)}
+            />
+          )}
           <main
             style={{
               flex: 1,
