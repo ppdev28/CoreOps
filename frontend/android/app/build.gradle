@@ -1,0 +1,53 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.coreops.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.coreops.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "0.1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        aaptOptions {
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../node_modules/@capacitor/android/capacitor/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation project(':capacitor-android')
+
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.activity:activity:$androidxActivityVersion"
+    implementation "androidx.drawerlayout:drawerlayout:1.2.0"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "com.google.android.material:material:$materialVersion"
+
+    testImplementation "junit:junit:$junitVersion"
+}
+
+apply from: 'capacitor.build.gradle'
