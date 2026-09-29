@@ -54,8 +54,17 @@ public class MainActivity extends BridgeActivity {
 
     private void setupNativeShell() {
         final WebView webView = getBridge().getWebView();
-        final ViewGroup webViewParent = (ViewGroup) webView.getParent();
+        if (webView == null) {
+            return;
+        }
 
+        // BridgeActivity creates and attaches the WebView during super.onCreate().
+        // Post the re-parenting so the Capacitor view hierarchy is guaranteed to exist.
+        webView.post(() -> installNativeShell(webView));
+    }
+
+    private void installNativeShell(final WebView webView) {
+        final ViewGroup webViewParent = (ViewGroup) webView.getParent();
         if (webViewParent == null) {
             return;
         }
