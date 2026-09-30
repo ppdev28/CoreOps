@@ -72,7 +72,7 @@ const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+
 const apiBase =
   configuredApiBase ||
   (Capacitor.isNativePlatform()
-    ? "http://10.0.2.2:8082/api/v1"
+    ? "http://100.84.193.37:8082/api/v1"
     : "/api/v1");
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
