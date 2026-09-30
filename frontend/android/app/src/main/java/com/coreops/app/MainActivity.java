@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -95,6 +96,10 @@ public class MainActivity extends BridgeActivity {
         ));
 
         webView.setBackgroundColor(Color.rgb(11, 13, 16));
+        // The Capacitor page itself is served from HTTPS. Allow the native shell
+        // to reach the CoreOps backend over the private Tailscale HTTP endpoint.
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         content.addView(webView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
