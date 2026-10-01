@@ -1093,6 +1093,7 @@ export default function App() {
             />
           )}
           <main
+            className="coreops-main"
             style={{
               flex: 1,
               overflowY: "auto",
