@@ -145,3 +145,161 @@ button, a, [role="button"] {
   .sidebar-desktop { display: none !important; }
   .mobile-menu-btn { display: flex !important; }
 }
+
+
+/* ── Cross-screen responsive layout ──────────────────────────────
+   The Android Capacitor shell supplies the top bar and navigation.
+   The content below must remain readable on narrow phone widths:
+   single-column layouts, generous touch targets, wrapped controls,
+   and horizontal scrolling for data-heavy regions.
+*/
+.coreops-main {
+  min-width: 0;
+  width: 100%;
+}
+
+.coreops-main > * {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .coreops-main > div:not(.terminal-view) {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .coreops-main [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .coreops-main [style*="display: flex"] {
+    min-width: 0;
+  }
+
+  .coreops-main [style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+  }
+
+  .coreops-main table {
+    min-width: 560px;
+  }
+
+  .coreops-main pre {
+    max-width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .coreops-main input,
+  .coreops-main select,
+  .coreops-main textarea,
+  .coreops-main button {
+    min-height: 36px;
+  }
+
+  .coreops-main button {
+    touch-action: manipulation;
+  }
+
+  .coreops-main .recharts-responsive-container {
+    min-width: 0 !important;
+  }
+
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .toast-stack > * {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: none !important;
+  }
+
+  .cmd-backdrop {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .cmd-backdrop > * {
+    width: 100% !important;
+    max-width: 600px;
+  }
+}
+
+@media (max-width: 600px) {
+  .coreops-main > div:not(.terminal-view) {
+    padding-top: 16px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .coreops-main .card-header {
+    flex-wrap: wrap;
+  }
+
+  .coreops-main [style*="gap: 24px"] {
+    gap: 12px !important;
+  }
+
+  .coreops-main [style*="min-width: 180px"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .coreops-main [style*="min-width: 240px"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .coreops-main [style*="min-width: 280px"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .coreops-main h1 {
+    font-size: 18px !important;
+    line-height: 1.25;
+  }
+
+  .coreops-main .terminal-view {
+    padding: 14px 12px !important;
+  }
+
+  .terminal-view pre {
+    font-size: 11px !important;
+  }
+
+  .terminal-view input {
+    min-height: 40px;
+  }
+
+  .terminal-view button {
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 420px) {
+  .coreops-main > div:not(.terminal-view) {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .coreops-main [style*="padding: 14px 16px"] {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .coreops-main table {
+    min-width: 520px;
+  }
+}
+
+@media (min-width: 901px) {
+  .coreops-main > * {
+    width: 100%;
+  }
+}
