@@ -192,6 +192,7 @@ export default function TerminalView() {
 
   return (
     <div
+      className="terminal-view"
       style={{
         padding: full ? 0 : "22px 24px",
         display: "flex",
