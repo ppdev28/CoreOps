@@ -306,7 +306,7 @@ export default function ContainersView({
       setContainers(await getContainers());
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to connect to SCP API",
+        err instanceof Error ? err.message : "Unable to connect to CoreOps API",
       );
     } finally {
       setLoading(false);
