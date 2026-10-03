@@ -4,9 +4,9 @@ Last known working milestone: **the Figma-designed Containers UI displays real D
 
 ## Repository
 
-- GitHub repository: `ppdev28/SCP`
+- GitHub repository: `ppdev28/CoreOps`
 - Active branch: `feature/project-foundation`
-- The developer also has a local checkout on the Ubuntu server at `~/proyectos/SCP`.
+- The developer also has a local checkout on the Ubuntu server at `~/proyectos/CoreOps`.
 - GitHub authentication from the server uses SSH.
 - The JavaScript package manager is pnpm.
 
@@ -26,14 +26,14 @@ The frontend lives in `frontend/`.
 
 The UI originated in Figma Make and has been brought into the repository. It contains route-level views, reusable components, shared types, UI data and utility code.
 
-The Containers screen has been connected to the SCP API rather than relying on its original mock container list.
+The Containers screen has been connected to the CoreOps API rather than relying on its original mock container list.
 
 The Vite development server proxies `/api` requests to the local backend on port `8080`.
 
 Known frontend validation command:
 
 ```bash
-cd ~/proyectos/SCP/frontend
+cd ~/proyectos/CoreOps/frontend
 pnpm install
 pnpm build
 pnpm dev --host 0.0.0.0
@@ -75,7 +75,7 @@ GET /api/v1/containers
 
 It returns real Docker containers with fields including IDs, names, images, state/status, creation time, published ports and networks.
 
-The frontend currently adapts this API response to the UI's container model. Values not exposed by the backend are not fabricated. Container start, stop and restart actions call the SCP API, show a pending state per container, prevent duplicate submissions and refresh the real Docker state after completion.
+The frontend currently adapts this API response to the UI's container model. Values not exposed by the backend are not fabricated. Container start, stop and restart actions call the CoreOps API, show a pending state per container, prevent duplicate submissions and refresh the real Docker state after completion.
 
 ## Real integration environment
 
@@ -114,7 +114,7 @@ The following path is working:
 Browser
   -> React/Vite UI
   -> /api proxy
-  -> Go SCP API :8080
+  -> Go CoreOps API :8080
   -> Docker Engine
   -> real containers
 ```
