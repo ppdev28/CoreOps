@@ -1,9 +1,9 @@
 if (
   typeof document !== "undefined" &&
-  !document.getElementById("scp-sidebar-overflow-fix")
+  !document.getElementById("coreops-sidebar-overflow-fix")
 ) {
   const style = document.createElement("style");
-  style.id = "scp-sidebar-overflow-fix";
+  style.id = "coreops-sidebar-overflow-fix";
   style.textContent = `
     aside{overflow:visible!important}
     aside > div:first-child > button:last-child{opacity:1;pointer-events:auto;left:12px;right:auto!important;top:12px!important;width:28px!important;height:28px!important;padding:0!important;border-radius:8px!important;background:rgba(17,19,24,.94)!important;border:1px solid rgba(59,130,246,.34)!important;box-shadow:0 4px 14px rgba(0,0,0,.34),0 0 0 3px rgba(59,130,246,.07)!important;transform:none!important;transition:background 140ms ease,border-color 140ms ease,box-shadow 140ms ease!important;z-index:20}
