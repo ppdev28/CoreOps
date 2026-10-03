@@ -58,10 +58,10 @@ func main() {
     mux.HandleFunc("GET /api/v1/updates", api.updates)
     mux.HandleFunc("POST /api/v1/updates/refresh", api.refreshUpdates)
     mux.HandleFunc("POST /api/v1/updates/apply", api.applyUpdates)
-    port := envInt("SCP_PORT", 8082)
+    port := envInt("CoreOps_PORT", 8082)
     server := &http.Server{Addr: ":"+strconv.Itoa(port), Handler: withCORS(withLogging(mux)), ReadHeaderTimeout:5*time.Second, ReadTimeout:40*time.Second, WriteTimeout:45*time.Second, IdleTimeout:60*time.Second}
     go func(){ <-ctx.Done(); shutdownCtx,cancel:=context.WithTimeout(context.Background(),5*time.Second); defer cancel(); _=server.Shutdown(shutdownCtx) }()
-    logger.Info("SCP API listening", "addr", server.Addr)
+    logger.Info("CoreOps API listening", "addr", server.Addr)
     if err:=server.ListenAndServe(); err!=nil && !errors.Is(err,http.ErrServerClosed){logger.Error("HTTP server stopped","error",err);os.Exit(1)}
 }
 func (a *API) health(w http.ResponseWriter,r *http.Request){ctx,cancel:=context.WithTimeout(r.Context(),3*time.Second);defer cancel();if _,err:=a.docker.Ping(ctx,client.PingOptions{});err!=nil{writeJSON(w,http.StatusServiceUnavailable,map[string]any{"status":"degraded","docker":"unavailable"});return};writeJSON(w,http.StatusOK,map[string]any{"status":"ok","docker":"available"})}
@@ -91,7 +91,7 @@ func writeJSON(w http.ResponseWriter,status int,value any){w.Header().Set("Conte
 		"http://localhost":      {},
 		"capacitor://localhost": {},
 	}
-	if extra := os.Getenv("SCP_CORS_ORIGINS"); extra != "" {
+	if extra := os.Getenv("CoreOps_CORS_ORIGINS"); extra != "" {
 		for _, origin := range strings.Split(extra, ",") {
 			origin = strings.TrimSpace(origin)
 			if origin != "" {
