@@ -1,6 +1,6 @@
-# SCP backend
+# CoreOps backend
 
-The backend is a small Go HTTP API that exposes Server Control Center capabilities without leaking Docker Engine details into the frontend.
+The backend is a small Go HTTP API that exposes CoreOps capabilities without leaking Docker Engine details into the frontend.
 
 ## Local development
 
@@ -23,10 +23,10 @@ Useful endpoints:
 - `POST /api/v1/containers/:id/stop`
 - `POST /api/v1/containers/:id/restart`
 
-Set `SCP_PORT` to change the HTTP port.
+Set `CoreOps_PORT` to change the HTTP port.
 
 ## Security
 
 The backend is intentionally designed to talk to Docker through the local Unix socket rather than exposing Docker Engine's TCP API. Access to the Docker socket is highly privileged and must be protected at the host level.
 
-For the first integration, SCP is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization will be added before SCP is exposed beyond a trusted development network.
+For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization will be added before CoreOps is exposed beyond a trusted development network.
