@@ -7,7 +7,7 @@ The primary development/integration environment is an Ubuntu Server host running
 Repository path on that host:
 
 ```bash
-~/proyectos/SCP
+~/proyectos/CoreOps
 ```
 
 The developer also works from a Mac and can access the server through Tailscale. The mobile client is useful for responsive and remote-access testing.
@@ -17,7 +17,7 @@ The developer also works from a Mac and can access the server through Tailscale.
 Use pnpm, not npm.
 
 ```bash
-cd ~/proyectos/SCP/frontend
+cd ~/proyectos/CoreOps/frontend
 pnpm install
 pnpm build
 pnpm dev --host 0.0.0.0
@@ -30,7 +30,7 @@ When Vite is started with `--host 0.0.0.0`, it exposes the application on the se
 ## Backend
 
 ```bash
-cd ~/proyectos/SCP/backend
+cd ~/proyectos/CoreOps/backend
 go mod tidy
 go build ./...
 go run ./cmd/scp-api
