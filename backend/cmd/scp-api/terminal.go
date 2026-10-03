@@ -32,7 +32,7 @@ type TerminalCompleteResponse struct {
     Candidates []string `json:"candidates"`
 }
 
-const terminalCwdMarker = "__SCP_TERMINAL_CWD__"
+const terminalCwdMarker = "__COREOPS_TERMINAL_CWD__"
 
 func normalizeTerminalCwd(cwd string) (string, error) {
     cwd = strings.TrimSpace(cwd)
@@ -94,7 +94,7 @@ func completeTerminalInput(parent context.Context, req TerminalCompleteRequest) 
     ctx, cancel := context.WithTimeout(parent, 2*time.Second)
     defer cancel()
     script := `prefix="$1"; compgen -c -- "$prefix"; compgen -f -- "$prefix"`
-    cmd := exec.CommandContext(ctx, "bash", "-lc", script, "scp-complete", token)
+    cmd := exec.CommandContext(ctx, "bash", "-lc", script, "coreops-complete", token)
     cmd.Dir = cwd
     cmd.Env = os.Environ()
     var out bytes.Buffer
