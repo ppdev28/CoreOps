@@ -373,7 +373,7 @@ export default function SettingsView({
               marginBottom: 14,
             }}
           >
-            SCP stores interface preferences locally in this browser. Server
+            CoreOps stores interface preferences locally in this browser. Server
             configuration, credentials and terminal data are not stored here.
           </div>
           <Btn variant="danger" size="xs" onClick={reset}>
