@@ -1,15 +1,15 @@
-# SCP — React guide for beginners
+# CoreOps — React guide for beginners
 
-Este documento es una guía práctica para entender **Server Control Panel (SCP)** si todavía tienes poca experiencia con React. La idea no es enseñarte React desde cero como un curso completo, sino explicarte **cómo está organizado este proyecto, dónde tocar cada cosa y qué ocurre cuando modificas una pantalla**.
+Este documento es una guía práctica para entender **CoreOps (CoreOps)** si todavía tienes poca experiencia con React. La idea no es enseñarte React desde cero como un curso completo, sino explicarte **cómo está organizado este proyecto, dónde tocar cada cosa y qué ocurre cuando modificas una pantalla**.
 
 ---
 
-## 1. La idea general de SCP
+## 1. La idea general de CoreOps
 
-SCP tiene dos partes principales:
+CoreOps tiene dos partes principales:
 
 ```text
-SCP/
+CoreOps/
 ├── frontend/        ← React + TypeScript + Vite
 └── backend/         ← Go + Docker API + Linux/systemd
 ```
@@ -106,7 +106,7 @@ components/
 
 ### `shell.tsx`
 
-Contiene la estructura general de SCP: sidebar, navegación, cabecera y zona principal.
+Contiene la estructura general de CoreOps: sidebar, navegación, cabecera y zona principal.
 
 Si quieres cambiar cosas globales de la aplicación, como el sidebar, este es uno de los primeros archivos que debes revisar.
 
@@ -122,7 +122,7 @@ Por ejemplo, en lugar de crear un botón desde cero en cada vista:
 
 Esto mantiene el diseño consistente.
 
-**Regla práctica:** si necesitas cambiar el aspecto de todos los botones de SCP, probablemente debes tocar `components/ui.tsx`, no veinte vistas diferentes.
+**Regla práctica:** si necesitas cambiar el aspecto de todos los botones de CoreOps, probablemente debes tocar `components/ui.tsx`, no veinte vistas diferentes.
 
 ---
 
@@ -146,7 +146,7 @@ views/
 └── UpdatesView.tsx
 ```
 
-Cada archivo representa una pantalla o sección de SCP.
+Cada archivo representa una pantalla o sección de CoreOps.
 
 Por ejemplo:
 
@@ -218,7 +218,7 @@ Esto permite que TypeScript te avise si intentas hacer algo incorrecto.
 
 ## `lib/tokens.ts`
 
-**Este archivo es especialmente importante para cambiar el aspecto visual de SCP.**
+**Este archivo es especialmente importante para cambiar el aspecto visual de CoreOps.**
 
 Aquí están los colores y tokens visuales usados por las vistas.
 
@@ -243,7 +243,7 @@ style={{ color: T.text }}
 
 Eso significa que el componente utiliza el color definido por el token `text`.
 
-### ¿Quieres cambiar el color principal de SCP?
+### ¿Quieres cambiar el color principal de CoreOps?
 
 Empieza por `lib/tokens.ts`.
 
@@ -449,7 +449,7 @@ const load = useCallback(async () => {
 }, [])
 ```
 
-No necesitas dominar `useCallback` para empezar a modificar SCP.
+No necesitas dominar `useCallback` para empezar a modificar CoreOps.
 
 En este proyecto se utiliza principalmente para evitar recrear ciertas funciones que se utilizan como dependencias de `useEffect`.
 
@@ -525,7 +525,7 @@ También puedes utilizar ternarios:
 
 ---
 
-# 16. Cómo cambiar los colores de SCP
+# 16. Cómo cambiar los colores de CoreOps
 
 La forma recomendada es utilizar los tokens de `lib/tokens.ts`.
 
@@ -697,7 +697,7 @@ y comprueba qué datos entran en ese cálculo.
 
 # 19. Vite y el servidor de desarrollo
 
-SCP utiliza Vite.
+CoreOps utiliza Vite.
 
 En `frontend/package.json` encontrarás:
 
@@ -719,7 +719,7 @@ El script de build ejecuta TypeScript y después Vite.
 
 # 20. TypeScript: por qué aparecen tipos por todas partes
 
-Los archivos `.tsx` de SCP utilizan TypeScript.
+Los archivos `.tsx` de CoreOps utilizan TypeScript.
 
 Por eso encontrarás cosas como:
 
@@ -746,7 +746,7 @@ Al principio puede parecer más complicado que JavaScript, pero ayuda mucho a de
 
 ---
 
-# 21. Regla práctica para trabajar en SCP
+# 21. Regla práctica para trabajar en CoreOps
 
 Cuando quieras implementar algo nuevo, intenta seguir este orden:
 
@@ -792,7 +792,7 @@ Y antes de modificar algo global, busca si ya existe un componente o token reuti
 
 ## Lo más importante para empezar
 
-No necesitas entender todo React antes de tocar SCP.
+No necesitas entender todo React antes de tocar CoreOps.
 
 Empieza aprendiendo estos conceptos en este orden:
 
@@ -809,4 +809,4 @@ Empieza aprendiendo estos conceptos en este orden:
 10. useCallback
 ```
 
-Con esos conceptos ya puedes entender y modificar una gran parte del frontend actual de SCP.
+Con esos conceptos ya puedes entender y modificar una gran parte del frontend actual de CoreOps.
