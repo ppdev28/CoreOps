@@ -1,8 +1,8 @@
-# Server Control Center — Codex Instructions
+# CoreOps — Codex Instructions
 
 ## Mission
 
-You are working on **Server Control Center (SCP)**, a self-hosted, professional infrastructure control plane inspired by Cockpit and Portainer, but intentionally aiming beyond both as a practical all-in-one tool for DevOps engineers, sysadmins, SREs and cloud engineers.
+You are working on **CoreOps (CoreOps)**, a self-hosted, professional infrastructure control plane inspired by Cockpit and Portainer, but intentionally aiming beyond both as a practical all-in-one tool for DevOps engineers, sysadmins, SREs and cloud engineers.
 
 The product must feel like a serious operational application, not a dashboard mockup. The UI already has a strong Figma Make design direction; preserve it unless a product decision explicitly requires a change.
 
@@ -22,7 +22,7 @@ Before changing code, read these files in this order:
 - Prefer real infrastructure over mocks as soon as a feature can be safely exercised against it.
 - Do not redesign the Figma UI merely because implementation is easier another way.
 - Do not invent infrastructure data. If the backend does not expose a value, represent it as unavailable rather than fabricating it.
-- Keep infrastructure concerns in the Go backend. The browser talks to SCP APIs, never directly to Docker Engine, `/var/run/docker.sock`, systemd or host filesystems.
+- Keep infrastructure concerns in the Go backend. The browser talks to CoreOps APIs, never directly to Docker Engine, `/var/run/docker.sock`, systemd or host filesystems.
 - Keep the frontend independent from Docker SDK types. Use explicit API/domain types and adapters.
 - Treat API contracts as implementation details that may evolve with the UI; do not build a giant domain model prematurely.
 - Security is a first-class requirement: least privilege, authentication, authorization, auditability, safe defaults and protection of privileged interfaces.
@@ -35,9 +35,9 @@ Before changing code, read these files in this order:
 
 ## Current real environment
 
-The primary integration test host is an Ubuntu Server machine running Docker directly. The repository is located at `~/proyectos/SCP` on that server. The developer also has a Mac and a mobile phone connected to the server through Tailscale.
+The primary integration test host is an Ubuntu Server machine running Docker directly. The repository is located at `~/proyectos/CoreOps` on that server. The developer also has a Mac and a mobile phone connected to the server through Tailscale.
 
-The real Docker host contains many containers, so it is suitable for exercising SCP against a non-trivial environment. Do not assume the exact container list is static; query the API/Docker Engine when validating behavior.
+The real Docker host contains many containers, so it is suitable for exercising CoreOps against a non-trivial environment. Do not assume the exact container list is static; query the API/Docker Engine when validating behavior.
 
 ## Git workflow
 
