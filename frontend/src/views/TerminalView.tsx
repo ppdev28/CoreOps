@@ -139,7 +139,7 @@ export default function TerminalView() {
                 running: false,
                 lines: [
                   ...s.lines,
-                  `SCP: ${error instanceof Error ? error.message : "command failed"}`,
+                  `CoreOps: ${error instanceof Error ? error.message : "command failed"}`,
                   `pepe@homelab-server:${s.cwd.replace("/home/pepe", "~")}$ `,
                 ],
               }
@@ -380,7 +380,7 @@ export default function TerminalView() {
                   <div
                     key={i}
                     style={{
-                      color: line.startsWith("SCP:")
+                      color: line.startsWith("CoreOps:")
                         ? T.red
                         : line.startsWith("Connected")
                           ? T.green
