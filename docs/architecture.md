@@ -2,13 +2,13 @@
 
 ## Current direction
 
-SCP is being built in vertical slices. The current frontend is the product UI reference, while infrastructure integrations are implemented behind the Go backend.
+CoreOps is being built in vertical slices. The current frontend is the product UI reference, while infrastructure integrations are implemented behind the Go backend.
 
 ```text
 React UI
    |
    v
-SCP API client / application services
+CoreOps API client / application services
    |
    +---- mock data (until a feature is connected)
    |
@@ -43,7 +43,7 @@ Docker SDK
 Docker Engine /var/run/docker.sock
 ```
 
-The Docker socket is a highly privileged interface. It should not be exposed directly over TCP. In the initial self-hosted deployment SCP is expected to run on the same Linux host as Docker and be reached through a trusted private network such as Tailscale.
+The Docker socket is a highly privileged interface. It should not be exposed directly over TCP. In the initial self-hosted deployment CoreOps is expected to run on the same Linux host as Docker and be reached through a trusted private network such as Tailscale.
 
 ## Frontend boundaries
 
