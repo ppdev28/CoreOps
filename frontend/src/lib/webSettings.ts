@@ -1,4 +1,4 @@
-export const SETTINGS_STORAGE_KEY = "scp-web-settings";
+export const SETTINGS_STORAGE_KEY = "coreops-web-settings";
 export const SETTINGS_CHANGED_EVENT = "coreops-settings-changed";
 
 export type ThemePreference = "dark" | "light" | "system";
