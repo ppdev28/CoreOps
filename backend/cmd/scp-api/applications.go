@@ -41,13 +41,13 @@ func collectApplications(ctx context.Context, docker *client.Client) ([]Applicat
         name := labels["com.docker.compose.project"]
         if name == "" { name = firstContainerName(first) }
         name = prettyApplicationName(name)
-        if custom := strings.TrimSpace(labels["scp.application.name"]); custom != "" { name = custom }
+        if custom := strings.TrimSpace(labels["coreops.application.name"]); custom != "" { name = custom }
         category := applicationCategory(name, first.Image)
-        if custom := strings.TrimSpace(labels["scp.application.category"]); custom != "" { category = custom }
-        description := strings.TrimSpace(labels["scp.application.description"])
+        if custom := strings.TrimSpace(labels["coreops.application.category"]); custom != "" { category = custom }
+        description := strings.TrimSpace(labels["coreops.application.description"])
         if description == "" { description = "Docker application composed of one or more containers." }
         icon := applicationIcon(name, first.Image, category)
-        if custom := strings.TrimSpace(labels["scp.application.icon"]); custom != "" { icon = custom }
+        if custom := strings.TrimSpace(labels["coreops.application.icon"]); custom != "" { icon = custom }
         running := 0
         versions := make([]string, 0, len(g.items))
         ids := make([]string, 0, len(g.items))
