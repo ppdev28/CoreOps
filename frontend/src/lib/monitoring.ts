@@ -10,12 +10,12 @@ if (
     aside > div:first-child > div:first-child{transition:opacity 120ms ease!important}
     aside > div:first-child > div:first-child > svg,aside > div:first-child > div:first-child > * > svg{opacity:0!important}
     aside > div:first-child > button:last-child:hover{background:rgba(31,35,48,.98)!important;border-color:rgba(59,130,246,.62)!important;box-shadow:0 5px 16px rgba(0,0,0,.42),0 0 0 3px rgba(59,130,246,.12)!important}
-    html[data-scp-reduce-motion="true"] *,html[data-scp-reduce-motion="true"] *::before,html[data-scp-reduce-motion="true"] *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
-    html[data-scp-compact="true"] aside nav button{padding-top:5px!important;padding-bottom:5px!important}
-    html[data-scp-compact="true"] aside nav > div > div{margin-bottom:0!important}
-    html[data-scp-compact="true"] .dash-metrics{gap:7px!important}
-    html[data-scp-compact="true"] .dash-charts{gap:8px!important}
-    html[data-scp-compact="true"] .dash-bottom{gap:8px!important}
+    html[data-coreops-reduce-motion="true"] *,html[data-coreops-reduce-motion="true"] *::before,html[data-coreops-reduce-motion="true"] *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    html[data-coreops-compact="true"] aside nav button{padding-top:5px!important;padding-bottom:5px!important}
+    html[data-coreops-compact="true"] aside nav > div > div{margin-bottom:0!important}
+    html[data-coreops-compact="true"] .dash-metrics{gap:7px!important}
+    html[data-coreops-compact="true"] .dash-charts{gap:8px!important}
+    html[data-coreops-compact="true"] .dash-bottom{gap:8px!important}
   `;
   document.head.appendChild(style);
 }
