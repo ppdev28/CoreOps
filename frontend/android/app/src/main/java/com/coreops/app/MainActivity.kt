@@ -1,6 +1,5 @@
 package com.coreops.app
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
@@ -397,7 +396,6 @@ class MainActivity : BridgeActivity() {
             for (i in 0 until container.childCount) {
                 val child = container.getChildAt(i)
                 val refs = child.tag as? NavigationRowRefs ?: continue
-                val selected = (child.findViewWithTag<Any>(null) == null) // no-op; state below is driven by destination lookup
                 val destinationForRow = findDestinationForRow(child)
                 applyNavigationState(child, destinationForRow?.view == activeView)
             }
