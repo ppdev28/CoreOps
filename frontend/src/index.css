@@ -1217,3 +1217,80 @@ body,
     display: block !important;
   }
 }
+
+
+/* ── Mobile container action button ──────────────────────────── */
+@media (max-width: 680px) {
+  .containers-mobile-card-head {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .containers-mobile-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
+    max-width: none;
+  }
+
+  .containers-mobile-card-actions {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .containers-mobile-card-actions > button {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 !important;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent !important;
+    border-radius: 7px !important;
+  }
+
+  .containers-mobile-card-actions > button:active {
+    background: #1a2737 !important;
+    border-color: #263a53 !important;
+  }
+
+  .containers-mobile-card-actions .status-badge {
+    flex: 0 0 auto;
+    max-width: 68px;
+  }
+
+  .containers-mobile-card-name-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .containers-mobile-card-name,
+  .containers-mobile-card-image {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .containers-mobile-card-actions {
+    gap: 2px;
+  }
+
+  .containers-mobile-card-actions > button {
+    flex-basis: 34px;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+}
