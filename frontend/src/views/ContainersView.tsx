@@ -587,6 +587,7 @@ export default function ContainersView({
         ].map((s) => (
           <div
             key={s.label}
+            className="containers-stat-card"
             style={{
               padding: "8px 14px",
               background: T.raised,
