@@ -868,7 +868,7 @@ export default function ContainersView({
                         e.preventDefault();
                         setCtx({ x: e.clientX, y: e.clientY, c });
                       }}
-                      onClick={onDetail}
+                      onClick={() => onDetail(c.id)}
                       style={{
                         cursor: pendingAction ? "wait" : "pointer",
                         opacity: pendingAction ? 0.6 : 1,
