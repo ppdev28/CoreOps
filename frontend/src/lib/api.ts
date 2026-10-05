@@ -1,6 +1,7 @@
 import type {
   Container,
   ContainerStatus,
+  ContainerDetailData,
   HealthStatus,
   HostOverview,
   NetworkOverview,
@@ -194,6 +195,14 @@ export async function getHost(): Promise<HostOverview> {
 export async function getContainers(): Promise<Container[]> {
   const containers = await request<ApiContainer[]>("/containers");
   return containers.map(toContainer);
+}
+
+export async function getContainerDetail(
+  id: string,
+): Promise<ContainerDetailData> {
+  return request(
+    `/containers/${encodeURIComponent(id)}`,
+  );
 }
 export async function runContainerAction(
   id: string,
