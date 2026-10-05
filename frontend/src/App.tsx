@@ -43,6 +43,7 @@ import {
 import { Sidebar, Header, CommandPalette } from "./components/shell";
 import ContainersView from "./views/ContainersView";
 import ContainerDetail from "./views/ContainerDetail";
+import NativeContainerDetail from "./views/NativeContainerDetail";
 import HostView from "./views/HostView";
 import ApplicationsView from "./views/ApplicationsView";
 import ServicesView from "./views/ServicesView";
@@ -930,7 +931,8 @@ export default function App() {
     [showCmd, setShowCmd] = useState(false),
     [toasts, setToasts] = useState<Toast[]>([]),
     [confirm, setConfirm] = useState<ConfirmDialog | null>(null),
-    [settings, setSettings] = useState(loadWebSettings);
+    [settings, setSettings] = useState(loadWebSettings),
+    [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   useEffect(() => subscribeWebSettings(setSettings), []);
   const playNotificationSound = useCallback(() => {
     try {
@@ -969,6 +971,11 @@ export default function App() {
   );
   const navigate = useCallback((v: View) => {
     setView(v);
+    setMobileOpen(false);
+  }, []);
+  const openContainerDetail = useCallback((id: string) => {
+    setSelectedContainerId(id);
+    setView("container-detail");
     setMobileOpen(false);
   }, []);
   useEffect(() => {
@@ -1107,15 +1114,20 @@ export default function App() {
             {view === "host" && <HostView />}{" "}
             {view === "containers" && (
               <ContainersView
-                onDetail={() => navigate("container-detail")}
+                onDetail={isNative ? openContainerDetail : () => navigate("container-detail")}
                 {...shell}
               />
             )}{" "}
             {view === "container-detail" && (
-              <ContainerDetail
-                onBack={() => navigate("containers")}
-                {...shell}
-              />
+              isNative && selectedContainerId ? (
+                <NativeContainerDetail
+                  containerId={selectedContainerId}
+                  onBack={() => navigate("containers")}
+                  {...shell}
+                />
+              ) : (
+                <ContainerDetail onBack={() => navigate("containers")} {...shell} />
+              )
             )}{" "}
             {view === "applications" && (
               <ApplicationsView
