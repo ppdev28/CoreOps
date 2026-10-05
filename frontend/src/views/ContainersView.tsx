@@ -774,7 +774,7 @@ export default function ContainersView({
             }}
           >
             {rows.map((c) => (
-              <GridCard key={c.id} c={c} onClick={onDetail} />
+              <GridCard key={c.id} c={c} onClick={() => onDetail(c.id)} />
             ))}
           </div>
         ) : (
