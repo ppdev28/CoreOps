@@ -3,8 +3,6 @@ import type { MouseEvent } from "react";
 import {
   Box,
   Plus,
-  Grid,
-  List,
   MoreHorizontal,
   Play,
   Square,
@@ -287,91 +285,6 @@ function MobileContainerCard({
   );
 }
 
-function GridCard({ c, onClick }: { c: Container; onClick: () => void }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background: hov ? T.hover : T.raised,
-        border: `1px solid ${hov ? T.borderStrong : T.border}`,
-        borderRadius: 10,
-        padding: "14px 16px",
-        cursor: "pointer",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: T.text,
-              fontFamily: "JetBrains Mono,monospace",
-              marginBottom: 4,
-            }}
-          >
-            {c.name}
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: T.textDim,
-              fontFamily: "JetBrains Mono,monospace",
-            }}
-          >
-            {c.image}
-          </div>
-        </div>
-        <StatusBadge status={c.status} />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {[
-          { label: "CPU", value: c.cpu },
-          { label: "Memory", value: c.memory },
-          { label: "Network", value: c.net },
-          { label: "Uptime", value: c.uptime },
-        ].map((r) => (
-          <div key={r.label}>
-            <div
-              style={{
-                fontSize: 10,
-                color: T.textDim,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 2,
-              }}
-            >
-              {r.label}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: T.textSub,
-                fontFamily: "JetBrains Mono,monospace",
-              }}
-            >
-              {r.value}
-            </div>
-          </div>
-        ))}
-      </div>
-      <HealthBadge health={c.health} />
-    </div>
-  );
-}
-
 export default function ContainersView({
   onDetail,
   addToast,
@@ -386,7 +299,6 @@ export default function ContainersView({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
-  const [gridView, setGridView] = useState(false);
   const [ctx, setCtx] = useState<{ x: number; y: number; c: Container } | null>(
     null,
   );
@@ -649,46 +561,6 @@ export default function ContainersView({
           value={filter}
           onChange={setFilter}
         />
-        <div
-          style={{
-            display: "flex",
-            background: T.raised,
-            border: `1px solid ${T.border}`,
-            borderRadius: 7,
-            overflow: "hidden",
-          }}
-        >
-          <button
-            onClick={() => setGridView(false)}
-            style={{
-              padding: "0 10px",
-              height: 32,
-              background: !gridView ? T.active : "none",
-              border: "none",
-              cursor: "pointer",
-              color: !gridView ? T.text : T.textDim,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <List size={13} />
-          </button>
-          <button
-            onClick={() => setGridView(true)}
-            style={{
-              padding: "0 10px",
-              height: 32,
-              background: gridView ? T.active : "none",
-              border: "none",
-              cursor: "pointer",
-              color: gridView ? T.text : T.textDim,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Grid size={13} />
-          </button>
-        </div>
         <div style={{ flex: 1 }} />
         <Btn
           icon={<RefreshCw size={11} />}
@@ -764,28 +636,6 @@ export default function ContainersView({
             </div>
           </div>
         </Card>
-      ) : gridView ? (
-        rows.length > 0 ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-              gap: 10,
-            }}
-          >
-            {rows.map((c) => (
-              <GridCard key={c.id} c={c} onClick={() => onDetail(c.id)} />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <EmptyState
-              icon={<Box size={28} />}
-              title="No containers found"
-              sub="Adjust your search or filter criteria."
-            />
-          </Card>
-        )
       ) : (
         <>
           <div className="containers-mobile-list">
@@ -820,7 +670,7 @@ export default function ContainersView({
 
           <div className="containers-desktop-table">
           <Card>
-          <div style={{ overflowX: "auto" }}>
+          <div className="containers-table-scroll">
             <table
               style={{
                 width: "100%",
