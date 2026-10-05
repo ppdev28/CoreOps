@@ -250,7 +250,7 @@ function MobileContainerCard({
             }}
             aria-label={`Actions for ${c.name}`}
           >
-            <MoreHorizontal size={16} />
+            <MoreHorizontal size={18} strokeWidth={2.2} />
           </button>
         </div>
       </div>
