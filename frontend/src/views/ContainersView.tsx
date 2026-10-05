@@ -562,7 +562,7 @@ export default function ContainersView({
           onAction={handleAction}
         />
       )}
-      <div style={{ marginBottom: 18 }}>
+      <div className="containers-header" style={{ marginBottom: 18 }}>
         <h1
           style={{
             fontSize: 17,
@@ -578,7 +578,7 @@ export default function ContainersView({
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+      <div className="containers-stats" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         {[
           { label: "Total", value: containers.length, color: T.text },
           { label: "Running", value: running, color: T.green },
@@ -623,6 +623,7 @@ export default function ContainersView({
       </div>
 
       <div
+        className="containers-toolbar"
         style={{
           display: "flex",
           gap: 8,
