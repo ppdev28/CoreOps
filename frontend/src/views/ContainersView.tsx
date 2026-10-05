@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { MouseEvent } from "react";
 import {
   Box,
   Plus,
@@ -188,6 +189,101 @@ function CtxMenu({
         )}
       </div>
     </>
+  );
+}
+
+function MobileContainerCard({
+  c,
+  selected,
+  pendingAction,
+  onSelect,
+  onOpen,
+  onMenu,
+}: {
+  c: Container;
+  selected: boolean;
+  pendingAction?: ContainerAction;
+  onSelect: () => void;
+  onOpen: () => void;
+  onMenu: (e: MouseEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <div
+      className="containers-mobile-card"
+      onClick={onOpen}
+      style={{
+        opacity: pendingAction ? 0.6 : 1,
+        cursor: pendingAction ? "wait" : "pointer",
+      }}
+    >
+      <div className="containers-mobile-card-head">
+        <div className="containers-mobile-card-title">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ accentColor: T.accent, cursor: "pointer" }}
+            aria-label={`Select ${c.name}`}
+          />
+          <div className="containers-mobile-card-name-wrap">
+            <div className="containers-mobile-card-name">{c.name}</div>
+            <div className="containers-mobile-card-image">{c.image}</div>
+          </div>
+        </div>
+        <div className="containers-mobile-card-actions">
+          <StatusBadge status={c.status} />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMenu(e);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: T.textDim,
+              padding: 6,
+              borderRadius: 6,
+              display: "inline-flex",
+            }}
+            aria-label={`Actions for ${c.name}`}
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="containers-mobile-card-health">
+        <HealthBadge health={c.health} />
+        {pendingAction && (
+          <span className="containers-mobile-card-pending">
+            {pendingAction[0].toUpperCase()}{pendingAction.slice(1)}ing…
+          </span>
+        )}
+      </div>
+
+      <div className="containers-mobile-metrics">
+        {[
+          { label: "CPU", value: c.cpu },
+          { label: "Memory", value: c.memory },
+          { label: "Network", value: c.net },
+          { label: "Uptime", value: c.uptime },
+          { label: "Ports", value: c.ports },
+          { label: "Restarts", value: String(c.restarts) },
+        ].map((item) => (
+          <div key={item.label} className="containers-mobile-metric">
+            <span>{item.label}</span>
+            <strong className={item.label === "Restarts" && c.restarts > 2 ? "warning" : ""}>
+              {item.value}
+            </strong>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -456,7 +552,7 @@ export default function ContainersView({
   };
 
   return (
-    <div style={{ padding: "22px 24px" }}>
+    <div className="containers-view" style={{ padding: "22px 24px" }}>
       {ctx && (
         <CtxMenu
           x={ctx.x}
@@ -689,7 +785,39 @@ export default function ContainersView({
           </Card>
         )
       ) : (
-        <Card>
+        <>
+          <div className="containers-mobile-list">
+            {rows.length > 0 ? (
+              rows.map((c) => (
+                <MobileContainerCard
+                  key={c.id}
+                  c={c}
+                  selected={selected.has(c.id)}
+                  pendingAction={pendingActions.get(c.id)}
+                  onSelect={() =>
+                    setSelected((prev) => {
+                      const s = new Set(prev);
+                      s.has(c.id) ? s.delete(c.id) : s.add(c.id);
+                      return s;
+                    })
+                  }
+                  onOpen={onDetail}
+                  onMenu={(e) => setCtx({ x: e.clientX, y: e.clientY, c })}
+                />
+              ))
+            ) : (
+              <Card>
+                <EmptyState
+                  icon={<Box size={28} />}
+                  title="No containers found"
+                  sub="Adjust your search or filter criteria."
+                />
+              </Card>
+            )}
+          </div>
+
+          <div className="containers-desktop-table">
+          <Card>
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
@@ -852,6 +980,8 @@ export default function ContainersView({
             />
           )}
         </Card>
+        </div>
+        </>
       )}
     </div>
   );
