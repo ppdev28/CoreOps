@@ -377,7 +377,7 @@ export default function ContainersView({
   addToast,
   onConfirm,
 }: {
-  onDetail: () => void;
+  onDetail: (id: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -802,7 +802,7 @@ export default function ContainersView({
                       return s;
                     })
                   }
-                  onOpen={onDetail}
+                  onOpen={() => onDetail(c.id)}
                   onMenu={(e) => setCtx({ x: e.clientX, y: e.clientY, c })}
                 />
               ))
