@@ -1071,3 +1071,149 @@ button, a, [role="button"] {
     gap: 3px;
   }
 }
+
+
+/* ── Containers: prevent horizontal viewport overflow ─────────── */
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.coreops-main {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.coreops-main > div,
+.containers-view,
+.containers-view > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.containers-view {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.containers-stats {
+  width: 100%;
+  max-width: 100%;
+}
+
+.containers-stat-card {
+  overflow: hidden;
+}
+
+.containers-toolbar {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.containers-toolbar > * {
+  min-width: 0;
+}
+
+.containers-toolbar input {
+  box-sizing: border-box;
+}
+
+.containers-mobile-list {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.containers-mobile-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.containers-desktop-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.containers-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.containers-table-scroll table {
+  width: 100%;
+  max-width: none;
+}
+
+/* On phones the list becomes cards; there is never a horizontal
+   page-level scroll caused by the desktop table. */
+@media (max-width: 680px) {
+  .coreops-main > div:not(.terminal-view) {
+    box-sizing: border-box !important;
+  }
+
+  .containers-view {
+    width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .containers-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .containers-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .containers-toolbar > * {
+    max-width: 100%;
+  }
+
+  .containers-mobile-card-title {
+    min-width: 0;
+    max-width: calc(100% - 72px);
+  }
+
+  .containers-mobile-card-name-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .containers-mobile-card-actions {
+    max-width: 72px;
+  }
+
+  .containers-mobile-metrics {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .containers-desktop-table {
+    display: none !important;
+  }
+}
+
+@media (min-width: 681px) {
+  .containers-mobile-list {
+    display: none !important;
+  }
+
+  .containers-desktop-table {
+    display: block !important;
+  }
+}
