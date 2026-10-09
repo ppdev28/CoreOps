@@ -413,8 +413,8 @@ export default function TerminalView() {
       {!full && (
         <header className="termx-app-header">
           <button type="button" className="termx-icon-button termx-mobile-menu" aria-label="Open hosts" onClick={() => setMobileHostsOpen(!mobileHostsOpen)}><Menu size={18} /></button>
-          <div className="termx-app-brand"><div className="termx-brand-mark"><TerminalSquare size={18} /></div><div><strong>Terminal</strong><span>Secure server workspace</span></div></div>
-          <div className="termx-header-host"><span className="termx-state-dot" /><Server size={15} /><strong>{HOST_NAME}</strong><ChevronDown size={14} /></div>
+          <div className="termx-app-brand"><div className="termx-brand-mark"><TerminalSquare size={18} /></div><div><strong>Terminal</strong><span>Host & shell sessions</span></div></div>
+          <button type="button" className="termx-header-host" onClick={() => { setSidebarOpen(true); setMobileHostsOpen((open) => !open); }}><span className="termx-state-dot" /><Server size={15} /><strong>{HOST_NAME}</strong><ChevronDown size={14} /></button>
           <button type="button" className="termx-icon-button" title="New terminal" onClick={addSession}><Plus size={18} /></button>
         </header>
       )}
