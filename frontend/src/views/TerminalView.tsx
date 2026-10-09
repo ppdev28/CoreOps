@@ -1,16 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  Bookmark,
   Check,
   ChevronDown,
   ChevronRight,
-  Clock3,
-  Command,
   Copy,
   CornerDownLeft,
-  FileTerminal,
   Folder,
   History,
   Maximize2,
@@ -88,7 +82,6 @@ export default function TerminalView() {
   const [mobileHostsOpen, setMobileHostsOpen] = useState(false);
   const [full, setFull] = useState(false);
   const [panel, setPanel] = useState<"none" | "history" | "snippets">("none");
-  const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [commandFilter, setCommandFilter] = useState("");
   const [favoriteCommands, setFavoriteCommands] = useState<string[]>(["df -h", "docker ps"]);
@@ -255,7 +248,7 @@ export default function TerminalView() {
     current.includes(command) ? current.filter((item) => item !== command) : [...current, command],
   );
 
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!active) return;
     if (event.key === "Enter") {
       event.preventDefault();
