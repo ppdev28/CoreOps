@@ -6,6 +6,7 @@ import {
   RefreshCw,
   Copy,
   ChevronDown,
+  CornerDownLeft,
 } from "lucide-react";
 import { T } from "../lib/tokens";
 import { Btn } from "../components/ui";
@@ -181,6 +182,12 @@ export default function TerminalView() {
     }
   };
 
+  const insertSnippet = (snippet: string) => {
+    if (!sess || sess.running) return;
+    update({ input: `${sess.input}${snippet}` });
+    inputRef.current?.focus();
+  };
+
   const copyOutput = async () => {
     if (!sess) return;
     try {
@@ -202,6 +209,7 @@ export default function TerminalView() {
     >
       {!full && (
         <div
+          className="terminal-page-header"
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -226,7 +234,7 @@ export default function TerminalView() {
               Integrated shell on homelab-server.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="terminal-toolbar-actions" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <Btn
               variant="secondary"
               size="xs"
@@ -266,6 +274,7 @@ export default function TerminalView() {
         </div>
       )}
       <div
+        className="terminal-panel"
         style={{
           flex: 1,
           display: "flex",
@@ -278,6 +287,7 @@ export default function TerminalView() {
         }}
       >
         <div
+          className="terminal-session-bar"
           style={{
             display: "flex",
             alignItems: "center",
@@ -285,11 +295,15 @@ export default function TerminalView() {
             borderBottom: `1px solid ${T.border}`,
           }}
         >
-          <div style={{ display: "flex", flex: 1, overflowX: "auto" }}>
+          <div className="terminal-session-tabs" style={{ display: "flex", flex: 1, overflowX: "auto" }}>
             {sessions.map((s) => (
               <div
                 key={s.id}
                 onClick={() => setActive(s.id)}
+                className={`terminal-session-tab${active === s.id ? " active" : ""}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActive(s.id); }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -361,6 +375,7 @@ export default function TerminalView() {
             }}
           >
             <div
+              className="terminal-output"
               style={{
                 flex: 1,
                 overflowY: "auto",
@@ -396,6 +411,7 @@ export default function TerminalView() {
               </div>
             </div>
             <div
+              className="terminal-command-row"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -406,6 +422,7 @@ export default function TerminalView() {
               }}
             >
               <span
+                className="terminal-prompt"
                 style={{ color: T.green, whiteSpace: "pre" }}
               >{`pepe@homelab-server:${sess.cwd.replace("/home/pepe", "~")}$ `}</span>
               <input
@@ -422,6 +439,9 @@ export default function TerminalView() {
                     void tabComplete();
                   }
                 }}
+                className="terminal-command-input"
+                aria-label="Command to execute on server"
+                enterKeyHint="send"
                 style={{
                   flex: 1,
                   background: "none",
@@ -444,6 +464,16 @@ export default function TerminalView() {
               {sess.completing && (
                 <span style={{ fontSize: 10, color: T.textDim }}>tab…</span>
               )}
+            </div>
+            <div className="terminal-mobile-keybar" aria-label="Terminal shortcuts">
+              <button type="button" onClick={() => void tabComplete()} disabled={sess.running || sess.completing}>Tab</button>
+              <button type="button" onClick={() => insertSnippet(" | ")} disabled={sess.running}>|</button>
+              <button type="button" onClick={() => insertSnippet(" && ")} disabled={sess.running}>{"&&"}</button>
+              <button type="button" onClick={() => insertSnippet(" / ")} disabled={sess.running}>/</button>
+              <button type="button" onClick={() => insertSnippet(" ~")} disabled={sess.running}>~</button>
+              <button type="button" onClick={() => insertSnippet(" ..")} disabled={sess.running}>..</button>
+              <button type="button" onClick={() => insertSnippet("sudo ")} disabled={sess.running}>sudo</button>
+              <button type="button" className="terminal-mobile-run" onClick={() => void submit()} disabled={sess.running || !sess.input.trim()} aria-label="Run command"><CornerDownLeft size={17} /></button>
             </div>
           </div>
         )}
