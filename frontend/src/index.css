@@ -1438,3 +1438,192 @@ body,
   .terminal-mobile-keybar { gap: 4px; padding-left: 5px; padding-right: 5px; }
   .terminal-mobile-keybar button { min-width: 36px; padding: 0 8px; }
 }
+
+
+/* ── Termius-inspired terminal polish ────────────────────────── */
+/* Dark navy surfaces, crisp blue focus, compact host/session chrome. */
+.terminal-view {
+  --terminal-navy: #081321;
+  --terminal-panel: #0b1727;
+  --terminal-raised: #101e30;
+  --terminal-blue: #4da3ff;
+  --terminal-line: #1b3049;
+  --terminal-muted: #8ca2bc;
+}
+.terminal-view .terminal-page-header h1 {
+  color: #edf5ff !important;
+  letter-spacing: -0.035em !important;
+  font-weight: 650 !important;
+}
+.terminal-view .terminal-page-header p {
+  color: #8196b0 !important;
+}
+.terminal-view .terminal-toolbar-actions button {
+  border: 1px solid #213650 !important;
+  background: #101e30 !important;
+  color: #b9cbe0 !important;
+  border-radius: 8px !important;
+}
+.terminal-view .terminal-toolbar-actions button:hover {
+  background: #172b43 !important;
+  border-color: #315477 !important;
+  color: #edf5ff !important;
+}
+.terminal-view .terminal-toolbar-actions button svg {
+  color: #7ebcff;
+}
+.terminal-view .terminal-toolbar-actions button:last-child {
+  background: #1769c2 !important;
+  border-color: #287ed7 !important;
+  color: #fff !important;
+}
+.terminal-view .terminal-toolbar-actions button:last-child svg { color: #fff; }
+.terminal-view .terminal-panel {
+  background: var(--terminal-navy) !important;
+  border-color: var(--terminal-line) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .16);
+}
+.terminal-view .terminal-session-bar {
+  background: #0d1a2a !important;
+  border-bottom-color: var(--terminal-line) !important;
+}
+.terminal-view .terminal-session-tab {
+  position: relative;
+  gap: 9px !important;
+  border-right-color: #1a2b40 !important;
+  color: #91a7c1;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.terminal-view .terminal-session-tab.active {
+  background: #10243a !important;
+  box-shadow: inset 0 -2px var(--terminal-blue) !important;
+}
+.terminal-view .terminal-session-tab.active span { color: #f1f7ff !important; }
+.terminal-view .terminal-session-tab:not(.active):hover { background: #102033 !important; }
+.terminal-view .terminal-session-tab > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+.terminal-view .terminal-session-bar > div:last-child {
+  min-height: 42px;
+  border-left: 1px solid #1a2b40;
+  background: #0b1726;
+}
+.terminal-view .terminal-session-bar > div:last-child span:first-child {
+  box-shadow: 0 0 7px currentColor;
+}
+.terminal-view .terminal-session-bar > div:last-child span:last-of-type {
+  color: #91a7c1 !important;
+  letter-spacing: .015em;
+}
+.terminal-view .terminal-session-bar > div:last-child svg { display: none; }
+.terminal-view .terminal-output {
+  background: #07111e;
+  color: #c6d6e8;
+}
+.terminal-view .terminal-output > div {
+  font-variant-ligatures: none;
+  tab-size: 4;
+}
+.terminal-view .terminal-command-row {
+  background: #0c1929;
+  border-top-color: #1b3049 !important;
+}
+.terminal-view .terminal-prompt {
+  color: #61dba8 !important;
+}
+.terminal-view .terminal-command-input {
+  color: #f0f6ff !important;
+  caret-color: #58b4ff !important;
+}
+.terminal-view .terminal-command-input:focus { outline: none; }
+.terminal-view .terminal-mobile-keybar {
+  background: #0c1929 !important;
+  border-top-color: #1b3049 !important;
+}
+.terminal-view .terminal-mobile-keybar button {
+  background: #112238 !important;
+  border-color: #28415e !important;
+  color: #d4e4f6 !important;
+  border-radius: 8px !important;
+}
+.terminal-view .terminal-mobile-keybar button:active {
+  background: #1a4168 !important;
+  border-color: #4da3ff !important;
+}
+.terminal-view .terminal-mobile-keybar .terminal-mobile-run {
+  background: #1769c2 !important;
+  border-color: #398fe5 !important;
+  color: #fff !important;
+}
+.terminal-view .terminal-mobile-keybar .terminal-mobile-run:disabled {
+  background: #15283d !important;
+  border-color: #253a51 !important;
+}
+.terminal-view .terminal-output > div > div { overflow-wrap: anywhere; }
+
+@media (max-width: 680px) {
+  .terminal-view {
+    padding: 8px 7px max(7px, env(safe-area-inset-bottom)) !important;
+    gap: 7px;
+  }
+  .terminal-view .terminal-page-header h1 {
+    font-size: 16px !important;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.04em !important;
+  }
+  .terminal-view .terminal-page-header p {
+    margin-top: 3px !important;
+    font-size: 10px !important;
+  }
+  .terminal-view .terminal-toolbar-actions button {
+    min-height: 36px !important;
+    border-radius: 8px !important;
+  }
+  .terminal-view .terminal-panel { box-shadow: none; }
+  .terminal-view .terminal-session-bar { background: #0d1a2a !important; }
+  .terminal-view .terminal-session-tab {
+    min-height: 45px;
+    padding: 0 11px !important;
+  }
+  .terminal-view .terminal-session-tab span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px !important;
+  }
+  .terminal-view .terminal-session-bar > div:last-child {
+    min-height: 45px;
+    background: #0b1726;
+  }
+  .terminal-view .terminal-session-bar > div:last-child span:last-of-type {
+    font-size: 9px !important;
+  }
+  .terminal-view .terminal-output {
+    padding: 13px 11px !important;
+  }
+  .terminal-view .terminal-command-row {
+    padding: 7px 9px !important;
+    gap: 6px;
+  }
+  .terminal-view .terminal-prompt {
+    color: #61dba8 !important;
+    max-width: 90px;
+  }
+  .terminal-view .terminal-command-input {
+    font-size: 16px !important;
+    min-height: 43px;
+  }
+  .terminal-view .terminal-mobile-keybar {
+    padding-top: 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .terminal-view .terminal-mobile-keybar button {
+    min-height: 39px;
+    min-width: 39px;
+  }
+}
+@media (max-width: 380px) {
+  .terminal-view .terminal-page-header h1 { font-size: 13px !important; }
+  .terminal-view .terminal-page-header p { display: none; }
+}
