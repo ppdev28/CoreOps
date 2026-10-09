@@ -243,7 +243,7 @@ export default function TerminalView() {
             >
               Reconnect
             </Btn>
-            <Btn variant="ghost" size="xs" onClick={clear}>
+            <Btn variant="ghost" size="xs" icon={<Trash2 size={11} />} onClick={clear}>
               Clear
             </Btn>
             <Btn
