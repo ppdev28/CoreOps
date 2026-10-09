@@ -1998,3 +1998,128 @@ body,
     padding: 8px 8px max(7px, env(safe-area-inset-bottom));
   }
 }
+
+
+/* CoreOps palette applied to the immersive terminal */
+.termx-immersive {
+  --tx-bg: #0b0c0f;
+  --tx-panel: #111318;
+  --tx-panel-raised: #171a21;
+  --tx-border: #1f2333;
+  --tx-border-strong: #2d3348;
+  --tx-text: #eaecf0;
+  --tx-muted: #8b92a5;
+  --tx-accent: #3b82f6;
+  --tx-accent-hover: #2563eb;
+  background: #0b0c0f !important;
+  color: #eaecf0;
+}
+.termx-immersive .termx-tabs {
+  background: #111318 !important;
+  border-bottom: 1px solid #1f2333 !important;
+}
+.termx-immersive .termx-tab {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #8b92a5 !important;
+}
+.termx-immersive .termx-tab:hover {
+  background: #1a1d26 !important;
+  color: #eaecf0 !important;
+}
+.termx-immersive .termx-tab.is-active {
+  background: #0b0c0f !important;
+  border-color: #1f2333 !important;
+  border-bottom-color: #0b0c0f !important;
+  color: #eaecf0 !important;
+  box-shadow: inset 0 2px 0 #3b82f6;
+}
+.termx-immersive .termx-tab-add {
+  background: transparent !important;
+  color: #8b92a5 !important;
+}
+.termx-immersive .termx-tab-add:hover {
+  background: #1a1d26 !important;
+  color: #3b82f6 !important;
+}
+.termx-immersive .termx-output { background: #0b0c0f !important; }
+.termx-immersive .termx-welcome-icon {
+  background: #111318 !important;
+  border-color: #2d3348 !important;
+  color: #3b82f6 !important;
+}
+.termx-immersive .termx-welcome h2 { color: #eaecf0 !important; }
+.termx-immersive .termx-welcome p { color: #8b92a5 !important; }
+.termx-immersive .termx-prompt-user,
+.termx-immersive .termx-input-prompt > span:first-child { color: #22c55e !important; }
+.termx-immersive .termx-prompt-separator { color: #8b92a5 !important; }
+.termx-immersive .termx-prompt-path { color: #60a5fa !important; }
+.termx-immersive .termx-prompt-symbol,
+.termx-immersive .termx-command-text,
+.termx-immersive .termx-input-prompt strong,
+.termx-immersive .termx-input-card input { color: #eaecf0 !important; }
+.termx-immersive .termx-command-output { color: #c5c9d3 !important; }
+.termx-immersive .termx-command-output.has-error,
+.termx-immersive .termx-command-status { color: #ef4444 !important; }
+.termx-immersive .termx-command-status span { background: #ef4444 !important; }
+.termx-immersive .termx-command-time { color: #50586b !important; }
+.termx-immersive .termx-running { color: #8b92a5 !important; }
+.termx-immersive .termx-spinner {
+  border-color: #2d3348 !important;
+  border-top-color: #3b82f6 !important;
+}
+.termx-immersive .termx-input-area {
+  background: #111318 !important;
+  border-top-color: #1f2333 !important;
+}
+.termx-immersive .termx-input-card {
+  background: #0d0e12 !important;
+  border-color: #2d3348 !important;
+  box-shadow: none !important;
+}
+.termx-immersive .termx-input-card:focus-within {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 1px #1e3a5f !important;
+}
+.termx-immersive .termx-input-prompt { color: #8b92a5 !important; }
+.termx-immersive .termx-input-card input::placeholder { color: #50586b !important; }
+.termx-immersive .termx-run-button {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.termx-immersive .termx-run-button:hover:not(:disabled) { background: #2563eb !important; }
+.termx-immersive .termx-run-button:disabled {
+  background: #1a1d26 !important;
+  border-color: #2d3348 !important;
+  color: #50586b !important;
+}
+.termx-immersive .termx-hints { color: #8b92a5 !important; }
+.termx-immersive .termx-hints kbd {
+  background: #171a21;
+  border: 1px solid #2d3348;
+  color: #c5c9d3;
+}
+.termx-immersive .termx-server-note { color: #8b92a5 !important; }
+.termx-immersive .termx-server-note svg { color: #22c55e !important; }
+.termx-immersive .termx-mobile-keys button {
+  background: #171a21 !important;
+  border-color: #2d3348 !important;
+  color: #c5c9d3 !important;
+}
+.termx-immersive .termx-mobile-keys button:active {
+  background: #1e3a5f !important;
+  border-color: #3b82f6 !important;
+}
+.termx-immersive .termx-mobile-keys button:last-child {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.termx-immersive .termx-toast {
+  background: #171a21 !important;
+  border-color: #2d3348 !important;
+  color: #eaecf0 !important;
+}
+.termx-immersive .termx-toast > svg { color: #3b82f6 !important; }
+.termx-immersive .termx-toast button { color: #8b92a5 !important; }
