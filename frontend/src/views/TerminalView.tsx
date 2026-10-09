@@ -30,7 +30,7 @@ const HOME = "/home/pepe";
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const displayPath = (path: string) => path === HOME ? "~" : path.startsWith(`${HOME}/`) ? path.replace(HOME, "~") : path;
 const cleanAnsi = (value: string) =>
-  value.replace(/\u001b(?:\[[0-?]*[ -/]*[@-~]|\][^\u0007]*(?:\u0007|\u001b\\\\))/g, "").replace(/\r/g, "");
+  value.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "").replace(/\r/g, "");
 const makeSession = (n: number): TerminalSession => ({
   id: newId(),
   title: n === 1 ? "Shell" : `Shell ${n}`,
