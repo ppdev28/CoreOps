@@ -1103,9 +1103,11 @@ export default function App() {
             className="coreops-main"
             style={{
               flex: 1,
-              overflowY: "auto",
+              overflowY: view === "terminal" ? "hidden" : "auto",
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
+              padding: view === "terminal" ? 0 : undefined,
             }}
           >
             {view === "dashboard" && (
