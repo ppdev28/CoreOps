@@ -214,7 +214,6 @@ export default function TerminalView() {
           ))}
           <button type="button" className="termx-tab-add" aria-label="New terminal" title="New terminal" onClick={addSession}><Plus size={16} /></button>
         </div>
-        <div className="termx-session-state"><span className="termx-state-dot" /> Shell ready</div>
       </div>
 
       {active && <>
