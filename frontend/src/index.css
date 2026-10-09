@@ -1678,6 +1678,8 @@ body,
 .termx-app-brand strong { font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
 .termx-app-brand span { margin-top: 3px; font-size: 10px; color: var(--tx-dim); }
 .termx-header-host {
+  cursor: pointer;
+  font: inherit;
   display: flex; align-items: center; gap: 9px; margin: 0 auto;
   padding: 8px 12px; border: 1px solid var(--tx-border); border-radius: 8px;
   background: #0d1c2e; color: var(--tx-muted); font-size: 12px;
