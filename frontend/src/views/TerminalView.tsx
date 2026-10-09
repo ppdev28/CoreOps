@@ -231,7 +231,7 @@ export default function TerminalView() {
               Terminal
             </h1>
             <p style={{ fontSize: 12, color: T.textDim, marginTop: 2 }}>
-              Integrated shell on homelab-server.
+              Integrated shell · CoreOps server.
             </p>
           </div>
           <div className="terminal-toolbar-actions" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
