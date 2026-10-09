@@ -1922,3 +1922,79 @@ body,
   .termx-input-prompt { max-width: 38%; }
   .termx-hints { display: none; }
 }
+
+
+/* Immersive terminal: use the entire content viewport, with only the session strip. */
+.coreops-main:has(.termx-immersive) {
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.coreops-main > .termx-immersive {
+  flex: 1 1 auto;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+.termx-immersive {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+.termx-immersive .termx-tabs {
+  flex: 0 0 43px;
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  padding: 0;
+  margin: 0;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+.termx-immersive .termx-tabs-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.termx-immersive .termx-tab {
+  border-radius: 0;
+}
+.termx-immersive .termx-tab-add {
+  min-width: 42px;
+}
+.termx-immersive .termx-output {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+  padding: 20px 22px;
+}
+.termx-immersive .termx-input-area {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+  padding: 10px 14px max(8px, env(safe-area-inset-bottom));
+}
+.termx-immersive .termx-input-card {
+  border-radius: 7px;
+  box-shadow: none;
+}
+.termx-immersive .termx-welcome-chips { display: none !important; }
+@media (max-width: 680px) {
+  .termx-immersive .termx-tabs { flex-basis: 40px; min-height: 40px; }
+  .termx-immersive .termx-output { padding: 14px 11px; }
+  .termx-immersive .termx-input-area {
+    padding: 8px 8px max(7px, env(safe-area-inset-bottom));
+  }
+}
