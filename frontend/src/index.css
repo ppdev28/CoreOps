@@ -1294,3 +1294,147 @@ body,
     min-height: 34px;
   }
 }
+
+
+/* ── Terminal: mobile-first usability ─────────────────────────── */
+.terminal-view { min-width: 0; max-width: 100%; overflow: hidden; }
+.terminal-page-header { flex: 0 0 auto; }
+.terminal-toolbar-actions { justify-content: flex-end; }
+.terminal-panel { min-width: 0; min-height: 240px; }
+.terminal-session-bar { min-height: 42px; flex: 0 0 auto; }
+.terminal-session-tabs { min-width: 0; scrollbar-width: none; }
+.terminal-session-tabs::-webkit-scrollbar { display: none; }
+.terminal-session-tab { flex: 0 0 auto; min-height: 42px; user-select: none; }
+.terminal-session-tab.active { box-shadow: inset 0 -2px #3b82f6; }
+.terminal-output { min-width: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.terminal-output > div { min-width: max-content; max-width: 100%; }
+.terminal-command-row { flex: 0 0 auto; min-width: 0; gap: 6px; }
+.terminal-prompt { flex: 0 0 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+.terminal-command-input { min-width: 0; width: 0; min-height: 36px; }
+.terminal-mobile-keybar { display: none; }
+
+@media (max-width: 680px) {
+  .terminal-view {
+    height: 100%;
+    min-height: 0;
+    padding: 10px 8px max(8px, env(safe-area-inset-bottom)) !important;
+    gap: 8px;
+  }
+  .terminal-page-header {
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 0 !important;
+  }
+  .terminal-page-header h1 { font-size: 18px !important; }
+  .terminal-page-header p { font-size: 10px !important; }
+  .terminal-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(36px, auto));
+    justify-content: end;
+    gap: 4px !important;
+  }
+  .terminal-toolbar-actions button {
+    min-height: 36px !important;
+    padding: 0 8px !important;
+    justify-content: center;
+  }
+  .terminal-panel {
+    flex: 1 1 0;
+    height: 0;
+    min-height: 0;
+    border-radius: 9px !important;
+  }
+  .terminal-session-bar { min-height: 44px; }
+  .terminal-session-tab {
+    min-height: 44px;
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+  .terminal-session-tab > button {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 18px;
+  }
+  .terminal-session-bar > div:last-child {
+    gap: 5px !important;
+    padding: 0 8px !important;
+  }
+  .terminal-session-bar > div:last-child span:last-of-type { font-size: 9px !important; }
+  .terminal-output {
+    padding: 12px 10px !important;
+    font-size: 12px !important;
+    touch-action: pan-x pan-y;
+  }
+  .terminal-output > div {
+    font-size: 12px !important;
+    line-height: 1.7 !important;
+    width: max-content;
+    min-width: 100%;
+    padding-bottom: 4px;
+  }
+  .terminal-command-row {
+    padding: 8px 9px !important;
+    gap: 5px;
+    align-items: center;
+  }
+  .terminal-prompt {
+    max-width: 100%;
+    font-size: 10px !important;
+    letter-spacing: -0.04em;
+  }
+  .terminal-command-input {
+    font-size: 16px !important; /* avoids iOS/Android WebView auto-zoom */
+    min-height: 42px;
+    padding: 0 3px;
+  }
+  .terminal-command-row > span:not(.terminal-prompt) { font-size: 9px !important; }
+  .terminal-mobile-keybar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px max(7px, env(safe-area-inset-bottom));
+    overflow-x: auto;
+    border-top: 1px solid #1f2333;
+    background: #111318;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .terminal-mobile-keybar::-webkit-scrollbar { display: none; }
+  .terminal-mobile-keybar button {
+    flex: 0 0 auto;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 11px;
+    border: 1px solid #2d3348;
+    border-radius: 7px;
+    background: #171a21;
+    color: #dce0e8;
+    font: 500 12px 'JetBrains Mono', monospace;
+    touch-action: manipulation;
+  }
+  .terminal-mobile-keybar button:active { background: #1e3a5f; }
+  .terminal-mobile-keybar button:disabled { opacity: .4; }
+  .terminal-mobile-keybar .terminal-mobile-run {
+    margin-left: auto;
+    min-width: 44px;
+    background: #14532d;
+    border-color: #166534;
+    color: #dcfce7;
+  }
+  .terminal-panel[style*="position: fixed"] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 380px) {
+  .terminal-view { padding-left: 5px !important; padding-right: 5px !important; }
+  .terminal-page-header p { display: none; }
+  .terminal-toolbar-actions { grid-template-columns: repeat(3, 34px); }
+  .terminal-toolbar-actions button { width: 34px; min-width: 34px; padding: 0 !important; font-size: 0 !important; }
+  .terminal-toolbar-actions button svg { width: 15px; height: 15px; }
+  .terminal-prompt { max-width: 84px; }
+  .terminal-mobile-keybar { gap: 4px; padding-left: 5px; padding-right: 5px; }
+  .terminal-mobile-keybar button { min-width: 36px; padding: 0 8px; }
+}
