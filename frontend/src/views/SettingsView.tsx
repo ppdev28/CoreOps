@@ -171,17 +171,17 @@ export default function SettingsView({
   const [settings, setSettings] = useState<WebSettings>(loadWebSettings);
   const [saved, setSaved] = useState(true);
   useEffect(() => {
-    document.documentElement.dataset.scpReduceMotion = settings.reduceMotion
+    document.documentElement.dataset.coreopsReduceMotion = settings.reduceMotion
       ? "true"
       : "false";
-    document.documentElement.dataset.scpCompact = settings.compact
+    document.documentElement.dataset.coreopsCompact = settings.compact
       ? "true"
       : "false";
   }, [settings.reduceMotion, settings.compact]);
   useEffect(
     () => () => {
-      delete document.documentElement.dataset.scpReduceMotion;
-      delete document.documentElement.dataset.scpCompact;
+      delete document.documentElement.dataset.coreopsReduceMotion;
+      delete document.documentElement.dataset.coreopsCompact;
     },
     [],
   );
@@ -373,7 +373,7 @@ export default function SettingsView({
               marginBottom: 14,
             }}
           >
-            SCP stores interface preferences locally in this browser. Server
+            CoreOps stores interface preferences locally in this browser. Server
             configuration, credentials and terminal data are not stored here.
           </div>
           <Btn variant="danger" size="xs" onClick={reset}>
