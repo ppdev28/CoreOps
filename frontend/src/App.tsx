@@ -967,9 +967,10 @@ export default function App() {
     [],
   );
   const navigate = useCallback((v: View) => {
-    setView(v);
+    // A container detail view needs a selected container ID; otherwise return to the list.
+    setView(v === "container-detail" && !selectedContainerId ? "containers" : v);
     setMobileOpen(false);
-  }, []);
+  }, [selectedContainerId]);
   const openContainerDetail = useCallback((id: string) => {
     setSelectedContainerId(id);
     setView("container-detail");
@@ -1113,12 +1114,16 @@ export default function App() {
             {view === "host" && <HostView />}{" "}
             {view === "containers" && (
               <ContainersView
-                onDetail={isNative ? openContainerDetail : () => navigate("container-detail")}
+                onDetail={openContainerDetail}
                 {...shell}
               />
             )}{" "}
-            {view === "container-detail" && (
-<ContainerDetail onBack={() => navigate("containers")} {...shell} />
+            {view === "container-detail" && selectedContainerId && (
+              <ContainerDetail
+                containerId={selectedContainerId}
+                onBack={() => navigate("containers")}
+                {...shell}
+              />
             )}{" "}
             {view === "applications" && (
               <ApplicationsView
