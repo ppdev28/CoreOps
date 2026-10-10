@@ -13,11 +13,10 @@ import {
   Server,
   Terminal,
 } from "lucide-react";
-import { T } from "../lib/tokens";
 import { getContainerDetail, runContainerAction } from "../lib/api";
 import type { ContainerDetailData, ConfirmDialog } from "../lib/types";
 import type { ContainerAction } from "../lib/api";
-import { Card, CardHeader, StatusBadge, Btn, HealthBadge } from "../components/ui";
+import { Card, CardHeader, StatusBadge, Btn } from "../components/ui";
 
 type Tab = "Overview" | "Network" | "Mounts" | "Environment" | "Inspect";
 
