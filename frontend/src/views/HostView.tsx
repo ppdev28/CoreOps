@@ -434,7 +434,7 @@ export default function HostView() {
         </Card>
       </div>
       <div style={{ marginTop: 12, fontSize: 10, color: T.textDim }}>
-        Storage reports the filesystem containing the SCP host root (`/`). CPU
+        Storage reports the filesystem containing the CoreOps host root (`/`). CPU
         usage is sampled by the backend when this page is refreshed.
       </div>
     </div>
