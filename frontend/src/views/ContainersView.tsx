@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import type { MouseEvent } from "react";
 import {
   Box,
   Plus,
-  Grid,
-  List,
   MoreHorizontal,
   Play,
   Square,
@@ -191,87 +190,97 @@ function CtxMenu({
   );
 }
 
-function GridCard({ c, onClick }: { c: Container; onClick: () => void }) {
-  const [hov, setHov] = useState(false);
+function MobileContainerCard({
+  c,
+  selected,
+  pendingAction,
+  onSelect,
+  onOpen,
+  onMenu,
+}: {
+  c: Container;
+  selected: boolean;
+  pendingAction?: ContainerAction;
+  onSelect: () => void;
+  onOpen: () => void;
+  onMenu: (e: MouseEvent<HTMLButtonElement>) => void;
+}) {
   return (
     <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
+      className="containers-mobile-card"
+      onClick={onOpen}
       style={{
-        background: hov ? T.hover : T.raised,
-        border: `1px solid ${hov ? T.borderStrong : T.border}`,
-        borderRadius: 10,
-        padding: "14px 16px",
-        cursor: "pointer",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
+        opacity: pendingAction ? 0.6 : 1,
+        cursor: pendingAction ? "wait" : "pointer",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: T.text,
-              fontFamily: "JetBrains Mono,monospace",
-              marginBottom: 4,
+      <div className="containers-mobile-card-head">
+        <div className="containers-mobile-card-title">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelect();
             }}
-          >
-            {c.name}
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: T.textDim,
-              fontFamily: "JetBrains Mono,monospace",
-            }}
-          >
-            {c.image}
+            onClick={(e) => e.stopPropagation()}
+            style={{ accentColor: T.accent, cursor: "pointer" }}
+            aria-label={`Select ${c.name}`}
+          />
+          <div className="containers-mobile-card-name-wrap">
+            <div className="containers-mobile-card-name">{c.name}</div>
+            <div className="containers-mobile-card-image">{c.image}</div>
           </div>
         </div>
-        <StatusBadge status={c.status} />
+        <div className="containers-mobile-card-actions">
+          <StatusBadge status={c.status} />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMenu(e);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: T.textDim,
+              padding: 6,
+              borderRadius: 6,
+              display: "inline-flex",
+            }}
+            aria-label={`Actions for ${c.name}`}
+          >
+            <MoreHorizontal size={18} strokeWidth={2.2} />
+          </button>
+        </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+
+      <div className="containers-mobile-card-health">
+        <HealthBadge health={c.health} />
+        {pendingAction && (
+          <span className="containers-mobile-card-pending">
+            {pendingAction[0].toUpperCase()}{pendingAction.slice(1)}ing…
+          </span>
+        )}
+      </div>
+
+      <div className="containers-mobile-metrics">
         {[
           { label: "CPU", value: c.cpu },
           { label: "Memory", value: c.memory },
           { label: "Network", value: c.net },
           { label: "Uptime", value: c.uptime },
-        ].map((r) => (
-          <div key={r.label}>
-            <div
-              style={{
-                fontSize: 10,
-                color: T.textDim,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 2,
-              }}
-            >
-              {r.label}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: T.textSub,
-                fontFamily: "JetBrains Mono,monospace",
-              }}
-            >
-              {r.value}
-            </div>
+          { label: "Ports", value: c.ports },
+          { label: "Restarts", value: String(c.restarts) },
+        ].map((item) => (
+          <div key={item.label} className="containers-mobile-metric">
+            <span>{item.label}</span>
+            <strong className={item.label === "Restarts" && c.restarts > 2 ? "warning" : ""}>
+              {item.value}
+            </strong>
           </div>
         ))}
       </div>
-      <HealthBadge health={c.health} />
     </div>
   );
 }
@@ -281,7 +290,7 @@ export default function ContainersView({
   addToast,
   onConfirm,
 }: {
-  onDetail: () => void;
+  onDetail: (id: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -290,7 +299,6 @@ export default function ContainersView({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
-  const [gridView, setGridView] = useState(false);
   const [ctx, setCtx] = useState<{ x: number; y: number; c: Container } | null>(
     null,
   );
@@ -306,7 +314,7 @@ export default function ContainersView({
       setContainers(await getContainers());
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to connect to SCP API",
+        err instanceof Error ? err.message : "Unable to connect to CoreOps API",
       );
     } finally {
       setLoading(false);
@@ -456,7 +464,7 @@ export default function ContainersView({
   };
 
   return (
-    <div style={{ padding: "22px 24px" }}>
+    <div className="containers-view" style={{ padding: "22px 24px" }}>
       {ctx && (
         <CtxMenu
           x={ctx.x}
@@ -466,7 +474,7 @@ export default function ContainersView({
           onAction={handleAction}
         />
       )}
-      <div style={{ marginBottom: 18 }}>
+      <div className="containers-header" style={{ marginBottom: 18 }}>
         <h1
           style={{
             fontSize: 17,
@@ -482,7 +490,7 @@ export default function ContainersView({
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+      <div className="containers-stats" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         {[
           { label: "Total", value: containers.length, color: T.text },
           { label: "Running", value: running, color: T.green },
@@ -491,6 +499,7 @@ export default function ContainersView({
         ].map((s) => (
           <div
             key={s.label}
+            className="containers-stat-card"
             style={{
               padding: "8px 14px",
               background: T.raised,
@@ -527,6 +536,7 @@ export default function ContainersView({
       </div>
 
       <div
+        className="containers-toolbar"
         style={{
           display: "flex",
           gap: 8,
@@ -551,46 +561,6 @@ export default function ContainersView({
           value={filter}
           onChange={setFilter}
         />
-        <div
-          style={{
-            display: "flex",
-            background: T.raised,
-            border: `1px solid ${T.border}`,
-            borderRadius: 7,
-            overflow: "hidden",
-          }}
-        >
-          <button
-            onClick={() => setGridView(false)}
-            style={{
-              padding: "0 10px",
-              height: 32,
-              background: !gridView ? T.active : "none",
-              border: "none",
-              cursor: "pointer",
-              color: !gridView ? T.text : T.textDim,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <List size={13} />
-          </button>
-          <button
-            onClick={() => setGridView(true)}
-            style={{
-              padding: "0 10px",
-              height: 32,
-              background: gridView ? T.active : "none",
-              border: "none",
-              cursor: "pointer",
-              color: gridView ? T.text : T.textDim,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Grid size={13} />
-          </button>
-        </div>
         <div style={{ flex: 1 }} />
         <Btn
           icon={<RefreshCw size={11} />}
@@ -666,31 +636,41 @@ export default function ContainersView({
             </div>
           </div>
         </Card>
-      ) : gridView ? (
-        rows.length > 0 ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-              gap: 10,
-            }}
-          >
-            {rows.map((c) => (
-              <GridCard key={c.id} c={c} onClick={onDetail} />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <EmptyState
-              icon={<Box size={28} />}
-              title="No containers found"
-              sub="Adjust your search or filter criteria."
-            />
-          </Card>
-        )
       ) : (
-        <Card>
-          <div style={{ overflowX: "auto" }}>
+        <>
+          <div className="containers-mobile-list">
+            {rows.length > 0 ? (
+              rows.map((c) => (
+                <MobileContainerCard
+                  key={c.id}
+                  c={c}
+                  selected={selected.has(c.id)}
+                  pendingAction={pendingActions.get(c.id)}
+                  onSelect={() =>
+                    setSelected((prev) => {
+                      const s = new Set(prev);
+                      s.has(c.id) ? s.delete(c.id) : s.add(c.id);
+                      return s;
+                    })
+                  }
+                  onOpen={() => onDetail(c.id)}
+                  onMenu={(e) => setCtx({ x: e.clientX, y: e.clientY, c })}
+                />
+              ))
+            ) : (
+              <Card>
+                <EmptyState
+                  icon={<Box size={28} />}
+                  title="No containers found"
+                  sub="Adjust your search or filter criteria."
+                />
+              </Card>
+            )}
+          </div>
+
+          <div className="containers-desktop-table">
+          <Card>
+          <div className="containers-table-scroll">
             <table
               style={{
                 width: "100%",
@@ -738,7 +718,7 @@ export default function ContainersView({
                         e.preventDefault();
                         setCtx({ x: e.clientX, y: e.clientY, c });
                       }}
-                      onClick={onDetail}
+                      onClick={() => onDetail(c.id)}
                       style={{
                         cursor: pendingAction ? "wait" : "pointer",
                         opacity: pendingAction ? 0.6 : 1,
@@ -852,6 +832,8 @@ export default function ContainersView({
             />
           )}
         </Card>
+        </div>
+        </>
       )}
     </div>
   );
