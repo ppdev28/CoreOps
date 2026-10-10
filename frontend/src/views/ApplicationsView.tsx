@@ -403,11 +403,11 @@ export default function ApplicationsView({
               lineHeight: 1.7,
             }}
           >
-            SCP groups Docker Compose projects into applications using the{" "}
+            CoreOps groups Docker Compose projects into applications using the{" "}
             <code style={{ color: T.textSub }}>com.docker.compose.project</code>{" "}
             label. Standalone containers are exposed as single-container
             applications. Custom{" "}
-            <code style={{ color: T.textSub }}>scp.application.*</code> labels
+            <code style={{ color: T.textSub }}>coreops.application.*</code> labels
             can provide a friendly name, category, description and icon.
           </div>
         </Card>
