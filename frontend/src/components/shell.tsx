@@ -139,7 +139,7 @@ export function Sidebar({
           padding: collapsed ? "14px 14px" : "14px 16px",
           height: 52,
           flexShrink: 0,
-          borderBottom: `1px solid ${T.borderRight}`,
+          borderBottom: `1px solid ${T.border}`,
         }}
       >
         <div
@@ -392,7 +392,7 @@ export function Header({
       style={{
         height: 52,
         background: T.bgHeader,
-        borderBottom: `1px solid ${T.borderHeader}`,
+        borderBottom: `1px solid rgb(148, 179, 255)`,
         display: "flex",
         alignItems: "center",
         padding: "0 18px",
