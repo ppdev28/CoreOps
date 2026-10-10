@@ -1981,14 +1981,24 @@ body,
 }
 .termx-immersive .termx-input-area {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
   width: 100%;
   margin: 0;
   border-radius: 0;
   padding: 10px 14px max(8px, env(safe-area-inset-bottom));
 }
 .termx-immersive .termx-input-card {
+  width: min(100%, 960px);
+  margin-inline: auto;
   border-radius: 7px;
   box-shadow: none;
+}
+.termx-immersive .termx-input-footer {
+  width: min(100%, 960px);
+  margin-inline: auto;
 }
 .termx-immersive .termx-welcome-chips { display: none !important; }
 @media (max-width: 680px) {
