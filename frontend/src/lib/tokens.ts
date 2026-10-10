@@ -86,10 +86,6 @@ export const T = {
   get border() {
     return palette().border;
   },
-  // Used by the shared web header; keep it aligned with the original web palette.
-  get borderHeader() {
-    return palette().border;
-  },
   get borderRight() {
     return palette().borderRight;
   },
