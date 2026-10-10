@@ -920,13 +920,16 @@ function DashboardView({
 }
 
 export default function App() {
+  // This branch is the browser/PWA build; the Android shell lives in capacitor-native.
+  const isNative = false;
   const [view, setView] = useState<View>("dashboard"),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [showCmd, setShowCmd] = useState(false),
     [toasts, setToasts] = useState<Toast[]>([]),
     [confirm, setConfirm] = useState<ConfirmDialog | null>(null),
-    [settings, setSettings] = useState(loadWebSettings);
+    [settings, setSettings] = useState(loadWebSettings),
+    [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   useEffect(() => subscribeWebSettings(setSettings), []);
   const playNotificationSound = useCallback(() => {
     try {
@@ -967,6 +970,22 @@ export default function App() {
     setView(v);
     setMobileOpen(false);
   }, []);
+  const openContainerDetail = useCallback((id: string) => {
+    setSelectedContainerId(id);
+    setView("container-detail");
+    setMobileOpen(false);
+  }, []);
+  useEffect(() => {
+    const handleNativeNavigation = (event: Event) => {
+      const view = (event as CustomEvent<{ view?: View }>).detail?.view;
+      if (!view) return;
+      navigate(view);
+    };
+
+    window.addEventListener("coreops-native-navigate", handleNativeNavigation);
+    return () =>
+      window.removeEventListener("coreops-native-navigate", handleNativeNavigation);
+  }, [navigate]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (
@@ -1017,45 +1036,49 @@ export default function App() {
           />
         )}
         <ToastStack toasts={toasts} onRemove={removeToast} />
-        <div
-          className="sidebar-desktop"
-          style={{ flexShrink: 0, position: "relative" }}
-        >
-          <Sidebar
-            view={view}
-            onNavigate={navigate}
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((v) => !v)}
-          />
-        </div>
-        {mobileOpen && (
+        {!isNative && (
           <>
             <div
-              onClick={() => setMobileOpen(false)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,.55)",
-                zIndex: 100,
-              }}
-            />
-            <div
-              style={{
-                position: "fixed",
-                left: 0,
-                top: 0,
-                height: "100%",
-                zIndex: 101,
-                display: "flex",
-              }}
+              className="sidebar-desktop"
+              style={{ flexShrink: 0, position: "relative" }}
             >
               <Sidebar
                 view={view}
                 onNavigate={navigate}
-                collapsed={false}
-                onToggle={() => setMobileOpen(false)}
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((v) => !v)}
               />
             </div>
+            {mobileOpen && (
+              <>
+                <div
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    background: "rgba(0,0,0,.55)",
+                    zIndex: 100,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "fixed",
+                    left: 0,
+                    top: 0,
+                    height: "100%",
+                    zIndex: 101,
+                    display: "flex",
+                  }}
+                >
+                  <Sidebar
+                    view={view}
+                    onNavigate={navigate}
+                    collapsed={false}
+                    onToggle={() => setMobileOpen(false)}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
         <div
@@ -1067,16 +1090,21 @@ export default function App() {
             minWidth: 0,
           }}
         >
-          <Header
-            onCmd={() => setShowCmd(true)}
-            onMenuToggle={() => setMobileOpen((v) => !v)}
-          />
+          {!isNative && (
+            <Header
+              onCmd={() => setShowCmd(true)}
+              onMenuToggle={() => setMobileOpen((v) => !v)}
+            />
+          )}
           <main
+            className="coreops-main"
             style={{
               flex: 1,
-              overflowY: "auto",
+              overflowY: view === "terminal" ? "hidden" : "auto",
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
+              padding: view === "terminal" ? 0 : undefined,
             }}
           >
             {view === "dashboard" && (
@@ -1085,15 +1113,12 @@ export default function App() {
             {view === "host" && <HostView />}{" "}
             {view === "containers" && (
               <ContainersView
-                onDetail={() => navigate("container-detail")}
+                onDetail={isNative ? openContainerDetail : () => navigate("container-detail")}
                 {...shell}
               />
             )}{" "}
             {view === "container-detail" && (
-              <ContainerDetail
-                onBack={() => navigate("containers")}
-                {...shell}
-              />
+<ContainerDetail onBack={() => navigate("containers")} {...shell} />
             )}{" "}
             {view === "applications" && (
               <ApplicationsView
