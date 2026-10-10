@@ -950,12 +950,6 @@ body,
   box-sizing: border-box;
 }
 
-/* View roots often carry legacy inline max-width values. Override those at the
-   shell boundary so every screen uses the complete content area; nested cards
-   and dialogs keep their own intentional sizing. */
-.coreops-main > :not(.termx-immersive) > :first-child {
-  max-width: none;
-}
 
 .containers-view {
   width: 100%;
