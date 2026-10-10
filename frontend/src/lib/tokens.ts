@@ -4,14 +4,15 @@ import { loadWebSettings } from "./webSettings";
 
 const DARK = {
   bg: "#1c1e25",
-  bgSidebar: "rgb(6,6,6)",
-  bgHeader: "rgb(13, 19, 32)",
+  bgHeader: "rgb(21, 22, 24)",
+  bgSidebar: "rgb(0,0,0)",
   raised: "rgb(7, 7, 8)",
   overlay: "#171a21",
   hover: "#1a1d26",
   active: "#1f2330",
   border: "rgb(38, 44, 59)",
-  borderRight: "rgb(102, 133, 175)",
+  borderHeader: "rgb(36 51 69)",
+  borderRight: "rgb(73, 94, 122)",
   borderMuted: "#181b27",
   borderStrong: "#2d3348",
   text: "#eaecf0",
@@ -27,13 +28,14 @@ const DARK = {
 
 const LIGHT = {
   bg: "#f1f3f8",
+  bgHeader: "rgb(20, 22, 27)",
   bgSidebar: "#ffffff",
-  bgHeader: "#ffffff",
   raised: "#ffffff",
   overlay: "#f8fafc",
   hover: "#e8edf5",
   active: "#e2eaf8",
   border: "#d6dce7",
+  borderHeader: "rgb(38, 44, 59)",
   borderRight: "#b8c7de",
   borderMuted: "#e7ebf2",
   borderStrong: "#b7c2d4",
@@ -65,11 +67,11 @@ export const T = {
   get bg() {
     return palette().bg;
   },
-  get bgSidebar() {
-    return palette().bgSidebar;
-  },
   get bgHeader() {
     return palette().bgHeader;
+  },
+  get bgSidebar() {
+    return palette().bgSidebar;
   },
   get raised() {
     return palette().raised;
@@ -85,6 +87,9 @@ export const T = {
   },
   get border() {
     return palette().border;
+  },
+  get borderHeader() {
+    return palette().borderHeader;
   },
   get borderRight() {
     return palette().borderRight;
