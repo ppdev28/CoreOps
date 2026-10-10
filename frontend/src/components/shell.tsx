@@ -139,7 +139,7 @@ export function Sidebar({
           padding: collapsed ? "14px 14px" : "14px 16px",
           height: 52,
           flexShrink: 0,
-          borderBottom: `1px solid ${T.border}`,
+          borderBottom: `1px solid ${T.borderRight}`,
         }}
       >
         <div
@@ -148,7 +148,7 @@ export function Sidebar({
             height: 24,
             borderRadius: 7,
             flexShrink: 0,
-            background: "linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)",
+            background: "linear-gradient(155deg, rgb(0, 97, 255) 24.79%, rgba(19, 37, 54, 1) 34.45%, rgb(0, 149, 255) 84.87%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -168,7 +168,7 @@ export function Sidebar({
                 overflow: "hidden",
               }}
             >
-              Server Control
+              CoreOps
             </span>
             <button
               onClick={onToggle}
@@ -392,7 +392,7 @@ export function Header({
       style={{
         height: 52,
         background: T.bgHeader,
-        borderBottom: `1px solid rgb(148, 179, 255)`,
+        borderBottom: `1px solid ${T.borderHeader}`,
         display: "flex",
         alignItems: "center",
         padding: "0 18px",
