@@ -1004,10 +1004,6 @@ body,
 /* On phones the list becomes cards; there is never a horizontal
    page-level scroll caused by the desktop table. */
 @media (max-width: 680px) {
-  .coreops-main > div:not(.terminal-view) {
-    box-sizing: border-box !important;
-  }
-
   .containers-view {
     width: 100% !important;
     padding-left: 12px !important;
