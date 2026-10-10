@@ -1,6 +1,7 @@
 import type {
   Container,
   ContainerStatus,
+  ContainerDetailData,
   HealthStatus,
   HostOverview,
   NetworkOverview,
@@ -64,7 +65,9 @@ export interface ApplyUpdatesResponse {
   packages: string[];
   output: string;
 }
-const apiBase = "/api/v1";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+// The web app uses the same-origin Vite proxy in development and /api/v1 in production.
+const apiBase = configuredApiBase || "/api/v1";
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
     case "running":
@@ -140,14 +143,44 @@ function toApplication(app: ApiApplication): AppService {
   };
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBase}${path}`, init);
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(body?.error || `SCP API returned ${response.status}`);
+  const url = `${apiBase}${path}`;
+  let response: Response;
+
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
+    );
   }
-  return response.json() as Promise<T>;
+
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
+
+  if (!response.ok) {
+    let body: { error?: string } | null = null;
+    try {
+      body = JSON.parse(bodyText) as { error?: string };
+    } catch {
+      // Keep the HTTP status when the server returned HTML or another non-JSON body.
+    }
+    throw new Error(
+      body?.error ||
+        `CoreOps API returned ${response.status} (${contentType || "unknown content type"})`,
+    );
+  }
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      `CoreOps API returned a non-JSON response from ${url}. Check the API base URL; the server returned ${contentType || "unknown content type"}.`,
+    );
+  }
+
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`CoreOps API returned invalid JSON from ${url}`);
+  }
 }
 export async function getHost(): Promise<HostOverview> {
   return request("/host");
@@ -155,6 +188,14 @@ export async function getHost(): Promise<HostOverview> {
 export async function getContainers(): Promise<Container[]> {
   const containers = await request<ApiContainer[]>("/containers");
   return containers.map(toContainer);
+}
+
+export async function getContainerDetail(
+  id: string,
+): Promise<ContainerDetailData> {
+  return request(
+    `/containers/${encodeURIComponent(id)}`,
+  );
 }
 export async function runContainerAction(
   id: string,
@@ -165,7 +206,7 @@ export async function runContainerAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id)
-    throw new Error("SCP API returned an invalid container action response");
+    throw new Error("CoreOps API returned an invalid container action response");
 }
 export async function getApplications(): Promise<AppService[]> {
   const applications = await request<ApiApplication[]>("/applications");
@@ -180,7 +221,7 @@ export async function runApplicationAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id || response.action !== action)
-    throw new Error("SCP API returned an invalid application action response");
+    throw new Error("CoreOps API returned an invalid application action response");
 }
 export async function getServices(): Promise<SystemService[]> {
   return request("/services");
@@ -194,7 +235,7 @@ export async function runServiceAction(
     { method: "POST" },
   );
   if (!response.ok || response.name !== name || response.action !== action)
-    throw new Error("SCP API returned an invalid service action response");
+    throw new Error("CoreOps API returned an invalid service action response");
 }
 export async function getStorage(): Promise<StorageOverview> {
   return request("/storage");
@@ -226,7 +267,7 @@ export async function terminateSecuritySession(pid: number): Promise<void> {
     { method: "POST" },
   );
   if (!response.ok || response.pid !== pid)
-    throw new Error("SCP API returned an invalid session response");
+    throw new Error("CoreOps API returned an invalid session response");
 }
 export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
   const response = await request<{ ok: boolean; item: string }>(
@@ -234,7 +275,7 @@ export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
     { method: "POST" },
   );
   if (!response.ok || response.item !== item)
-    throw new Error("SCP API returned an invalid security fix response");
+    throw new Error("CoreOps API returned an invalid security fix response");
 }
 export async function getVirtualMachines(): Promise<VirtualMachine[]> {
   return request("/virtual-machines");
@@ -249,7 +290,7 @@ export async function runVirtualMachineAction(
   );
   if (!response.ok || response.name !== name || response.action !== action)
     throw new Error(
-      "SCP API returned an invalid virtual machine action response",
+      "CoreOps API returned an invalid virtual machine action response",
     );
 }
 export async function execTerminal(
