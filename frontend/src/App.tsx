@@ -968,7 +968,9 @@ export default function App() {
   );
   const navigate = useCallback((v: View) => {
     // A container detail view needs a selected container ID; otherwise return to the list.
-    setView(v === "container-detail" && !selectedContainerId ? "containers" : v);
+    const nextView = v === "container-detail" && !selectedContainerId ? "containers" : v;
+    setView(nextView);
+    if (nextView !== "container-detail") setSelectedContainerId(null);
     setMobileOpen(false);
   }, [selectedContainerId]);
   const openContainerDetail = useCallback((id: string) => {
