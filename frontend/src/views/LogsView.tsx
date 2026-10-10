@@ -89,7 +89,7 @@ export default function LogsView() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `scp-logs-${new Date().toISOString().replace(/[:.]/g, "-")}.log`;
+    anchor.download = `coreops-logs-${new Date().toISOString().replace(/[:.]/g, "-")}.log`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
