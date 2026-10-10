@@ -937,6 +937,16 @@ body,
   min-width: 0;
 }
 
+/* Web screens should use the full content viewport, not inherit a centered
+   max-width from a nested/mobile layout. Individual cards may still constrain
+   their own internal content. */
+.coreops-main > :not(.termx-immersive) {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .containers-view {
   width: 100%;
   max-width: 100%;
@@ -1829,13 +1839,23 @@ body,
   padding: 10px 14px max(8px, env(safe-area-inset-bottom));
 }
 .termx-immersive .termx-input-card {
-  width: min(100%, 960px);
+  width: min(100%, 1200px);
+  min-height: 68px;
   margin-inline: auto;
-  border-radius: 7px;
+  padding: 10px 12px 10px 18px;
+  border-radius: 9px;
   box-shadow: none;
 }
-.termx-immersive .termx-input-footer {
-  width: min(100%, 960px);
+.termx-immersive .termx-input-card input {
+  min-height: 48px;
+  font-size: 15px;
+}
+.termx-immersive .termx-run-button {
+  min-width: 48px;
+  min-height: 48px;
+}
+ .termx-immersive .termx-input-footer {
+  width: min(100%, 1200px);
   margin-inline: auto;
 }
 .termx-immersive .termx-welcome-chips { display: none !important; }
