@@ -22,10 +22,10 @@ import type { SecurityOverview } from "../lib/types";
 
 if (
   typeof document !== "undefined" &&
-  !document.getElementById("scp-sidebar-icon-hover-fix")
+  !document.getElementById("coreops-sidebar-icon-hover-fix")
 ) {
   const style = document.createElement("style");
-  style.id = "scp-sidebar-icon-hover-fix";
+  style.id = "coreops-sidebar-icon-hover-fix";
   style.textContent = `
     aside > div:first-child > button:last-child{right:3px!important;top:26px!important;z-index:30!important}
     aside > div:first-child > div:first-child:hover ~ button:last-child,

@@ -1,4 +1,4 @@
-module github.com/ppdev28/SCP/backend
+module github.com/ppdev28/CoreOps/backend
 
 go 1.24.0
 

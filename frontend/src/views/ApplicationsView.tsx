@@ -36,59 +36,6 @@ const CATS = [
   "Storage",
   "Security",
 ];
-type CatalogApp = { name: string; desc: string; cat: string; icon: string };
-
-const APP_CATALOG: CatalogApp[] = [
-  {
-    name: "Vaultwarden",
-    desc: "Lightweight Bitwarden-compatible password manager",
-    cat: "Security",
-    icon: "🔐",
-  },
-  {
-    name: "Immich",
-    desc: "High-performance self-hosted photo and video backup",
-    cat: "Media",
-    icon: "📷",
-  },
-  {
-    name: "Jellyfin",
-    desc: "Free software media streaming platform",
-    cat: "Media",
-    icon: "📺",
-  },
-  {
-    name: "Home Assistant",
-    desc: "Open-source home automation",
-    cat: "Automation",
-    icon: "🏠",
-  },
-  {
-    name: "Gitea",
-    desc: "Lightweight self-hosted Git service",
-    cat: "Development",
-    icon: "🐙",
-  },
-  {
-    name: "Portainer",
-    desc: "Container management UI",
-    cat: "Web",
-    icon: "🐳",
-  },
-  {
-    name: "Uptime Kuma",
-    desc: "Self-hosted uptime monitoring",
-    cat: "Monitoring",
-    icon: "📡",
-  },
-  {
-    name: "n8n",
-    desc: "Workflow automation platform",
-    cat: "Automation",
-    icon: "⚙",
-  },
-];
-
 const normalize = (value: string) =>
   value
     .normalize("NFD")
@@ -154,7 +101,6 @@ export default function ApplicationsView({
   onDetail?: () => void;
   addToast: (m: string, t: any) => void;
 }) {
-  const [tab, setTab] = useState<"installed" | "available">("installed");
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("All");
   const [apps, setApps] = useState<AppService[]>([]);
@@ -201,19 +147,6 @@ export default function ApplicationsView({
         ].some((value) => normalize(value).includes(query));
       }),
     [apps, cat, query],
-  );
-
-  const filteredAvailable = useMemo(
-    () =>
-      APP_CATALOG.filter(
-        (app) =>
-          (cat === "All" || app.cat === cat) &&
-          (!query ||
-            [app.name, app.desc, app.cat].some((value) =>
-              normalize(value).includes(query),
-            )),
-      ),
-    [cat, query],
   );
 
   async function actionApp(app: AppService, verb: ApplicationAction) {
@@ -403,12 +336,12 @@ export default function ApplicationsView({
               lineHeight: 1.7,
             }}
           >
-            SCP groups Docker Compose projects into applications using the{" "}
+            CoreOps groups Docker Compose projects into applications using the{" "}
             <code style={{ color: T.textSub }}>com.docker.compose.project</code>{" "}
             label. Standalone containers are exposed as single-container
             applications. Custom{" "}
-            <code style={{ color: T.textSub }}>scp.application.*</code> labels
-            can provide a friendly name, category, description and icon.
+            <code style={{ color: T.textSub }}>coreops.application.*</code>{" "}
+            labels can provide a friendly name, category, description and icon.
           </div>
         </Card>
       </div>
@@ -447,52 +380,6 @@ export default function ApplicationsView({
       <div
         style={{
           display: "flex",
-          borderBottom: `1px solid ${T.border}`,
-          marginBottom: 18,
-        }}
-      >
-        <button
-          key="installed"
-          onClick={() => setTab("installed")}
-          style={{
-            padding: "8px 16px",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 12,
-            fontWeight: 500,
-            color: tab === "installed" ? T.text : T.textDim,
-            textTransform: "capitalize",
-            borderBottom: `2px solid ${tab === "installed" ? T.accent : "transparent"}`,
-            marginBottom: -1,
-            fontFamily: "Inter,sans-serif",
-          }}
-        >
-          Installed ({apps.length})
-        </button>
-        <button
-          key="available"
-          onClick={() => setTab("available")}
-          style={{
-            padding: "8px 16px",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 12,
-            fontWeight: 500,
-            color: tab === "available" ? T.text : T.textDim,
-            textTransform: "capitalize",
-            borderBottom: `2px solid ${tab === "available" ? T.accent : "transparent"}`,
-            marginBottom: -1,
-            fontFamily: "Inter,sans-serif",
-          }}
-        >
-          Available
-        </button>
-      </div>
-      <div
-        style={{
-          display: "flex",
           gap: 8,
           marginBottom: 16,
           flexWrap: "wrap",
@@ -502,7 +389,7 @@ export default function ApplicationsView({
         <Input
           value={search}
           onChange={setSearch}
-          placeholder={`Search ${tab} apps…`}
+          placeholder="Search applications…"
           icon={<Search size={12} />}
           style={{ maxWidth: 300 }}
         />
@@ -537,14 +424,14 @@ export default function ApplicationsView({
           />
         </div>
       )}
-      {tab === "installed" && loading ? (
+      {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} h={76} r={10} />
           ))}
         </div>
       ) : null}
-      {tab === "installed" && !loading && !error && (
+      {!loading && !error && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filteredInstalled.length === 0 ? (
             <Card>
@@ -659,66 +546,6 @@ export default function ApplicationsView({
               </div>
             ))
           )}
-        </div>
-      )}
-      {tab === "available" && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
-            gap: 10,
-          }}
-        >
-          {filteredAvailable.map((app) => (
-            <Card key={app.name}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 8,
-                }}
-              >
-                <div style={{ fontSize: 24 }}>{app.icon}</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
-                    {app.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: T.textDim,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {app.cat}
-                  </div>
-                </div>
-              </div>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: T.textDim,
-                  lineHeight: 1.6,
-                  margin: "0 0 12px",
-                }}
-              >
-                {app.desc}
-              </p>
-              <Btn
-                variant="primary"
-                size="xs"
-                onClick={() =>
-                  addToast(
-                    `Install ${app.name} is not wired yet — catalog only`,
-                    "info",
-                  )
-                }
-              >
-                Install
-              </Btn>
-            </Card>
-          ))}
         </div>
       )}
     </div>

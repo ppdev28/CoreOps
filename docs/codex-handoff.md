@@ -1,6 +1,6 @@
 # Codex Handoff
 
-This file is the short operational handoff for continuing SCP work in Codex without losing the context of the current development conversation.
+This file is the short operational handoff for continuing CoreOps work in Codex without losing the context of the current development conversation.
 
 ## Where we are
 
@@ -11,18 +11,14 @@ The Figma Make design for **Server Control Center Dashboard** was used as the vi
 The repository is:
 
 ```text
-https://github.com/ppdev28/SCP
+https://github.com/ppdev28/CoreOps
 ```
 
-The active development branch is:
-
-```text
-feature/project-foundation
-```
+The branch with the latest work is `capacitor-native` (it includes the auth, backend refactor and native shells); earlier work happened on `feature/project-foundation`.
 
 The latest important milestone is:
 
-> The Containers view displays real containers and its start, stop and restart operations have been manually verified against the developer's Ubuntu Server Docker Engine through the SCP Go API.
+> The Containers view displays real containers and its start, stop and restart operations have been manually verified against the developer's Ubuntu Server Docker Engine through the CoreOps Go API.
 
 ## Current architecture
 
@@ -36,7 +32,7 @@ React + TypeScript + Vite
        |
        | /api/* via Vite dev proxy
        v
-Go SCP API :8080
+Go CoreOps API :8082
        |
        v
 Docker client / infrastructure adapters
@@ -50,7 +46,13 @@ real containers
 
 The browser must never talk directly to Docker Engine.
 
+## Authentication
+
+All API calls except health and login need a session. Create a user with `printf '%s' "<password>" | go run ./cmd/coreops-api user add <name> admin` (from `backend/`), then sign in from the UI. When adding endpoints, register them in `backend/cmd/coreops-api/routes.go` with the lowest role that is safe, and keep the UI error handling for 403.
+
 ## Current working endpoints
+
+The full list lives in `docs/current-state.md`. The original slice was:
 
 ```text
 GET /api/v1/health
@@ -68,7 +70,7 @@ Containers returns real Docker container information including ID, name, image, 
 
 The Containers screen:
 
-- calls the SCP API rather than using Figma mock data;
+- calls the CoreOps API rather than using Figma mock data;
 - adapts API data into the UI model;
 - shows loading and error states;
 - supports retry/refresh;
@@ -90,7 +92,7 @@ All future infrastructure actions should follow the same pattern: validate the t
 Run:
 
 ```bash
-cd ~/proyectos/SCP
+cd ~/proyectos/CoreOps
 git status
 git branch --show-current
 git log --oneline -10
@@ -111,7 +113,7 @@ Do not assume that this document is more authoritative than the code. If code an
 
 ## Important implementation philosophy
 
-SCP is intended to become a genuinely useful professional DevOps/sysadmin/cloud operations tool, not an imitation of Portainer with a different skin.
+CoreOps is intended to become a genuinely useful professional DevOps/sysadmin/cloud operations tool, not an imitation of Portainer with a different skin.
 
 Favor capabilities that compose into complete workflows:
 

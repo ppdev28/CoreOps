@@ -1,6 +1,13 @@
+import {
+  getAuthToken,
+  getServerUrl,
+  setSession,
+  type AuthSession,
+} from "./auth";
 import type {
   Container,
   ContainerStatus,
+  ContainerDetailData,
   HealthStatus,
   HostOverview,
   NetworkOverview,
@@ -64,7 +71,18 @@ export interface ApplyUpdatesResponse {
   packages: string[];
   output: string;
 }
-const apiBase = "/api/v1";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+  /\/+$/,
+  "",
+);
+// Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
+// proxy, so native builds (and anyone pointing the UI at another server) use the
+// server address saved on the login screen. VITE_API_BASE_URL overrides both.
+function getApiBase(): string {
+  if (configuredApiBase) return configuredApiBase;
+  const server = getServerUrl();
+  return server ? `${server}/api/v1` : "/api/v1";
+}
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
     case "running":
@@ -140,14 +158,74 @@ function toApplication(app: ApiApplication): AppService {
   };
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBase}${path}`, init);
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(body?.error || `SCP API returned ${response.status}`);
+  const apiBase = getApiBase();
+  const url = `${apiBase}${path}`;
+  let response: Response;
+
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  try {
+    response = await fetch(url, { ...init, headers });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
+    );
   }
-  return response.json() as Promise<T>;
+
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
+
+  if (response.status === 401 && token) {
+    // The session expired or was revoked; send the user back to the login screen.
+    setSession(null);
+  }
+
+  if (!response.ok) {
+    let body: { error?: string } | null = null;
+    try {
+      body = JSON.parse(bodyText) as { error?: string };
+    } catch {
+      // Keep the HTTP status when the server returned HTML or another non-JSON body.
+    }
+    throw new Error(
+      body?.error ||
+        `CoreOps API returned ${response.status} (${contentType || "unknown content type"})`,
+    );
+  }
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      `CoreOps API returned a non-JSON response from ${url}. Check the API base URL; the server returned ${contentType || "unknown content type"}.`,
+    );
+  }
+
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`CoreOps API returned invalid JSON from ${url}`);
+  }
+}
+export async function login(
+  username: string,
+  password: string,
+): Promise<AuthSession> {
+  const session = await request<AuthSession>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  setSession(session);
+  return session;
+}
+export async function logout(): Promise<void> {
+  try {
+    await request("/auth/logout", { method: "POST" });
+  } catch {
+    // The local session is dropped regardless of the server response.
+  }
+  setSession(null);
 }
 export async function getHost(): Promise<HostOverview> {
   return request("/host");
@@ -155,6 +233,12 @@ export async function getHost(): Promise<HostOverview> {
 export async function getContainers(): Promise<Container[]> {
   const containers = await request<ApiContainer[]>("/containers");
   return containers.map(toContainer);
+}
+
+export async function getContainerDetail(
+  id: string,
+): Promise<ContainerDetailData> {
+  return request(`/containers/${encodeURIComponent(id)}`);
 }
 export async function runContainerAction(
   id: string,
@@ -165,7 +249,9 @@ export async function runContainerAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id)
-    throw new Error("SCP API returned an invalid container action response");
+    throw new Error(
+      "CoreOps API returned an invalid container action response",
+    );
 }
 export async function getApplications(): Promise<AppService[]> {
   const applications = await request<ApiApplication[]>("/applications");
@@ -180,7 +266,9 @@ export async function runApplicationAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id || response.action !== action)
-    throw new Error("SCP API returned an invalid application action response");
+    throw new Error(
+      "CoreOps API returned an invalid application action response",
+    );
 }
 export async function getServices(): Promise<SystemService[]> {
   return request("/services");
@@ -194,7 +282,7 @@ export async function runServiceAction(
     { method: "POST" },
   );
   if (!response.ok || response.name !== name || response.action !== action)
-    throw new Error("SCP API returned an invalid service action response");
+    throw new Error("CoreOps API returned an invalid service action response");
 }
 export async function getStorage(): Promise<StorageOverview> {
   return request("/storage");
@@ -226,7 +314,7 @@ export async function terminateSecuritySession(pid: number): Promise<void> {
     { method: "POST" },
   );
   if (!response.ok || response.pid !== pid)
-    throw new Error("SCP API returned an invalid session response");
+    throw new Error("CoreOps API returned an invalid session response");
 }
 export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
   const response = await request<{ ok: boolean; item: string }>(
@@ -234,7 +322,7 @@ export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
     { method: "POST" },
   );
   if (!response.ok || response.item !== item)
-    throw new Error("SCP API returned an invalid security fix response");
+    throw new Error("CoreOps API returned an invalid security fix response");
 }
 export async function getVirtualMachines(): Promise<VirtualMachine[]> {
   return request("/virtual-machines");
@@ -249,7 +337,7 @@ export async function runVirtualMachineAction(
   );
   if (!response.ok || response.name !== name || response.action !== action)
     throw new Error(
-      "SCP API returned an invalid virtual machine action response",
+      "CoreOps API returned an invalid virtual machine action response",
     );
 }
 export async function execTerminal(
