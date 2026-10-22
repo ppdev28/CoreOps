@@ -27,7 +27,6 @@ const lazyView = <C extends ComponentType<any>>(
 const RealDashboardView = lazyView(() => import("./views/DashboardView"));
 const ContainersView = lazyView(() => import("./views/ContainersView"));
 const ContainerDetail = lazyView(() => import("./views/ContainerDetail"));
-const NativeContainerDetail = lazyView(() => import("./views/NativeContainerDetail"));
 const HostView = lazyView(() => import("./views/HostView"));
 const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
 const ServicesView = lazyView(() => import("./views/ServicesView"));
@@ -245,28 +244,20 @@ function AppShell({ user }: { user: AuthUser }) {
             {view === "host" && <HostView />}{" "}
             {view === "containers" && (
               <ContainersView
-                onDetail={isNative ? openContainerDetail : () => navigate("container-detail")}
+                onDetail={openContainerDetail}
                 {...shell}
               />
             )}{" "}
-            {view === "container-detail" && (
-              isNative && selectedContainerId ? (
-                <NativeContainerDetail
-                  containerId={selectedContainerId}
-                  onBack={() => navigate("containers")}
-                  {...shell}
-                />
-              ) : (
-                <ContainerDetail onBack={() => navigate("containers")} {...shell} />
-              )
-            )}{" "}
-            {view === "applications" && (
-              <ApplicationsView
-                onDetail={() => navigate("app-detail")}
-                addToast={addToast}
+            {view === "container-detail" && selectedContainerId && (
+              <ContainerDetail
+                containerId={selectedContainerId}
+                onBack={() => navigate("containers")}
+                {...shell}
               />
             )}{" "}
-            {view === "app-detail" && <ApplicationsView addToast={addToast} />}{" "}
+            {view === "applications" && (
+              <ApplicationsView addToast={addToast} />
+            )}{" "}
             {view === "services" && <ServicesView {...shell} />}{" "}
             {view === "storage" && <StorageView {...shell} />}{" "}
             {view === "network" && <NetworkView />}{" "}

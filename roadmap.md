@@ -30,7 +30,7 @@ Marca `[x]` lo hecho y `[ ]` lo pendiente. Prioridad: **P0** bloqueante/segurida
 - [x] **P2 — `MainActivity.kt`**: `EdgeToEdge.enable` está comentado (parche manual); decidir el comportamiento de insets y dejarlo limpio.
 - [ ] **P2 — `frontend/src/index.css` (2125 líneas), `App.tsx` (1158), `shell.tsx`, `ui.tsx`, `DashboardView.tsx` (>1000 líneas)**: trocear cuando se toquen.
 - [x] **P2 — `src/imports/pasted_text/server-control-center.md` (1391 líneas)** es material de Figma; mover a `docs/` o eliminar.
-- [ ] **P2 — `lib/data.ts` (548 líneas de mock)**: comprobar qué vistas siguen usándolo y eliminar el resto (la regla del proyecto es no inventar datos).
+- [x] **P2 — `lib/data.ts` (548 líneas de mock)**: comprobar qué vistas siguen usándolo y eliminar el resto (la regla del proyecto es no inventar datos).
 - [x] **P2 — Aviso de tamaño de chunk** en el build de Vite: code-splitting por vista (`React.lazy`).
 
 ## 3. Seguridad (bloquea cualquier uso fuera de un entorno de pruebas)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Box,
@@ -21,23 +21,15 @@ import {
   Globe,
   Copy,
   Check,
-  AlertTriangle,
-  Database,
   RotateCw,
-  LogIn,
-  CheckCircle2,
-  Upload,
-  X,
   Play,
   Square,
-  FileText,
   MonitorCog,
 } from "lucide-react";
 import { T } from "../lib/tokens";
-import { logout } from "../lib/api";
+import { getHost, logout } from "../lib/api";
 import type { AuthUser } from "../lib/auth";
-import type { View, ToastType } from "../lib/types";
-import { Btn } from "./ui";
+import type { View } from "../lib/types";
 
 const NAV = [
   {
@@ -338,32 +330,6 @@ export function Sidebar({
   );
 }
 
-const NOTIFS = [
-  {
-    icon: AlertTriangle,
-    color: "#f59e0b",
-    label: "traefik is restarting",
-    time: "2 min ago",
-  },
-  {
-    icon: Upload,
-    color: "#3b82f6",
-    label: "12 system updates available",
-    time: "3 hr ago",
-  },
-  {
-    icon: LogIn,
-    color: "#50586b",
-    label: "SSH login — admin@192.168.1.42",
-    time: "1 hr ago",
-  },
-  {
-    icon: Database,
-    color: "#22c55e",
-    label: "Backup completed — 2.4 GB",
-    time: "3 hr ago",
-  },
-];
 export function Header({
   user,
   onCmd,
@@ -386,8 +352,15 @@ export function Header({
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  const [hostname, setHostname] = useState("");
+  useEffect(() => {
+    getHost()
+      .then((host) => setHostname(host.hostname))
+      .catch(() => {});
+  }, []);
   const copy = () => {
-    navigator.clipboard.writeText("homelab-server").catch(() => {});
+    if (!hostname) return;
+    navigator.clipboard.writeText(hostname).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -441,7 +414,7 @@ export function Header({
             fontFamily: "JetBrains Mono,monospace",
           }}
         >
-          homelab-server
+          {hostname || "—"}
         </span>
         <ChevronDown size={11} color={T.textDim} />
         {copied ? (
@@ -526,18 +499,6 @@ export function Header({
           }}
         >
           <Bell size={15} />
-          <span
-            style={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              width: 7,
-              height: 7,
-              background: T.red,
-              borderRadius: "50%",
-              border: `2px solid ${T.bg}`,
-            }}
-          />
         </button>
         {notifOpen && (
           <div
@@ -557,66 +518,17 @@ export function Header({
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
                 padding: "12px 16px",
                 borderBottom: `1px solid ${T.border}`,
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.text,
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
-                Notifications
-              </span>
-              <button
-                style={{
-                  fontSize: 11,
-                  color: T.accent,
-                  background: "none",
-                  border: "none",
-                }}
-              >
-                Mark all read
-              </button>
+              Notifications
             </div>
-            {NOTIFS.map((n, i) => {
-              const Icon = n.icon;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    padding: "11px 16px",
-                    borderBottom: `1px solid ${T.borderMuted}`,
-                  }}
-                >
-                  <span style={{ color: n.color, display: "flex" }}>
-                    <Icon size={13} />
-                  </span>
-                  <div>
-                    <div
-                      style={{ fontSize: 12, fontWeight: 500, color: T.text }}
-                    >
-                      {n.label}
-                    </div>
-                    <div style={{ fontSize: 11, color: T.textDim }}>
-                      {n.time}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{ padding: "10px 16px" }}>
-              <button
-                style={{
-                  fontSize: 11,
-                  color: T.accent,
-                  background: "none",
-                  border: "none",
-                }}
-              >
-                View all notifications
-              </button>
+            <div style={{ padding: "18px 16px", fontSize: 12, color: T.textDim }}>
+              No notifications. Alerts will appear here once alerting is available.
             </div>
           </div>
         )}
@@ -792,32 +704,38 @@ const CMD_NAV = [
 const CMD_ACTIONS = [
   {
     label: "Restart container",
+    view: "containers" as View,
     sub: "Choose a running container",
     icon: <RotateCw size={13} />,
   },
   {
     label: "Stop container",
+    view: "containers" as View,
     sub: "Choose a running container",
     icon: <Square size={13} />,
   },
   {
     label: "Start container",
+    view: "containers" as View,
     sub: "Choose a stopped container",
     icon: <Play size={13} />,
   },
   {
     label: "View system logs",
+    view: "logs" as View,
     sub: "Open centralized log viewer",
     icon: <ScrollText size={13} />,
   },
   {
     label: "Check for updates",
+    view: "updates" as View,
     sub: "Scan for package updates",
     icon: <RefreshCw size={13} />,
   },
   {
     label: "Open terminal",
-    sub: "SSH to homelab-server",
+    view: "terminal" as View,
+    sub: "Open the web terminal",
     icon: <Terminal size={13} />,
   },
 ];
@@ -836,7 +754,7 @@ export function CommandPalette({
   }, []);
   const allItems = [
     ...CMD_NAV.map((i) => ({ ...i, type: "nav" })),
-    ...CMD_ACTIONS.map((i) => ({ ...i, view: null as any, type: "action" })),
+    ...CMD_ACTIONS.map((i) => ({ ...i, type: "action" })),
   ];
   const filtered = q
     ? allItems.filter(

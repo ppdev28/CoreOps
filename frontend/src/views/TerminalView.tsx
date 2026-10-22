@@ -23,18 +23,19 @@ type TerminalSession = {
   completing: boolean;
 };
 
-const HOST_NAME = "homelab-server";
-const HOST_USER = "pepe";
-const HOME = "/home/pepe";
+// Identity of the shell the backend runs; filled in from the server on mount.
+type ShellIdentity = { host: string; user: string; home: string };
+const UNKNOWN_IDENTITY: ShellIdentity = { host: "server", user: "user", home: "" };
 
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const displayPath = (path: string) => path === HOME ? "~" : path.startsWith(`${HOME}/`) ? path.replace(HOME, "~") : path;
+const displayPath = (path: string, home: string) =>
+  !home ? path : path === home ? "~" : path.startsWith(`${home}/`) ? path.replace(home, "~") : path;
 const cleanAnsi = (value: string) =>
   value.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "").replace(/\r/g, "");
 const makeSession = (n: number): TerminalSession => ({
   id: newId(),
   title: n === 1 ? "Shell" : `Shell ${n}`,
-  cwd: HOME,
+  cwd: "",
   input: "",
   records: [],
   history: [],
@@ -47,6 +48,25 @@ export default function TerminalView() {
   const [sessions, setSessions] = useState<TerminalSession[]>([makeSession(1)]);
   const [activeId, setActiveId] = useState("");
   const [notice, setNotice] = useState("");
+  const [identity, setIdentity] = useState<ShellIdentity>(UNKNOWN_IDENTITY);
+  const { host: HOST_NAME, user: HOST_USER, home: HOME } = identity;
+
+  useEffect(() => {
+    let cancelled = false;
+    execTerminal('printf "%s|%s|%s" "$(id -un)" "$(hostname)" "$HOME"', "")
+      .then((result) => {
+        const [user, host, home] = (result.output ?? "").trim().split("|");
+        if (cancelled || !user || !host || !home) return;
+        setIdentity({ user, host, home });
+        setSessions((all) =>
+          all.map((s) => (s.cwd === "" ? { ...s, cwd: result.cwd || home } : s)),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const outputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -222,13 +242,13 @@ export default function TerminalView() {
             <div className="termx-welcome">
               <div className="termx-welcome-icon"><TerminalSquare size={22} /></div>
               <h2>{HOST_NAME}</h2>
-              <p>Connected shell · {displayPath(active.cwd)}</p>
+              <p>Connected shell · {displayPath(active.cwd, HOME)}</p>
             </div>
           )}
           {active.records.map((record) => (
             <div className="termx-command-block" key={record.id}>
               <div className="termx-command-prompt">
-                <span className="termx-prompt-user">{HOST_USER}@{HOST_NAME}</span><span className="termx-prompt-separator">:</span><span className="termx-prompt-path">{displayPath(record.cwd)}</span><span className="termx-prompt-symbol">$</span><span className="termx-command-text">{record.command}</span>
+                <span className="termx-prompt-user">{HOST_USER}@{HOST_NAME}</span><span className="termx-prompt-separator">:</span><span className="termx-prompt-path">{displayPath(record.cwd, HOME)}</span><span className="termx-prompt-symbol">$</span><span className="termx-command-text">{record.command}</span>
                 <span className="termx-command-time">{record.time}</span>
               </div>
               {record.output && <pre className={`termx-command-output ${record.exitCode !== 0 ? "has-error" : ""}`}>{record.output}</pre>}
@@ -241,7 +261,7 @@ export default function TerminalView() {
         <div className="termx-input-area">
           <div className="termx-input-card">
             <div className="termx-input-prompt">
-              <span>{HOST_USER}@{HOST_NAME}</span><b>:</b><span>{displayPath(active.cwd)}</span><strong>$</strong>
+              <span>{HOST_USER}@{HOST_NAME}</span><b>:</b><span>{displayPath(active.cwd, HOME)}</span><strong>$</strong>
             </div>
             <input
               ref={inputRef}

@@ -26,7 +26,7 @@ The frontend lives in `frontend/`.
 
 The UI originated in Figma Make and has been brought into the repository. It contains route-level views, reusable components, shared types, UI data and utility code.
 
-The Containers screen has been connected to the CoreOps API rather than relying on its original mock container list.
+The Containers screen has been connected to the CoreOps API rather than relying on its original mock container list. All Figma-era mock data has been removed: container detail now always uses the real inspect endpoint, the notifications menu is empty until alerting exists, the header/terminal hostname and user come from the server, and the "Available apps" catalog was dropped because installing apps is not implemented.
 
 The Vite development server proxies `/api` requests to the local backend on port `8082`.
 
@@ -125,7 +125,7 @@ The lifecycle workflow has also been manually validated against Docker on the Ub
 
 ## Mobile
 
-`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly; the address is currently hardcoded in `frontend/src/lib/api.ts` (override with `VITE_API_BASE_URL`).
+`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly using the server address entered on the login screen (stored locally; `VITE_API_BASE_URL` overrides it).
 
 ## What is not finished
 
