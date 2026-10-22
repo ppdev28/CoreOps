@@ -34,6 +34,8 @@ import {
   MonitorCog,
 } from "lucide-react";
 import { T } from "../lib/tokens";
+import { logout } from "../lib/api";
+import type { AuthUser } from "../lib/auth";
 import type { View, ToastType } from "../lib/types";
 import { Btn } from "./ui";
 
@@ -363,9 +365,11 @@ const NOTIFS = [
   },
 ];
 export function Header({
+  user,
   onCmd,
   onMenuToggle,
 }: {
+  user: AuthUser;
   onCmd: () => void;
   onMenuToggle: () => void;
 }) {
@@ -648,10 +652,10 @@ export function Header({
               color: "#fff",
             }}
           >
-            A
+            {user.name.charAt(0).toUpperCase()}
           </div>
           <span style={{ fontSize: 12, fontWeight: 500, color: T.textSub }}>
-            admin
+            {user.name}
           </span>
           <ChevronDown size={11} color={T.textDim} />
         </button>
@@ -678,38 +682,26 @@ export function Header({
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>
-                admin
+                {user.name}
               </div>
-              <div style={{ fontSize: 11, color: T.textDim }}>
-                root@homelab-server
-              </div>
+              <div style={{ fontSize: 11, color: T.textDim }}>{user.role}</div>
             </div>
-            {["Profile", "SSH Keys", "API Tokens", "—", "Sign out"].map(
-              (item, i) =>
-                item === "—" ? (
-                  <div
-                    key={i}
-                    style={{ height: 1, background: T.border, margin: "4px 0" }}
-                  />
-                ) : (
-                  <button
-                    key={item}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      padding: "7px 14px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontSize: 12,
-                      color: item === "Sign out" ? T.red : T.textSub,
-                    }}
-                  >
-                    {item}
-                  </button>
-                ),
-            )}
+            <button
+              onClick={() => void logout()}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "7px 14px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                fontSize: 12,
+                color: T.red,
+              }}
+            >
+              Sign out
+            </button>
           </div>
         )}
       </div>

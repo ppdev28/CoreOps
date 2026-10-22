@@ -1,3 +1,4 @@
+import { getAuthToken, setSession, type AuthSession } from "./auth";
 import type {
   Container,
   ContainerStatus,
@@ -153,8 +154,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${apiBase}${path}`;
   let response: Response;
 
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
   try {
-    response = await fetch(url, init);
+    response = await fetch(url, { ...init, headers });
   } catch (error) {
     throw new Error(
       `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
@@ -163,6 +168,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const contentType = response.headers.get("content-type") || "";
   const bodyText = await response.text();
+
+  if (response.status === 401 && token) {
+    // The session expired or was revoked; send the user back to the login screen.
+    setSession(null);
+  }
 
   if (!response.ok) {
     let body: { error?: string } | null = null;
@@ -188,6 +198,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new Error(`CoreOps API returned invalid JSON from ${url}`);
   }
+}
+export async function login(
+  username: string,
+  password: string,
+): Promise<AuthSession> {
+  const session = await request<AuthSession>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  setSession(session);
+  return session;
+}
+export async function logout(): Promise<void> {
+  try {
+    await request("/auth/logout", { method: "POST" });
+  } catch {
+    // The local session is dropped regardless of the server response.
+  }
+  setSession(null);
 }
 export async function getHost(): Promise<HostOverview> {
   return request("/host");

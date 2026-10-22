@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { Capacitor } from "@capacitor/core";
 import {
   Cpu,
@@ -23,6 +29,8 @@ import {
   Plus,
 } from "lucide-react";
 import { T } from "./lib/tokens";
+import { getSession, subscribeSession, type AuthUser } from "./lib/auth";
+import LoginView from "./views/LoginView";
 import type {
   View,
   ContainerStatus,
@@ -921,7 +929,7 @@ function DashboardView({
   );
 }
 
-export default function App() {
+function AppShell({ user }: { user: AuthUser }) {
   // The Android shell owns the top bar and drawer when running inside Capacitor.
   // Keep the existing React shell for the browser/PWA so the web app is unchanged.
   const isNative = Capacitor.isNativePlatform();
@@ -1095,6 +1103,7 @@ export default function App() {
         >
           {!isNative && (
             <Header
+              user={user}
               onCmd={() => setShowCmd(true)}
               onMenuToggle={() => setMobileOpen((v) => !v)}
             />
@@ -1155,4 +1164,10 @@ export default function App() {
       </div>
     </>
   );
+}
+
+export default function App() {
+  const session = useSyncExternalStore(subscribeSession, getSession);
+  if (!session) return <LoginView />;
+  return <AppShell user={session.user} />;
 }
