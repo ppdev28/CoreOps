@@ -36,7 +36,13 @@ go build ./...
 go run ./cmd/coreops-api
 ```
 
-The API normally listens on port `8082`.
+The API normally listens on `127.0.0.1:8082`. Create a user first (see `backend/README.md`), for example:
+
+```bash
+COREOPS_ADMIN_USER=admin COREOPS_ADMIN_PASSWORD='a-long-password' go run ./cmd/coreops-api
+```
+
+Run `go test ./...` and `go vet ./...` before committing backend changes.
 
 ## Basic backend checks
 
@@ -49,7 +55,8 @@ curl http://localhost:8082/api/v1/health
 Containers:
 
 ```bash
-curl http://localhost:8082/api/v1/containers
+TOKEN=$(curl -s -d '{"username":"admin","password":"a-long-password"}' http://localhost:8082/api/v1/auth/login | jq -r .token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/api/v1/containers
 ```
 
 When validating Docker integration, the API response should be compared with the actual Docker host state. Do not rely solely on mock data or screenshots.

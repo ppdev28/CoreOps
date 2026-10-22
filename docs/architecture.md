@@ -43,6 +43,8 @@ Docker SDK
 Docker Engine /var/run/docker.sock
 ```
 
+Every request passes through CORS, logging, an audit wrapper and then a per-route role check (`routes.go`). The backend binds to loopback by default.
+
 The Docker socket is a highly privileged interface. It should not be exposed directly over TCP. In the initial self-hosted deployment CoreOps is expected to run on the same Linux host as Docker and be reached through a trusted private network such as Tailscale.
 
 ## Frontend boundaries

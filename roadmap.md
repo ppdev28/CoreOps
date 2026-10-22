@@ -35,11 +35,11 @@ Marca `[x]` lo hecho y `[ ]` lo pendiente. Prioridad: **P0** bloqueante/segurida
 
 ## 3. Seguridad (bloquea cualquier uso fuera de un entorno de pruebas)
 
-- [ ] **P0** Autenticación: login local (usuario + contraseña con argon2id/bcrypt) y sesiones por token/cookie `HttpOnly; SameSite`; primer arranque con creación de admin.
-- [ ] **P0** Middleware de auth en todas las rutas `/api/v1/*` salvo `health`.
-- [ ] **P0** Proteger el endpoint de terminal: sólo rol admin, rate limit, timeouts, y a medio plazo sustituir `exec` por PTY sobre WebSocket con registro de sesión.
-- [ ] **P1** Autorización por roles (admin / operador / sólo lectura) y mapeo por endpoint.
-- [ ] **P1** Auditoría: registro de quién ejecutó qué acción (contenedor, servicio, update, terminal, fix de seguridad), con persistencia (SQLite) y vista en la UI.
+- [x] **P0** Autenticación: login local (usuario + contraseña con argon2id/bcrypt) y sesiones por token/cookie `HttpOnly; SameSite`; primer arranque con creación de admin. *(hecho: PBKDF2 + tokens de sesión; usuarios por CLI o `COREOPS_ADMIN_*`)*
+- [x] **P0** Middleware de auth en todas las rutas `/api/v1/*` salvo `health`.
+- [ ] **P0** Proteger el endpoint de terminal: sólo rol admin, rate limit, timeouts, y a medio plazo sustituir `exec` por PTY sobre WebSocket con registro de sesión. *(parcial: admin-only y auditado; el rate limit de login está hecho; falta PTY/WebSocket)*
+- [x] **P1** Autorización por roles (admin / operador / sólo lectura) y mapeo por endpoint. *(viewer/operator/admin)*
+- [ ] **P1** Auditoría: registro de quién ejecutó qué acción (contenedor, servicio, update, terminal, fix de seguridad), con persistencia (SQLite) y vista en la UI. *(parcial: backend + `GET /api/v1/audit`; falta la vista en la UI y SQLite)*
 - [ ] **P1** Validación de entrada uniforme (ya hay regex para IDs de contenedor, servicios y paquetes apt; falta para VMs, apps, sesiones `pid`, `fix/{item}`).
 - [ ] **P1** Cabeceras de seguridad, límites de body y de tiempo en todos los endpoints; CORS estricto.
 - [ ] **P1** HTTPS: documentar despliegue con Tailscale Serve / reverse proxy con TLS; sin TLS no usar en red no confiable.
@@ -90,7 +90,7 @@ Marca `[x]` lo hecho y `[ ]` lo pendiente. Prioridad: **P0** bloqueante/segurida
 
 - [x] UI completa del diseño Figma con 17 vistas y estados de carga/error en las conectadas.
 - [x] Acciones de contenedor con estado pendiente, confirmación y refresco.
-- [ ] **P0** Pantalla de login y manejo de 401 (redirección, expiración de sesión).
+- [x] **P0** Pantalla de login y manejo de 401 (redirección, expiración de sesión).
 - [ ] **P1** Configuración de URL del servidor en la app (hoy: `VITE_API_BASE_URL` en build) — pantalla "Conectar a servidor" con validación y guardado seguro.
 - [ ] **P1** Auditar cada vista: `ContainerDetail.tsx` (973 líneas) y `NativeContainerDetail.tsx` (352) conviven; unificar.
 - [ ] **P1** Logs y métricas de contenedor reales en el detalle.

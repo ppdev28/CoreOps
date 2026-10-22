@@ -30,6 +30,8 @@ The Containers screen has been connected to the CoreOps API rather than relying 
 
 The Vite development server proxies `/api` requests to the local backend on port `8082`.
 
+The app shows a login screen until a session exists (`lib/auth.ts`, `views/LoginView.tsx`). `lib/api.ts` attaches the token to every request and returns to the login screen on a 401. The session is kept in `localStorage`.
+
 Known frontend validation command:
 
 ```bash
@@ -43,39 +45,37 @@ The build currently succeeds. Vite may report a chunk-size warning for the main 
 
 ## Backend
 
-Stack:
+Stack: Go (stdlib `net/http`), Moby Docker client, no database (JSON files under `COREOPS_DATA_DIR`).
 
-- Go
-- HTTP API
-- Moby Docker client
+The backend lives in `backend/cmd/coreops-api` and listens on `127.0.0.1:8082` by default (`COREOPS_HOST`, `COREOPS_PORT`). See `backend/README.md` for configuration.
 
-The backend lives in `backend/`.
+Source layout: `main.go` (startup), `routes.go` (route table with minimum role per endpoint), `http.go` (JSON helpers, CORS, logging, env), `auth.go` (users, sessions, roles), `audit.go` (audit log), `users_cli.go` (`coreops-api user ...`), `containers.go` and one file per area (`host`, `services`, `storage`, `network`, `monitoring`, `logs`, `security`, `updates`, `applications`, `virtual_machines`, `terminal`).
 
-The API runs on `:8082`.
-
-The backend can connect to the Docker Engine on the Ubuntu host through the normal Docker environment/local Unix socket.
-
-The health endpoint currently works:
+Implemented endpoints (all require a session except health and login):
 
 ```text
-GET /api/v1/health
+GET  /api/v1/health                              public
+POST /api/v1/auth/login | logout, GET /auth/me
+GET  /api/v1/host | storage | network | monitoring | updates
+GET  /api/v1/containers, GET /containers/{id}
+POST /api/v1/containers/{id}/start|stop|restart
+GET  /api/v1/applications, POST /applications/{id}/{action}
+GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
+GET  /api/v1/services, POST /services/{name}/start|stop|restart
+GET  /api/v1/logs, GET /security
+POST /api/v1/terminal/exec | complete             admin
+POST /api/v1/security/sessions/{pid}/terminate, /security/fix/{item}   admin
+POST /api/v1/updates/refresh | apply              admin
+GET  /api/v1/audit                                admin
 ```
 
-Expected shape:
+### Security model
 
-```json
-{"docker":"available","status":"ok"}
-```
-
-The containers endpoint currently works:
-
-```text
-GET /api/v1/containers
-```
-
-It returns real Docker containers with fields including IDs, names, images, state/status, creation time, published ports and networks.
-
-The frontend currently adapts this API response to the UI's container model. Values not exposed by the backend are not fabricated. Container start, stop and restart actions call the CoreOps API, show a pending state per container, prevent duplicate submissions and refresh the real Docker state after completion.
+- Opaque session tokens (`Authorization: Bearer`), stored server-side as SHA-256 hashes, 12 h TTL.
+- Users in `users.json` with PBKDF2-SHA256 hashes; roles `viewer` < `operator` < `admin` enforced per route in `routes.go`.
+- Login rate limit: 5 failures per client+user lock them for 15 minutes.
+- Every non-GET request (including rejected ones and logins) is appended to `audit.log`.
+- No TLS termination: use Tailscale Serve or a reverse proxy.
 
 ## Real integration environment
 
@@ -123,21 +123,22 @@ The Containers view now displays real containers from the server.
 
 The lifecycle workflow has also been manually validated against Docker on the Ubuntu Server: start, stop and restart operations update the UI and reconcile with the real container state, including stopping and starting a disposable test container.
 
+## Mobile
+
+`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly; the address is currently hardcoded in `frontend/src/lib/api.ts` (override with `VITE_API_BASE_URL`).
+
 ## What is not finished
 
-The Containers workflow supports real lifecycle actions through the Go API:
+See `roadmap.md` for the full checklist. Highlights:
 
-```text
-POST /api/v1/containers/{id}/start
-POST /api/v1/containers/{id}/stop
-POST /api/v1/containers/{id}/restart
-```
+- Container logs and metrics, richer inspection and destructive operations.
+- Backend tests for Docker handlers and system parsers (auth has tests).
+- UI for the audit log and for user management (users are managed through the CLI).
+- Hiding UI actions the current role cannot perform (the API already enforces them).
+- Server address configuration screen and secure token storage on mobile.
+- Multi-host, Kubernetes and cloud integrations.
 
-Stop and restart require confirmation in the UI. The API validates container IDs for lifecycle operations and returns Docker errors to the client. The next Containers milestone should extend the real workflow with inspection, logs, metrics and other operational details rather than simulated actions.
-
-CPU, memory, restart count and other richer operational data may still require additional backend endpoints/inspection/metrics work. Do not fake these values.
-
-Authentication, authorization, audit logging, production deployment, multi-host support and broader infrastructure integrations are future work.
+CPU, memory, restart count and other richer operational data may still require additional backend endpoints. Do not fake these values.
 
 ## Important historical issue
 

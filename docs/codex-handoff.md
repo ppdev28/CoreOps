@@ -14,11 +14,7 @@ The repository is:
 https://github.com/ppdev28/CoreOps
 ```
 
-The active development branch is:
-
-```text
-feature/project-foundation
-```
+The branch with the latest work is `capacitor-native` (it includes the auth, backend refactor and native shells); earlier work happened on `feature/project-foundation`.
 
 The latest important milestone is:
 
@@ -50,7 +46,13 @@ real containers
 
 The browser must never talk directly to Docker Engine.
 
+## Authentication
+
+All API calls except health and login need a session. Create a user with `printf '%s' "<password>" | go run ./cmd/coreops-api user add <name> admin` (from `backend/`), then sign in from the UI. When adding endpoints, register them in `backend/cmd/coreops-api/routes.go` with the lowest role that is safe, and keep the UI error handling for 403.
+
 ## Current working endpoints
+
+The full list lives in `docs/current-state.md`. The original slice was:
 
 ```text
 GET /api/v1/health
