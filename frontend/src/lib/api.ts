@@ -1,4 +1,9 @@
-import { getAuthToken, setSession, type AuthSession } from "./auth";
+import {
+  getAuthToken,
+  getServerUrl,
+  setSession,
+  type AuthSession,
+} from "./auth";
 import type {
   Container,
   ContainerStatus,
@@ -14,7 +19,6 @@ import type {
   VirtualMachine,
 } from "./types";
 import type { MonitoringOverview } from "./monitoring";
-import { Capacitor } from "@capacitor/core";
 
 type ApiPort = {
   privatePort: number;
@@ -69,13 +73,13 @@ export interface ApplyUpdatesResponse {
 }
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
 // Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
-// proxy, so native builds need a direct backend address. Override this with
-// VITE_API_BASE_URL for a physical device or a different server.
-const apiBase =
-  configuredApiBase ||
-  (Capacitor.isNativePlatform()
-    ? "http://100.84.193.37:8082/api/v1"
-    : "/api/v1");
+// proxy, so native builds (and anyone pointing the UI at another server) use the
+// server address saved on the login screen. VITE_API_BASE_URL overrides both.
+function getApiBase(): string {
+  if (configuredApiBase) return configuredApiBase;
+  const server = getServerUrl();
+  return server ? `${server}/api/v1` : "/api/v1";
+}
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
     case "running":
@@ -151,6 +155,7 @@ function toApplication(app: ApiApplication): AppService {
   };
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const apiBase = getApiBase();
   const url = `${apiBase}${path}`;
   let response: Response;
 

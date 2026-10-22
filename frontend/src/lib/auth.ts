@@ -53,3 +53,36 @@ export function subscribeSession(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+const SERVER_KEY = "coreops.serverUrl";
+
+// Address of the CoreOps API (for example http://100.x.y.z:8082). Empty means
+// same-origin, which is what the browser build behind the Vite proxy uses.
+export function getServerUrl(): string {
+  try {
+    return window.localStorage.getItem(SERVER_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function normalizeServerUrl(input: string): string | null {
+  const value = input.trim().replace(/\/+$/, "");
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return `${url.origin}${url.pathname === "/" ? "" : url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+export function setServerUrl(url: string) {
+  try {
+    if (url) window.localStorage.setItem(SERVER_KEY, url);
+    else window.localStorage.removeItem(SERVER_KEY);
+  } catch {
+    // Not persisted; the address has to be entered again next time.
+  }
+}

@@ -1,19 +1,36 @@
 import { useState, type FormEvent } from "react";
 import { Lock, Server } from "lucide-react";
 import { T } from "../lib/tokens";
+import { Capacitor } from "@capacitor/core";
 import { login } from "../lib/api";
+import { getServerUrl, normalizeServerUrl, setServerUrl } from "../lib/auth";
 
 export default function LoginView() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [server, setServer] = useState(getServerUrl);
+  // The native app has no same-origin API, so the address is always asked for.
+  const [showServer, setShowServer] = useState(
+    Capacitor.isNativePlatform() || getServerUrl() !== "",
+  );
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (busy || !username || !password) return;
+    const normalized = normalizeServerUrl(server);
+    if (normalized === null) {
+      setError("Server address must start with http:// or https://");
+      return;
+    }
+    if (Capacitor.isNativePlatform() && !normalized) {
+      setError("Enter the address of your CoreOps server");
+      return;
+    }
     setBusy(true);
     setError(null);
+    setServerUrl(normalized);
     try {
       await login(username.trim(), password);
     } catch (err) {
@@ -83,6 +100,36 @@ export default function LoginView() {
             </div>
           </div>
         </div>
+        {showServer ? (
+          <label style={{ fontSize: 11, color: T.textSub }}>
+            Server address
+            <input
+              style={{ ...field, marginTop: 5 }}
+              value={server}
+              onChange={(e) => setServer(e.target.value)}
+              placeholder="http://100.x.y.z:8082"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+          </label>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowServer(true)}
+            style={{
+              alignSelf: "flex-start",
+              background: "none",
+              border: "none",
+              padding: 0,
+              fontSize: 11,
+              color: T.textDim,
+              cursor: "pointer",
+            }}
+          >
+            Use a different server
+          </button>
+        )}
         <label style={{ fontSize: 11, color: T.textSub }}>
           Username
           <input
@@ -91,7 +138,6 @@ export default function LoginView() {
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
             autoCapitalize="none"
-            autoFocus
           />
         </label>
         <label style={{ fontSize: 11, color: T.textSub }}>
