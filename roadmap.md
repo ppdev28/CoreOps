@@ -25,13 +25,13 @@ Marca `[x]` lo hecho y `[ ]` lo pendiente. Prioridad: **P0** bloqueante/segurida
 - [x] **P1 — Variable de entorno `CoreOps_PORT` / `CoreOps_CORS_ORIGINS`** con mayúsculas mixtas; renombrar a `COREOPS_*` (con compatibilidad temporal).
 - [x] **P1 — Backend sin formatear**: `gofmt -l` marca 10 de 12 ficheros; `main.go` tiene funciones enteras en una sola línea. Pasar `gofmt` y partir `main.go` (handlers de Docker a `containers.go`, middleware a `middleware.go`, router a `routes.go`).
 - [x] **P1 — Nombre `scp-api`** (directorio renombrado a `cmd/coreops-api`; el módulo Go ya era `.../CoreOps/backend`) (Server Control Panel) heredado; renombrar a `coreops-api` junto con el módulo Go (`github.com/ppdev28/CoreOps/backend`).
-- [ ] **P1 — Cambios sin commitear en la rama** (`.gitignore` ya actualizado; falta commitear): `.idea/`, `frontend/ios/`, `android/gradle*`, `assets/` sin trackear. Añadir `.gitignore` adecuado (assets generados por `cap sync`, `.idea`, `dist`) y commitear lo demás.
+- [x] **P1 — Cambios sin commitear en la rama**: `.idea/`, `frontend/ios/`, `android/gradle*`, `assets/` sin trackear. Añadir `.gitignore` adecuado (assets generados por `cap sync`, `.idea`, `dist`) y commitear lo demás.
 - [ ] **P1 — Dos ramas divergentes** (`feature/kubernetes-observability`, `feature/mobile-responsive`, `terminal-redesign`, `capacitor-native`) sin integrar en `main`. Decidir qué se mergea y cerrar el resto.
-- [ ] **P2 — `MainActivity.kt`**: `EdgeToEdge.enable` está comentado (parche manual); decidir el comportamiento de insets y dejarlo limpio.
+- [x] **P2 — `MainActivity.kt`**: `EdgeToEdge.enable` está comentado (parche manual); decidir el comportamiento de insets y dejarlo limpio.
 - [ ] **P2 — `frontend/src/index.css` (2125 líneas), `App.tsx` (1158), `shell.tsx`, `ui.tsx`, `DashboardView.tsx` (>1000 líneas)**: trocear cuando se toquen.
-- [ ] **P2 — `src/imports/pasted_text/server-control-center.md` (1391 líneas)** es material de Figma; mover a `docs/` o eliminar.
+- [x] **P2 — `src/imports/pasted_text/server-control-center.md` (1391 líneas)** es material de Figma; mover a `docs/` o eliminar.
 - [ ] **P2 — `lib/data.ts` (548 líneas de mock)**: comprobar qué vistas siguen usándolo y eliminar el resto (la regla del proyecto es no inventar datos).
-- [ ] **P2 — Aviso de tamaño de chunk** en el build de Vite: code-splitting por vista (`React.lazy`).
+- [x] **P2 — Aviso de tamaño de chunk** en el build de Vite: code-splitting por vista (`React.lazy`).
 
 ## 3. Seguridad (bloquea cualquier uso fuera de un entorno de pruebas)
 
@@ -91,7 +91,7 @@ Marca `[x]` lo hecho y `[ ]` lo pendiente. Prioridad: **P0** bloqueante/segurida
 - [x] UI completa del diseño Figma con 17 vistas y estados de carga/error en las conectadas.
 - [x] Acciones de contenedor con estado pendiente, confirmación y refresco.
 - [x] **P0** Pantalla de login y manejo de 401 (redirección, expiración de sesión).
-- [ ] **P1** Configuración de URL del servidor en la app (hoy: `VITE_API_BASE_URL` en build) — pantalla "Conectar a servidor" con validación y guardado seguro.
+- [x] **P1** Configuración de URL del servidor en la app (hoy: `VITE_API_BASE_URL` en build) — pantalla "Conectar a servidor" con validación y guardado seguro. *(campo en la pantalla de login, guardado en `localStorage`; falta almacenamiento seguro en móvil)*
 - [ ] **P1** Auditar cada vista: `ContainerDetail.tsx` (973 líneas) y `NativeContainerDetail.tsx` (352) conviven; unificar.
 - [ ] **P1** Logs y métricas de contenedor reales en el detalle.
 - [ ] **P1** Gestión de errores consistente (toasts + reintento) y estados vacíos.
@@ -118,10 +118,10 @@ Ver análisis en §9. Tareas independientes de la decisión:
 
 ## 7. Calidad, CI y despliegue
 
-- [ ] **P1** Tests Go: handlers con cliente Docker simulado (interfaz pequeña), parsers (`parseAptUpgradableLine`, `parseUFWRules`, `classifySecurityEvent`, `detectUFWActive`) y validadores.
-- [ ] **P1** GitHub Actions: `go vet`, `gofmt -l`, `go test`, `pnpm build`, `format:check`.
+- [ ] **P1** Tests Go: handlers con cliente Docker simulado (interfaz pequeña), parsers (`parseAptUpgradableLine`, `parseUFWRules`, `classifySecurityEvent`, `detectUFWActive`) y validadores. *(parcial: auth, validadores y parsers; faltan handlers de Docker con cliente simulado)*
+- [x] **P1** GitHub Actions (`ci-cd.yml` en `main`: tests, build y despliegue; falta añadir `gofmt`/`go vet`).
 - [ ] **P1** `Dockerfile` multi-stage (frontend estático + backend) y `docker-compose.yml` con montaje de socket de sólo lectura donde sea posible.
-- [ ] **P1** Unit systemd y script de instalación para Ubuntu.
+- [ ] **P1** Unit systemd y script de instalación para Ubuntu. *(parcial: unit en `deploy/coreops.service`; falta script de instalación)*
 - [ ] **P2** Servir el frontend desde el propio binario Go (`embed`) → un solo artefacto.
 - [ ] **P2** Versionado y releases (binarios linux amd64/arm64).
 - [ ] **P2** `.gitignore` para binarios (`backend/scp-api` ya está prohibido en AGENTS.md).

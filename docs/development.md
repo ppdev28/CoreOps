@@ -120,3 +120,9 @@ Use focused commits. Do not squash/rebase/force-push existing work unless explic
 - Treat Docker lifecycle operations as privileged actions.
 - Do not add broad CORS rules as a substitute for a proper deployment/authentication design.
 - When an operation can destroy data or stop production services, add explicit confirmation and clear error handling.
+
+## Continuous integration and deployment
+
+`.github/workflows/ci-cd.yml` validates (tests, build, frontend format check) and deploys `main`.
+
+`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR`.
