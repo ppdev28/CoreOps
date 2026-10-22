@@ -71,7 +71,10 @@ export interface ApplyUpdatesResponse {
   packages: string[];
   output: string;
 }
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+  /\/+$/,
+  "",
+);
 // Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
 // proxy, so native builds (and anyone pointing the UI at another server) use the
 // server address saved on the login screen. VITE_API_BASE_URL overrides both.
@@ -235,9 +238,7 @@ export async function getContainers(): Promise<Container[]> {
 export async function getContainerDetail(
   id: string,
 ): Promise<ContainerDetailData> {
-  return request(
-    `/containers/${encodeURIComponent(id)}`,
-  );
+  return request(`/containers/${encodeURIComponent(id)}`);
 }
 export async function runContainerAction(
   id: string,
@@ -248,7 +249,9 @@ export async function runContainerAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id)
-    throw new Error("CoreOps API returned an invalid container action response");
+    throw new Error(
+      "CoreOps API returned an invalid container action response",
+    );
 }
 export async function getApplications(): Promise<AppService[]> {
   const applications = await request<ApiApplication[]>("/applications");
@@ -263,7 +266,9 @@ export async function runApplicationAction(
     { method: "POST" },
   );
   if (!response.ok || response.id !== id || response.action !== action)
-    throw new Error("CoreOps API returned an invalid application action response");
+    throw new Error(
+      "CoreOps API returned an invalid application action response",
+    );
 }
 export async function getServices(): Promise<SystemService[]> {
   return request("/services");

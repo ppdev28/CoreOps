@@ -11,12 +11,7 @@ import { Capacitor } from "@capacitor/core";
 import { T } from "./lib/tokens";
 import { getSession, subscribeSession, type AuthUser } from "./lib/auth";
 import LoginView from "./views/LoginView";
-import type {
-  View,
-  ToastType,
-  ConfirmDialog,
-  Toast,
-} from "./lib/types";
+import type { View, ToastType, ConfirmDialog, Toast } from "./lib/types";
 import { ToastStack, ConfirmDialogModal } from "./components/ui";
 import { Sidebar, Header, CommandPalette } from "./components/shell";
 
@@ -32,7 +27,9 @@ const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
 const ServicesView = lazyView(() => import("./views/ServicesView"));
 const StorageView = lazyView(() => import("./views/StorageView"));
 const NetworkView = lazyView(() => import("./views/NetworkView"));
-const VirtualMachinesView = lazyView(() => import("./views/VirtualMachinesView"));
+const VirtualMachinesView = lazyView(
+  () => import("./views/VirtualMachinesView"),
+);
 const MonitoringView = lazyView(() => import("./views/MonitoringView"));
 const LogsView = lazyView(() => import("./views/LogsView"));
 const TerminalView = lazyView(() => import("./views/TerminalView"));
@@ -52,7 +49,9 @@ function AppShell({ user }: { user: AuthUser }) {
     [toasts, setToasts] = useState<Toast[]>([]),
     [confirm, setConfirm] = useState<ConfirmDialog | null>(null),
     [settings, setSettings] = useState(loadWebSettings),
-    [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+    [selectedContainerId, setSelectedContainerId] = useState<string | null>(
+      null,
+    );
   useEffect(() => subscribeWebSettings(setSettings), []);
   const playNotificationSound = useCallback(() => {
     try {
@@ -107,7 +106,10 @@ function AppShell({ user }: { user: AuthUser }) {
 
     window.addEventListener("coreops-native-navigate", handleNativeNavigation);
     return () =>
-      window.removeEventListener("coreops-native-navigate", handleNativeNavigation);
+      window.removeEventListener(
+        "coreops-native-navigate",
+        handleNativeNavigation,
+      );
   }, [navigate]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -238,38 +240,35 @@ function AppShell({ user }: { user: AuthUser }) {
                 </div>
               }
             >
-            {view === "dashboard" && (
-              <RealDashboardView onNavigate={navigate} addToast={addToast} />
-            )}{" "}
-            {view === "host" && <HostView />}{" "}
-            {view === "containers" && (
-              <ContainersView
-                onDetail={openContainerDetail}
-                {...shell}
-              />
-            )}{" "}
-            {view === "container-detail" && selectedContainerId && (
-              <ContainerDetail
-                containerId={selectedContainerId}
-                onBack={() => navigate("containers")}
-                {...shell}
-              />
-            )}{" "}
-            {view === "applications" && (
-              <ApplicationsView addToast={addToast} />
-            )}{" "}
-            {view === "services" && <ServicesView {...shell} />}{" "}
-            {view === "storage" && <StorageView {...shell} />}{" "}
-            {view === "network" && <NetworkView />}{" "}
-            {view === "virtual-machines" && (
-              <VirtualMachinesView addToast={addToast} />
-            )}{" "}
-            {view === "monitoring" && <MonitoringView />}{" "}
-            {view === "logs" && <LogsView />}{" "}
-            {view === "terminal" && <TerminalView />}{" "}
-            {view === "security" && <SecurityView addToast={addToast} />}{" "}
-            {view === "updates" && <UpdatesView {...shell} />}{" "}
-            {view === "settings" && <SettingsView addToast={addToast} />}
+              {view === "dashboard" && (
+                <RealDashboardView onNavigate={navigate} addToast={addToast} />
+              )}{" "}
+              {view === "host" && <HostView />}{" "}
+              {view === "containers" && (
+                <ContainersView onDetail={openContainerDetail} {...shell} />
+              )}{" "}
+              {view === "container-detail" && selectedContainerId && (
+                <ContainerDetail
+                  containerId={selectedContainerId}
+                  onBack={() => navigate("containers")}
+                  {...shell}
+                />
+              )}{" "}
+              {view === "applications" && (
+                <ApplicationsView addToast={addToast} />
+              )}{" "}
+              {view === "services" && <ServicesView {...shell} />}{" "}
+              {view === "storage" && <StorageView {...shell} />}{" "}
+              {view === "network" && <NetworkView />}{" "}
+              {view === "virtual-machines" && (
+                <VirtualMachinesView addToast={addToast} />
+              )}{" "}
+              {view === "monitoring" && <MonitoringView />}{" "}
+              {view === "logs" && <LogsView />}{" "}
+              {view === "terminal" && <TerminalView />}{" "}
+              {view === "security" && <SecurityView addToast={addToast} />}{" "}
+              {view === "updates" && <UpdatesView {...shell} />}{" "}
+              {view === "settings" && <SettingsView addToast={addToast} />}
             </Suspense>
           </main>
         </div>

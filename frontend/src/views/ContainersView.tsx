@@ -259,7 +259,8 @@ function MobileContainerCard({
         <HealthBadge health={c.health} />
         {pendingAction && (
           <span className="containers-mobile-card-pending">
-            {pendingAction[0].toUpperCase()}{pendingAction.slice(1)}ing…
+            {pendingAction[0].toUpperCase()}
+            {pendingAction.slice(1)}ing…
           </span>
         )}
       </div>
@@ -275,7 +276,11 @@ function MobileContainerCard({
         ].map((item) => (
           <div key={item.label} className="containers-mobile-metric">
             <span>{item.label}</span>
-            <strong className={item.label === "Restarts" && c.restarts > 2 ? "warning" : ""}>
+            <strong
+              className={
+                item.label === "Restarts" && c.restarts > 2 ? "warning" : ""
+              }
+            >
               {item.value}
             </strong>
           </div>
@@ -490,7 +495,10 @@ export default function ContainersView({
         </p>
       </div>
 
-      <div className="containers-stats" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+      <div
+        className="containers-stats"
+        style={{ display: "flex", gap: 10, marginBottom: 14 }}
+      >
         {[
           { label: "Total", value: containers.length, color: T.text },
           { label: "Running", value: running, color: T.green },
@@ -669,170 +677,174 @@ export default function ContainersView({
           </div>
 
           <div className="containers-desktop-table">
-          <Card>
-          <div className="containers-table-scroll">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                minWidth: 760,
-              }}
-            >
-              <thead>
-                <tr style={{ background: T.bg }}>
-                  <th
-                    style={{
-                      width: 40,
-                      padding: "8px 14px",
-                      borderBottom: `1px solid ${T.border}`,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={
-                        rows.length > 0 && rows.every((c) => selected.has(c.id))
-                      }
-                      onChange={toggleAll}
-                      style={{ accentColor: T.accent, cursor: "pointer" }}
-                    />
-                  </th>
-                  <Th>Name</Th>
-                  <Th>Image</Th>
-                  <Th>Status</Th>
-                  <Th>Health</Th>
-                  <Th mono>CPU</Th>
-                  <Th mono>Memory</Th>
-                  <Th mono>Ports</Th>
-                  <Th>Uptime</Th>
-                  <Th right>Restarts</Th>
-                  <Th></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((c) => {
-                  const pendingAction = pendingActions.get(c.id);
-                  return (
-                    <tr
-                      key={c.id}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setCtx({ x: e.clientX, y: e.clientY, c });
-                      }}
-                      onClick={() => onDetail(c.id)}
-                      style={{
-                        cursor: pendingAction ? "wait" : "pointer",
-                        opacity: pendingAction ? 0.6 : 1,
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = T.hover)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                    >
-                      <td
+            <Card>
+              <div className="containers-table-scroll">
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 760,
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: T.bg }}>
+                      <th
                         style={{
-                          padding: "9px 14px",
-                          borderBottom: `1px solid ${T.borderMuted}`,
+                          width: 40,
+                          padding: "8px 14px",
+                          borderBottom: `1px solid ${T.border}`,
                         }}
-                        onClick={(e) => e.stopPropagation()}
                       >
                         <input
                           type="checkbox"
-                          checked={selected.has(c.id)}
-                          onChange={() =>
-                            setSelected((prev) => {
-                              const s = new Set(prev);
-                              s.has(c.id) ? s.delete(c.id) : s.add(c.id);
-                              return s;
-                            })
+                          checked={
+                            rows.length > 0 &&
+                            rows.every((c) => selected.has(c.id))
                           }
+                          onChange={toggleAll}
                           style={{ accentColor: T.accent, cursor: "pointer" }}
                         />
-                      </td>
-                      <Td>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            color: T.text,
-                            fontFamily: "JetBrains Mono,monospace",
-                            fontSize: 12,
-                          }}
-                        >
-                          {c.name}
-                        </span>
-                      </Td>
-                      <Td mono dim>
-                        {c.image}
-                      </Td>
-                      <Td>
-                        <StatusBadge status={c.status} />
-                      </Td>
-                      <Td>
-                        <HealthBadge health={c.health} />
-                      </Td>
-                      <Td mono dim>
-                        {c.cpu}
-                      </Td>
-                      <Td mono dim>
-                        {c.memory}
-                      </Td>
-                      <Td mono dim>
-                        {c.ports}
-                      </Td>
-                      <Td dim>{c.uptime}</Td>
-                      <Td right>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontFamily: "JetBrains Mono,monospace",
-                            color: c.restarts > 2 ? T.yellow : T.textDim,
-                          }}
-                        >
-                          {c.restarts}
-                        </span>
-                      </Td>
-                      <Td style={{ textAlign: "right" }}>
-                        {pendingAction ? (
-                          <span style={{ fontSize: 11, color: T.accent }}>
-                            {pendingAction[0].toUpperCase()}
-                            {pendingAction.slice(1)}ing…
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCtx({ x: e.clientX, y: e.clientY, c });
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: T.textDim,
-                              padding: "2px 4px",
-                              borderRadius: 5,
-                              display: "inline-flex",
-                            }}
-                          >
-                            <MoreHorizontal size={14} />
-                          </button>
-                        )}
-                      </Td>
+                      </th>
+                      <Th>Name</Th>
+                      <Th>Image</Th>
+                      <Th>Status</Th>
+                      <Th>Health</Th>
+                      <Th mono>CPU</Th>
+                      <Th mono>Memory</Th>
+                      <Th mono>Ports</Th>
+                      <Th>Uptime</Th>
+                      <Th right>Restarts</Th>
+                      <Th></Th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((c) => {
+                      const pendingAction = pendingActions.get(c.id);
+                      return (
+                        <tr
+                          key={c.id}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setCtx({ x: e.clientX, y: e.clientY, c });
+                          }}
+                          onClick={() => onDetail(c.id)}
+                          style={{
+                            cursor: pendingAction ? "wait" : "pointer",
+                            opacity: pendingAction ? 0.6 : 1,
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = T.hover)
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          <td
+                            style={{
+                              padding: "9px 14px",
+                              borderBottom: `1px solid ${T.borderMuted}`,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected.has(c.id)}
+                              onChange={() =>
+                                setSelected((prev) => {
+                                  const s = new Set(prev);
+                                  s.has(c.id) ? s.delete(c.id) : s.add(c.id);
+                                  return s;
+                                })
+                              }
+                              style={{
+                                accentColor: T.accent,
+                                cursor: "pointer",
+                              }}
+                            />
+                          </td>
+                          <Td>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: T.text,
+                                fontFamily: "JetBrains Mono,monospace",
+                                fontSize: 12,
+                              }}
+                            >
+                              {c.name}
+                            </span>
+                          </Td>
+                          <Td mono dim>
+                            {c.image}
+                          </Td>
+                          <Td>
+                            <StatusBadge status={c.status} />
+                          </Td>
+                          <Td>
+                            <HealthBadge health={c.health} />
+                          </Td>
+                          <Td mono dim>
+                            {c.cpu}
+                          </Td>
+                          <Td mono dim>
+                            {c.memory}
+                          </Td>
+                          <Td mono dim>
+                            {c.ports}
+                          </Td>
+                          <Td dim>{c.uptime}</Td>
+                          <Td right>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontFamily: "JetBrains Mono,monospace",
+                                color: c.restarts > 2 ? T.yellow : T.textDim,
+                              }}
+                            >
+                              {c.restarts}
+                            </span>
+                          </Td>
+                          <Td style={{ textAlign: "right" }}>
+                            {pendingAction ? (
+                              <span style={{ fontSize: 11, color: T.accent }}>
+                                {pendingAction[0].toUpperCase()}
+                                {pendingAction.slice(1)}ing…
+                              </span>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCtx({ x: e.clientX, y: e.clientY, c });
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: T.textDim,
+                                  padding: "2px 4px",
+                                  borderRadius: 5,
+                                  display: "inline-flex",
+                                }}
+                              >
+                                <MoreHorizontal size={14} />
+                              </button>
+                            )}
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {rows.length === 0 && (
+                <EmptyState
+                  icon={<Box size={28} />}
+                  title="No containers found"
+                  sub="Adjust your search or filter criteria."
+                />
+              )}
+            </Card>
           </div>
-          {rows.length === 0 && (
-            <EmptyState
-              icon={<Box size={28} />}
-              title="No containers found"
-              sub="Adjust your search or filter criteria."
-            />
-          )}
-        </Card>
-        </div>
         </>
       )}
     </div>

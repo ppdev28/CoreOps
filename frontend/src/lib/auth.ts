@@ -37,7 +37,8 @@ export function getSession(): AuthSession | null {
 export function setSession(session: AuthSession | null) {
   memorySession = session;
   try {
-    if (session) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    if (session)
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     else window.localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Keep working with the in-memory copy.

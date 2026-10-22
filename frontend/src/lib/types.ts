@@ -220,7 +220,6 @@ export interface ConfirmDialog {
   onConfirm: () => void;
 }
 
-
 export interface ContainerDetailData {
   id: string;
   name: string;
@@ -241,15 +240,21 @@ export interface ContainerDetailData {
     Mode: string;
     RW: boolean;
   }>;
-  networks: Record<string, {
-    IPAddress?: string;
-    MacAddress?: string;
-    Gateway?: string;
-    NetworkID?: string;
-  }>;
-  ports: Record<string, Array<{
-    HostIp?: string;
-    HostPort?: string;
-  }> | null>;
+  networks: Record<
+    string,
+    {
+      IPAddress?: string;
+      MacAddress?: string;
+      Gateway?: string;
+      NetworkID?: string;
+    }
+  >;
+  ports: Record<
+    string,
+    Array<{
+      HostIp?: string;
+      HostPort?: string;
+    }> | null
+  >;
   labels: Record<string, string>;
 }

@@ -56,9 +56,13 @@ export default function ContainerDetail({
 
   const state = container?.state?.toLowerCase() || "unknown";
   const status =
-    state === "running" ? "running" :
-    state === "paused" ? "paused" :
-    state === "restarting" ? "restarting" : "stopped";
+    state === "running"
+      ? "running"
+      : state === "paused"
+        ? "paused"
+        : state === "restarting"
+          ? "restarting"
+          : "stopped";
 
   const inspect = useMemo(
     () => (container ? JSON.stringify(container, null, 2) : ""),
@@ -102,7 +106,9 @@ export default function ContainerDetail({
   if (loading) {
     return (
       <div className="native-container-detail">
-        <div className="native-container-detail-loading">Loading container…</div>
+        <div className="native-container-detail-loading">
+          Loading container…
+        </div>
       </div>
     );
   }
@@ -191,7 +197,9 @@ export default function ContainerDetail({
           <Btn
             variant="secondary"
             icon={<Terminal size={11} />}
-            onClick={() => addToast(`Terminal for ${container.name} — coming next`, "info")}
+            onClick={() =>
+              addToast(`Terminal for ${container.name} — coming next`, "info")
+            }
           >
             Terminal
           </Btn>
@@ -199,7 +207,9 @@ export default function ContainerDetail({
       </div>
 
       <div className="native-container-tabs">
-        {(["Overview", "Network", "Mounts", "Environment", "Inspect"] as Tab[]).map((item) => (
+        {(
+          ["Overview", "Network", "Mounts", "Environment", "Inspect"] as Tab[]
+        ).map((item) => (
           <button
             key={item}
             className={tab === item ? "active" : ""}
@@ -234,18 +244,40 @@ export default function ContainerDetail({
           <Card>
             <CardHeader title="Runtime" />
             <div className="native-runtime-grid">
-              <div><Server size={16} /><span>State</span><strong>{container.state}</strong></div>
-              <div><Network size={16} /><span>Networks</span><strong>{Object.keys(container.networks).length}</strong></div>
-              <div><Box size={16} /><span>Mounts</span><strong>{container.mounts.length}</strong></div>
-              <div><Terminal size={16} /><span>Command</span><strong>{container.config.cmd.join(" ") || "—"}</strong></div>
+              <div>
+                <Server size={16} />
+                <span>State</span>
+                <strong>{container.state}</strong>
+              </div>
+              <div>
+                <Network size={16} />
+                <span>Networks</span>
+                <strong>{Object.keys(container.networks).length}</strong>
+              </div>
+              <div>
+                <Box size={16} />
+                <span>Mounts</span>
+                <strong>{container.mounts.length}</strong>
+              </div>
+              <div>
+                <Terminal size={16} />
+                <span>Command</span>
+                <strong>{container.config.cmd.join(" ") || "—"}</strong>
+              </div>
             </div>
           </Card>
 
           <Card>
             <CardHeader title="Command" />
             <div className="native-code-block">
-              <div><span>ENTRYPOINT</span>{container.config.entrypoint.join(" ") || "—"}</div>
-              <div><span>CMD</span>{container.config.cmd.join(" ") || "—"}</div>
+              <div>
+                <span>ENTRYPOINT</span>
+                {container.config.entrypoint.join(" ") || "—"}
+              </div>
+              <div>
+                <span>CMD</span>
+                {container.config.cmd.join(" ") || "—"}
+              </div>
             </div>
           </Card>
 
@@ -254,11 +286,14 @@ export default function ContainerDetail({
             <div className="native-detail-list">
               {Object.entries(container.labels).length === 0 ? (
                 <div className="native-empty-detail">No labels</div>
-              ) : Object.entries(container.labels).map(([key, value]) => (
-                <div className="native-detail-row" key={key}>
-                  <span>{key}</span><strong>{value}</strong>
-                </div>
-              ))}
+              ) : (
+                Object.entries(container.labels).map(([key, value]) => (
+                  <div className="native-detail-row" key={key}>
+                    <span>{key}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </div>
@@ -274,9 +309,18 @@ export default function ContainerDetail({
                   <Network size={15} />
                   <strong>{name}</strong>
                 </div>
-                <div><span>IP address</span><code>{network.IPAddress || "—"}</code></div>
-                <div><span>MAC address</span><code>{network.MacAddress || "—"}</code></div>
-                <div><span>Gateway</span><code>{network.Gateway || "—"}</code></div>
+                <div>
+                  <span>IP address</span>
+                  <code>{network.IPAddress || "—"}</code>
+                </div>
+                <div>
+                  <span>MAC address</span>
+                  <code>{network.MacAddress || "—"}</code>
+                </div>
+                <div>
+                  <span>Gateway</span>
+                  <code>{network.Gateway || "—"}</code>
+                </div>
               </div>
             ))}
           </div>
@@ -284,13 +328,21 @@ export default function ContainerDetail({
             <h3>Published ports</h3>
             {Object.entries(container.ports).length === 0 ? (
               <p>No published ports.</p>
-            ) : Object.entries(container.ports).map(([port, bindings]) => (
-              <div key={port}>
-                <code>{port}</code>
-                <span>→</span>
-                <code>{bindings?.map((b) => `${b.HostIp || "0.0.0.0"}:${b.HostPort || "—"}`).join(", ") || "—"}</code>
-              </div>
-            ))}
+            ) : (
+              Object.entries(container.ports).map(([port, bindings]) => (
+                <div key={port}>
+                  <code>{port}</code>
+                  <span>→</span>
+                  <code>
+                    {bindings
+                      ?.map(
+                        (b) => `${b.HostIp || "0.0.0.0"}:${b.HostPort || "—"}`,
+                      )
+                      .join(", ") || "—"}
+                  </code>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       )}
@@ -301,16 +353,25 @@ export default function ContainerDetail({
           <div className="native-mount-list">
             {container.mounts.length === 0 ? (
               <div className="native-empty-detail">No mounts configured.</div>
-            ) : container.mounts.map((mount, index) => (
-              <div className="native-mount-card" key={`${mount.Destination}-${index}`}>
-                <div className="native-mount-type">{mount.Type}</div>
-                <div className="native-mount-path"><span>{mount.Source}</span><b>→</b><span>{mount.Destination}</span></div>
-                <div className="native-mount-meta">
-                  <span>{mount.RW ? "read/write" : "read-only"}</span>
-                  <code>{mount.Mode || "default"}</code>
+            ) : (
+              container.mounts.map((mount, index) => (
+                <div
+                  className="native-mount-card"
+                  key={`${mount.Destination}-${index}`}
+                >
+                  <div className="native-mount-type">{mount.Type}</div>
+                  <div className="native-mount-path">
+                    <span>{mount.Source}</span>
+                    <b>→</b>
+                    <span>{mount.Destination}</span>
+                  </div>
+                  <div className="native-mount-meta">
+                    <span>{mount.RW ? "read/write" : "read-only"}</span>
+                    <code>{mount.Mode || "default"}</code>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
       )}
@@ -320,17 +381,22 @@ export default function ContainerDetail({
           <CardHeader title={`Environment · ${container.config.env.length}`} />
           <div className="native-env-list">
             {container.config.env.length === 0 ? (
-              <div className="native-empty-detail">No environment variables.</div>
-            ) : container.config.env.map((value, index) => {
-              const split = value.indexOf("=");
-              const key = split >= 0 ? value.slice(0, split) : value;
-              const val = split >= 0 ? value.slice(split + 1) : "";
-              return (
-                <div className="native-env-row" key={`${key}-${index}`}>
-                  <code>{key}</code><span>{val || "—"}</span>
-                </div>
-              );
-            })}
+              <div className="native-empty-detail">
+                No environment variables.
+              </div>
+            ) : (
+              container.config.env.map((value, index) => {
+                const split = value.indexOf("=");
+                const key = split >= 0 ? value.slice(0, split) : value;
+                const val = split >= 0 ? value.slice(split + 1) : "";
+                return (
+                  <div className="native-env-row" key={`${key}-${index}`}>
+                    <code>{key}</code>
+                    <span>{val || "—"}</span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       )}
@@ -339,7 +405,12 @@ export default function ContainerDetail({
         <Card>
           <div className="native-inspect-header">
             <CardHeader title="Docker inspect" />
-            <Btn variant="ghost" size="xs" icon={copied ? <Check size={11} /> : <Copy size={11} />} onClick={() => void copyInspect()}>
+            <Btn
+              variant="ghost"
+              size="xs"
+              icon={copied ? <Check size={11} /> : <Copy size={11} />}
+              onClick={() => void copyInspect()}
+            >
               {copied ? "Copied" : "Copy JSON"}
             </Btn>
           </div>

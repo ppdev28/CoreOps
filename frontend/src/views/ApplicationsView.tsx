@@ -340,8 +340,8 @@ export default function ApplicationsView({
             <code style={{ color: T.textSub }}>com.docker.compose.project</code>{" "}
             label. Standalone containers are exposed as single-container
             applications. Custom{" "}
-            <code style={{ color: T.textSub }}>coreops.application.*</code> labels
-            can provide a friendly name, category, description and icon.
+            <code style={{ color: T.textSub }}>coreops.application.*</code>{" "}
+            labels can provide a friendly name, category, description and icon.
           </div>
         </Card>
       </div>

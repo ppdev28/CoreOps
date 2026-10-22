@@ -142,7 +142,8 @@ export function Sidebar({
             height: 24,
             borderRadius: 7,
             flexShrink: 0,
-            background: "linear-gradient(155deg, rgb(0, 97, 255) 24.79%, rgba(19, 37, 54, 1) 34.45%, rgb(0, 149, 255) 84.87%)",
+            background:
+              "linear-gradient(155deg, rgb(0, 97, 255) 24.79%, rgba(19, 37, 54, 1) 34.45%, rgb(0, 149, 255) 84.87%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -527,8 +528,11 @@ export function Header({
             >
               Notifications
             </div>
-            <div style={{ padding: "18px 16px", fontSize: 12, color: T.textDim }}>
-              No notifications. Alerts will appear here once alerting is available.
+            <div
+              style={{ padding: "18px 16px", fontSize: 12, color: T.textDim }}
+            >
+              No notifications. Alerts will appear here once alerting is
+              available.
             </div>
           </div>
         )}
