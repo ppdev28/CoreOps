@@ -170,7 +170,7 @@ func parseUFWRules(status string) []FirewallRule {
 			inRules = true
 			continue
 		}
-		if !inRules || line == "" || strings.HasPrefix(line, "Status:") || strings.HasPrefix(line, "Logging:") || strings.HasPrefix(line, "Default:") {
+		if !inRules || line == "" || strings.HasPrefix(line, "--") || strings.HasPrefix(line, "Status:") || strings.HasPrefix(line, "Logging:") || strings.HasPrefix(line, "Default:") {
 			continue
 		}
 		fields := strings.Fields(line)
