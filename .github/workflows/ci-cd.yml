@@ -1,0 +1,99 @@
+name: CoreOps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coreops-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Run Go tests
+        working-directory: backend
+        run: go test ./...
+
+      - name: Build Go API
+        working-directory: backend
+        run: go build -o scp-api ./cmd/scp-api
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Check frontend formatting
+        working-directory: frontend
+        run: pnpm format:check
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+  deploy:
+    name: Deploy production
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/pepe/proyectos/CoreOps
+
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            cd backend
+            go build -o scp-api ./cmd/scp-api
+
+            sudo systemctl restart coreops
+            sudo systemctl is-active --quiet coreops
+
+            curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/health > /dev/null
+
+            echo "CoreOps production deployment completed successfully."
