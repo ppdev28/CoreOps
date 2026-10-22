@@ -36,7 +36,7 @@ React + TypeScript + Vite
        |
        | /api/* via Vite dev proxy
        v
-Go CoreOps API :8080
+Go CoreOps API :8082
        |
        v
 Docker client / infrastructure adapters

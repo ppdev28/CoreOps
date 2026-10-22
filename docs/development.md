@@ -33,30 +33,30 @@ When Vite is started with `--host 0.0.0.0`, it exposes the application on the se
 cd ~/proyectos/CoreOps/backend
 go mod tidy
 go build ./...
-go run ./cmd/scp-api
+go run ./cmd/coreops-api
 ```
 
-The API normally listens on port `8080`.
+The API normally listens on port `8082`.
 
 ## Basic backend checks
 
 Health:
 
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8082/api/v1/health
 ```
 
 Containers:
 
 ```bash
-curl http://localhost:8080/api/v1/containers
+curl http://localhost:8082/api/v1/containers
 ```
 
 When validating Docker integration, the API response should be compared with the actual Docker host state. Do not rely solely on mock data or screenshots.
 
 ## Frontend/API integration
 
-The frontend uses the Vite development proxy so browser calls can use `/api/...` while the backend remains on `localhost:8080` on the server.
+The frontend uses the Vite development proxy so browser calls can use `/api/...` while the backend remains on `localhost:8082` on the server.
 
 This avoids putting Docker Engine access into the browser and avoids unnecessary CORS complexity during local development.
 
@@ -98,7 +98,7 @@ git pull --ff-only origin feature/project-foundation
 
 Do not commit generated files such as:
 
-- `backend/scp-api`
+- `backend/coreops-api`
 - build output in `frontend/dist/`
 - local environment secrets
 - editor-specific files

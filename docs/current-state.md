@@ -28,7 +28,7 @@ The UI originated in Figma Make and has been brought into the repository. It con
 
 The Containers screen has been connected to the CoreOps API rather than relying on its original mock container list.
 
-The Vite development server proxies `/api` requests to the local backend on port `8080`.
+The Vite development server proxies `/api` requests to the local backend on port `8082`.
 
 Known frontend validation command:
 
@@ -51,7 +51,7 @@ Stack:
 
 The backend lives in `backend/`.
 
-The API runs on `:8080`.
+The API runs on `:8082`.
 
 The backend can connect to the Docker Engine on the Ubuntu host through the normal Docker environment/local Unix socket.
 
@@ -114,7 +114,7 @@ The following path is working:
 Browser
   -> React/Vite UI
   -> /api proxy
-  -> Go CoreOps API :8080
+  -> Go CoreOps API :8082
   -> Docker Engine
   -> real containers
 ```

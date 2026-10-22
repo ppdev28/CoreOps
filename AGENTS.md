@@ -31,7 +31,7 @@ Before changing code, read these files in this order:
 - Keep TypeScript strict and Go code idiomatic.
 - Before declaring a change complete, run the most relevant build/tests and report any warnings or limitations.
 - Do not silently change unrelated files.
-- Do not commit generated binaries such as `backend/scp-api`.
+- Do not commit generated binaries such as `backend/coreops-api`.
 
 ## Current real environment
 

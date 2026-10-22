@@ -615,8 +615,8 @@ frontend/src/lib/types.ts
 Si esos datos todavía no existen en el backend:
 
 ```text
-backend/cmd/scp-api/main.go
-backend/cmd/scp-api/applications.go
+backend/cmd/coreops-api/main.go
+backend/cmd/coreops-api/applications.go
 ```
 
 El flujo completo sería:
@@ -670,7 +670,7 @@ y después el backend correspondiente.
 Mira:
 
 ```text
-backend/cmd/scp-api/
+backend/cmd/coreops-api/
 ```
 
 ### 4. ¿La acción funciona pero la pantalla no se actualiza?
@@ -782,11 +782,11 @@ Y antes de modificar algo global, busca si ya existe un componente o token reuti
 | Llamadas HTTP | `frontend/src/lib/api.ts` |
 | Tipos de datos | `frontend/src/lib/types.ts` |
 | Estilos globales concretos | `frontend/src/styles/` |
-| Endpoint del backend | `backend/cmd/scp-api/main.go` |
-| Lógica de Applications | `backend/cmd/scp-api/applications.go` |
-| Lógica de Security | `backend/cmd/scp-api/security.go` |
-| Lógica de Terminal | `backend/cmd/scp-api/terminal.go` |
-| Docker | `backend/cmd/scp-api/` |
+| Endpoint del backend | `backend/cmd/coreops-api/main.go` |
+| Lógica de Applications | `backend/cmd/coreops-api/applications.go` |
+| Lógica de Security | `backend/cmd/coreops-api/security.go` |
+| Lógica de Terminal | `backend/cmd/coreops-api/terminal.go` |
+| Docker | `backend/cmd/coreops-api/` |
 
 ---
 

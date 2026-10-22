@@ -205,7 +205,7 @@ go run ./cmd/CoreOps-api
 The API listens on `:8082` by default. Override it with:
 
 ```bash
-CoreOps_PORT=8080 go run ./cmd/CoreOps-api
+COREOPS_PORT=8082 go run ./cmd/coreops-api
 ```
 
 The backend uses the standard Docker environment and can connect to the local Docker Engine through its Unix socket on a normal Linux Docker host.
