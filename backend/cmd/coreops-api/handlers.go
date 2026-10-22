@@ -158,6 +158,7 @@ func (a *API) terminalExec(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "command is required"})
 		return
 	}
+	setAuditDetail(r, "exec: "+req.Command)
 	result, err := executeTerminalCommand(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
