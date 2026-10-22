@@ -15,9 +15,9 @@ type VirtualMachine struct {
 }
 
 type VirtualMachineActionResponse struct {
-	OK         bool   `json:"ok"`
-	Name       string `json:"name"`
-	Action     string `json:"action"`
+	OK     bool   `json:"ok"`
+	Name   string `json:"name"`
+	Action string `json:"action"`
 }
 
 const libvirtSystemURI = "qemu:///system"

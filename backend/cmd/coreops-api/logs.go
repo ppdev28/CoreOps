@@ -158,6 +158,8 @@ func inferLogLevel(message string) string {
 }
 
 func minInt(a, b int) int {
-	if a < b { return a }
+	if a < b {
+		return a
+	}
 	return b
 }

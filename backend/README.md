@@ -9,10 +9,10 @@ The API uses Docker's standard environment configuration. On a Linux host with D
 ```bash
 cd backend
 go mod tidy
-go run ./cmd/scp-api
+go run ./cmd/coreops-api
 ```
 
-The default API address is `http://localhost:8080`.
+The default API address is `http://localhost:8082`.
 
 Useful endpoints:
 
@@ -23,7 +23,7 @@ Useful endpoints:
 - `POST /api/v1/containers/:id/stop`
 - `POST /api/v1/containers/:id/restart`
 
-Set `CoreOps_PORT` to change the HTTP port.
+Set `COREOPS_PORT` to change the HTTP port, `COREOPS_HOST` to change the bind address (default `127.0.0.1`; use `0.0.0.0` or a Tailscale IP to reach it from other devices) and `COREOPS_CORS_ORIGINS` (comma-separated) to allow extra browser origins. The legacy `CoreOps_*` names still work.
 
 ## Security
 
