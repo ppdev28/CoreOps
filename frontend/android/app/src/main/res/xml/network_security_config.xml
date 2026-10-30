@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Plain HTTP only to the CoreOps server on the home LAN; everything else stays HTTPS. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.1.128</domain>
+    </domain-config>
+</network-security-config>

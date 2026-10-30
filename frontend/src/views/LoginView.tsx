@@ -3,7 +3,14 @@ import { Lock, Server } from "lucide-react";
 import { T } from "../lib/tokens";
 import { Capacitor } from "@capacitor/core";
 import { login } from "../lib/api";
-import { getServerUrl, normalizeServerUrl, setServerUrl } from "../lib/auth";
+import {
+  getLanUrl,
+  getServerUrl,
+  normalizeServerUrl,
+  resolveServerUrl,
+  setLanUrl,
+  setServerUrl,
+} from "../lib/auth";
 
 export default function LoginView() {
   const [username, setUsername] = useState("");
@@ -11,6 +18,7 @@ export default function LoginView() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [server, setServer] = useState(getServerUrl);
+  const [lan, setLan] = useState(getLanUrl);
   // The native app has no same-origin API, so the address is always asked for.
   const [showServer, setShowServer] = useState(
     Capacitor.isNativePlatform() || getServerUrl() !== "",
@@ -30,8 +38,16 @@ export default function LoginView() {
     }
     setBusy(true);
     setError(null);
+    const normalizedLan = normalizeServerUrl(lan);
+    if (normalizedLan === null) {
+      setError("Home network address must start with http:// or https://");
+      setBusy(false);
+      return;
+    }
     setServerUrl(normalized);
+    setLanUrl(normalizedLan);
     try {
+      await resolveServerUrl();
       await login(username.trim(), password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");
@@ -108,6 +124,18 @@ export default function LoginView() {
               value={server}
               onChange={(e) => setServer(e.target.value)}
               placeholder="http://100.x.y.z:8082"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+            <span style={{ display: "block", marginTop: 10 }}>
+              Home network address (optional)
+            </span>
+            <input
+              style={{ ...field, marginTop: 5 }}
+              value={lan}
+              onChange={(e) => setLan(e.target.value)}
+              placeholder="http://192.168.1.50:8082"
               inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"

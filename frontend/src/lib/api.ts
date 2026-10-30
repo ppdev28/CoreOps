@@ -1,6 +1,6 @@
 import {
   getAuthToken,
-  getServerUrl,
+  getActiveServerUrl,
   setSession,
   type AuthSession,
 } from "./auth";
@@ -80,7 +80,7 @@ const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
 // server address saved on the login screen. VITE_API_BASE_URL overrides both.
 function getApiBase(): string {
   if (configuredApiBase) return configuredApiBase;
-  const server = getServerUrl();
+  const server = getActiveServerUrl();
   return server ? `${server}/api/v1` : "/api/v1";
 }
 function mapStatus(state: string): ContainerStatus {

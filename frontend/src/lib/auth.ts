@@ -87,3 +87,49 @@ export function setServerUrl(url: string) {
     // Not persisted; the address has to be entered again next time.
   }
 }
+
+const LAN_KEY = "coreops.lanUrl";
+const LAN_PROBE_MS = 1500;
+let activeServer: string | null = null;
+
+// Optional address reachable only from the home network. When it answers
+// /health quickly it is preferred over the main (for example Tailscale) one.
+export function getLanUrl(): string {
+  try {
+    return window.localStorage.getItem(LAN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setLanUrl(url: string) {
+  try {
+    if (url) window.localStorage.setItem(LAN_KEY, url);
+    else window.localStorage.removeItem(LAN_KEY);
+  } catch {
+    // Not persisted; the address has to be entered again next time.
+  }
+  activeServer = null;
+}
+
+// Address the API client should use right now: the LAN one if the last probe
+// succeeded, otherwise the main one.
+export function getActiveServerUrl(): string {
+  return activeServer ?? getServerUrl();
+}
+
+export async function resolveServerUrl(): Promise<string> {
+  const lan = getLanUrl();
+  activeServer = null;
+  if (lan) {
+    try {
+      const res = await fetch(`${lan}/api/v1/health`, {
+        signal: AbortSignal.timeout(LAN_PROBE_MS),
+      });
+      if (res.ok) activeServer = lan;
+    } catch {
+      // Not on the home network; fall back to the main address.
+    }
+  }
+  return getActiveServerUrl();
+}
