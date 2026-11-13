@@ -6,6 +6,12 @@ Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current termina
 
 Read the five documents in `AGENTS.md` order, then [module instructions](modules/README.md), [security findings](security.md) and [modularization plan](modularization-plan.md). The user requested documentation first, followed by gradual code implementation and preservation of the Figma UI.
 
+## Authorized Android cleanup
+
+The user explicitly authorized cleanup of the 36 previously untracked Android files after the terminal commit. All 36 were copied and SHA-256 verified outside the repo under `/tmp/coreops-android-cleanup-05romax3/` (temporary storage). Removed 34 unused/conflicting Capacitor template files; retained and versioned two reviewed `.gitignore` files, including exclusions for local signing keys. No previously tracked native code/resources changed, no `cap sync` and no app/security redesign. Do not restore the template resources merely because older handoffs said to preserve them.
+
+Validation: frontend build passed; XML/Kotlin resource references resolve, no duplicate resource IDs, backup hashes verified and ignore rules cover generated/local files without hiding tracked source. Android assemble could not start: Java/JAVA_HOME missing and no Android SDK configured. See [mobile guide](modules/mobile.md). Native build/device validation remains pending.
+
 ## Latest terminal slice (2026-11-13)
 
 The explicit terminal request replaces the isolated-command UI with xterm.js and a real Linux PTY. Branch `feature/terminal-redesign` was already checked out; it was preserved. Backend transport is `terminal_session.go`; frontend remains `views/TerminalView.tsx` with shared API transport and new terminal CSS. No wholesale module extraction. See [terminal module](modules/terminal.md) for protocol, environment, limits, lifecycle, shortcuts and proxy configuration.
@@ -48,7 +54,7 @@ Do not do a repository-wide move. Do not introduce microservices or multiple Go 
 - `cd frontend && pnpm build`: passed, no chunk-size warning.
 - No live API, Docker mutation, privileged host command, browser test, native build, dependency audit or deployment was performed.
 
-Untracked Android resources/tests existed before this task; keep them untouched. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. `toContainer` currently sets restart count to zero without source data, and the UI displays it: fix rather than claim all unavailable values are honest.
+The earlier untracked Android resources/tests were subsequently cleaned with explicit authorization; see the cleanup section above. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. `toContainer` currently sets restart count to zero without source data, and the UI displays it: fix rather than claim all unavailable values are honest.
 
 ## Commands for the next session
 

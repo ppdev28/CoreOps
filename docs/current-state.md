@@ -8,7 +8,7 @@ Last known working milestone: **the Figma-designed Containers UI displays real D
 
 - GitHub repository: `ppdev28/CoreOps`
 - Reviewed checkout: `develop`; confirm the current branch rather than following historical branch names.
-- Existing untracked Android assets/tests were present during review and were left untouched.
+- Android template assets/tests were initially left untracked; the user authorized their cleanup on 2026-11-13. See [mobile guide](modules/mobile.md).
 - The developer also has a local checkout on the Ubuntu server at `~/proyectos/CoreOps`.
 - GitHub authentication from the server uses SSH.
 - The JavaScript package manager is pnpm.
@@ -141,6 +141,8 @@ The lifecycle workflow has also been manually validated against Docker on the Ub
 ## Mobile
 
 `frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly using the server address entered on the login screen (stored locally; `VITE_API_BASE_URL` overrides it).
+
+Android repository cleanup (2026-11-13): backed up all 36 untracked template files, removed 34 unused/conflicting template files and versioned two reviewed `.gitignore` files. Existing native source/resources remain unchanged. Web build and static XML/resource/ignore checks passed; native build could not run because Java and an Android SDK are unavailable here. See [mobile guide](modules/mobile.md) for scope and temporary backup location.
 
 ## What is not finished
 
