@@ -31,7 +31,8 @@ When Vite is started with `--host 0.0.0.0`, it exposes the application on the se
 
 ```bash
 cd ~/proyectos/CoreOps/backend
-go mod tidy
+go test ./...
+go vet ./...
 go build ./...
 go run ./cmd/coreops-api
 ```
@@ -39,10 +40,17 @@ go run ./cmd/coreops-api
 The API normally listens on `127.0.0.1:8082`. Create a user first (see `backend/README.md`), for example:
 
 ```bash
-COREOPS_ADMIN_USER=admin COREOPS_ADMIN_PASSWORD='a-long-password' go run ./cmd/coreops-api
+# Stop the running API first; use its service user and COREOPS_DATA_DIR.
+# The CLI reads the password from stdin; avoid literal real secrets in shell history.
+read -rsp 'Password: ' COREOPS_NEW_PASSWORD
+printf '%s' "$COREOPS_NEW_PASSWORD" | go run ./cmd/coreops-api user add admin admin
+unset COREOPS_NEW_PASSWORD
+go run ./cmd/coreops-api
 ```
 
-Run `go test ./...` and `go vet ./...` before committing backend changes.
+Run `go test ./...` and `go vet ./...` before committing backend changes. Run `go mod tidy` only when dependency changes require it.
+
+**Identity caveat (SEC-01):** CLI and server keep separate in-memory stores. Stop the API before adding/removing users or changing passwords, use the same data directory and service identity, then restart it. Do not rely on live CLI revocation until this is fixed. A local development run and the installed systemd service can otherwise use different stores.
 
 ## Basic backend checks
 
@@ -100,8 +108,10 @@ Before making changes:
 ```bash
 git status
 git branch --show-current
-git pull --ff-only origin feature/project-foundation
+git log --oneline -5
 ```
+
+The reviewed branch was `develop`; do not automatically pull or switch to historical branches. Inspect upstream and local changes before synchronizing.
 
 Do not commit generated files such as:
 
@@ -125,4 +135,16 @@ Use focused commits. Do not squash/rebase/force-push existing work unless explic
 
 `.github/workflows/ci-cd.yml` validates (tests, build, frontend format check) and deploys `main`.
 
-`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR`.
+`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR` and keeping the service stopped during CLI changes.
+
+The checked-in workflow and unit disagree on the installed binary path; see [operations](modules/operations.md). Do not assume the workflow deploys the new binary or web assets.
+
+## Documentation-only validation
+
+Check local Markdown links, referenced paths, `git diff --check` and scope. Runtime code is unchanged in documentation tasks; baseline builds may be recorded but do not prove infrastructure or browser behavior. Read [module instructions](modules/README.md) before the next code slice.
+
+## Browser UI checks
+
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (15 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+
+Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal identity lookup. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.

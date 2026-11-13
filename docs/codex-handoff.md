@@ -1,153 +1,53 @@
 # Codex Handoff
 
-This file is the short operational handoff for continuing CoreOps work in Codex without losing the context of the current development conversation.
+Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current UI work is on `feature/ui-redesign`; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
 
-## Where we are
+## Read and resume
 
-The project has moved from a Figma-only prototype to a working first vertical slice.
+Read the five documents in `AGENTS.md` order, then [module instructions](modules/README.md), [security findings](security.md) and [modularization plan](modularization-plan.md). The user requested documentation first, followed by gradual code implementation and preservation of the Figma UI.
 
-The Figma Make design for **Server Control Center Dashboard** was used as the visual basis for the application. The design is intentionally being preserved while real backend capabilities are added behind it.
+## Latest UI slice (2026-11-13)
 
-The repository is:
+The user expanded the rounded monochrome styling to all application screens and requested configurable accents and responsive mobile/tablet/laptop/desktop layouts. `.app-workspace` now covers the whole app and login. `lib/appearance.ts` owns palette/contrast policy; `webSettings.ts` persists `accentColor`; `tokens.ts` applies live CSS variables. Settings has eight presets plus custom color and preserves the active view on Save/Reset. Semantic status colors remain independent. See [UI style](ui-style.md).
 
-```text
-https://github.com/ppdev28/CoreOps
-```
+Existing route and operation behavior remains. Keep the current working tree, including unrelated prior documentation/native assets, intact. Default native chrome is aligned with neutral colors but does not mirror web accent/light preferences; no native build was performed.
 
-The branch with the latest work is `capacitor-native` (it includes the auth, backend refactor and native shells); earlier work happened on `feature/project-foundation`.
+Validation commands: `pnpm --dir frontend build`, `pnpm --dir frontend format:check`, `pnpm --dir frontend test:ui` (Chromium required). The suite has 15 tests, including every navigation screen and inspect at eight viewports, plus appearance persistence, System, invalid stored color, gaps, stale data, roles and actions. API calls, including terminal identity lookup, are intercepted in these tests. Live API/device integration remains to be verified separately.
 
-The latest important milestone is:
+## Actual implementation
 
-> The Containers view displays real containers and its start, stop and restart operations have been manually verified against the developer's Ubuntu Server Docker Engine through the CoreOps Go API.
+React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8082` by default and owns Docker/Linux/libvirt access. Backend remains one `package main`; frontend API transport, types and mapping remain concentrated in `lib/api.ts`. Proposed modules are not extracted yet.
 
-## Current architecture
+Container list/inspect/start/stop/restart already exist; the prior milestone records manual validation on Ubuntu Docker. Host, applications, services, VMs, storage, network, monitoring, logs, terminal, security and updates have implementations with uneven real integration validation. Aggregate logs and metrics already use Docker. Never repeat production mutations merely to re-prove historical milestones.
 
-```text
-                         private network / Tailscale
-                                  |
-Browser / mobile -----------------+
-       |
-       v
-React + TypeScript + Vite
-       |
-       | /api/* via Vite dev proxy
-       v
-Go CoreOps API :8082
-       |
-       v
-Docker client / infrastructure adapters
-       |
-       v
-Docker Engine on Ubuntu Server
-       |
-       v
-real containers
-```
+Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. CLI changes are not reloaded by the running auth store; stop the API before CLI user changes and use the same service user/data directory. See SEC-01. Terminal is admin-only shell execution with process privileges, not a persistent PTY. Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
 
-The browser must never talk directly to Docker Engine.
+## Recommended next slice
 
-## Authentication
+Fix coherent identity persistence and revocation (SEC-01) with behavior tests for CLI/server, restart and storage failures. Choose persistence deliberately; SQLite is a candidate, not a completed decision. Then capture auth/health/containers API contracts and extract the containers backend slice: consumer-owned interface, Docker adapter, HTTP mapping and composition. Preserve current URLs, JSON behavior and minimum roles. Follow with the frontend containers feature, honest unavailable values and action-flow tests. Remaining P0 risks must precede broader exposure.
 
-All API calls except health and login need a session. Create a user with `printf '%s' "<password>" | go run ./cmd/coreops-api user add <name> admin` (from `backend/`), then sign in from the UI. When adding endpoints, register them in `backend/cmd/coreops-api/routes.go` with the lowest role that is safe, and keep the UI error handling for 403.
+Do not do a repository-wide move. Do not introduce microservices or multiple Go modules. Do not generate clients until a contract/tooling decision has been reviewed. New guide per extracted capability should live beside its code and be indexed from the module map.
 
-## Current working endpoints
+## Validation completed in this review
 
-The full list lives in `docs/current-state.md`. The original slice was:
+- `cd backend && go test ./... && go vet ./... && go build ./...`: passed.
+- `cd frontend && pnpm build`: passed, no chunk-size warning.
+- No live API, Docker mutation, privileged host command, browser test, native build, dependency audit or deployment was performed.
 
-```text
-GET /api/v1/health
-GET /api/v1/containers
-POST /api/v1/containers/{id}/start
-POST /api/v1/containers/{id}/stop
-POST /api/v1/containers/{id}/restart
-```
+Untracked Android resources/tests existed before this task; keep them untouched. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. `toContainer` currently sets restart count to zero without source data, and the UI displays it: fix rather than claim all unavailable values are honest.
 
-Health returns Docker availability and API status.
-
-Containers returns real Docker container information including ID, name, image, state/status, creation timestamp, ports and networks.
-
-## Current frontend behavior
-
-The Containers screen:
-
-- calls the CoreOps API rather than using Figma mock data;
-- adapts API data into the UI model;
-- shows loading and error states;
-- supports retry/refresh;
-- calculates container status counts from real API data;
-- supports the existing UI search/filter/table/grid behavior;
-- executes start, stop and restart actions through the API;
-- shows an in-progress state per container and prevents duplicate submissions;
-- confirms stop and restart operations and refreshes real state after completion;
-- does not fabricate metrics that the backend does not expose.
-
-## The next task
-
-The next Containers milestone should build on the real lifecycle workflow with inspection, logs or metrics. Before adding an endpoint, inspect the existing backend implementation and frontend action handlers, and preserve the existing UI.
-
-All future infrastructure actions should follow the same pattern: validate the target in the backend, execute through a Go adapter, return useful errors, show a pending state, prevent duplicates, reconcile real state after success and use confirmation for disruptive operations.
-
-## What to do before coding
-
-Run:
+## Commands for the next session
 
 ```bash
-cd ~/proyectos/CoreOps
-git status
+git status --short
 git branch --show-current
-git log --oneline -10
+git log --oneline -5
+cd backend
+go test ./...
+go vet ./...
+go build ./...
+cd ../frontend
+pnpm build
 ```
 
-Then inspect:
-
-```text
-backend/
-frontend/src/
-frontend/vite.config.ts
-docs/product.md
-docs/current-state.md
-docs/architecture.md
-```
-
-Do not assume that this document is more authoritative than the code. If code and documentation disagree, inspect the code and update the documentation after resolving the discrepancy.
-
-## Important implementation philosophy
-
-CoreOps is intended to become a genuinely useful professional DevOps/sysadmin/cloud operations tool, not an imitation of Portainer with a different skin.
-
-Favor capabilities that compose into complete workflows:
-
-```text
-observe -> inspect -> diagnose -> act -> verify
-```
-
-For example, a container workflow should eventually let a user see status/resource impact, inspect logs/configuration, perform an action, and verify the result without jumping between unrelated applications.
-
-Do not build a huge abstraction layer just because future Kubernetes/cloud support is possible. Build the current Linux/Docker workflow cleanly and introduce abstractions when a second implementation genuinely needs them.
-
-## Real test environment
-
-The Ubuntu Server has Docker installed directly on the host and contains many real containers. The developer has Tailscale on the server, Mac and mobile phone.
-
-This environment should be used for integration testing, but changes must be made carefully because the containers are real infrastructure.
-
-Never perform destructive operations against an arbitrary real container merely to test an API. Prefer a disposable test container when destructive behavior needs validation.
-
-## End-of-task protocol
-
-Before declaring a task complete:
-
-- run relevant tests/builds;
-- verify the API directly where applicable;
-- verify the browser behavior where applicable;
-- inspect `git diff` and `git status`;
-- avoid unrelated modifications;
-- update documentation if the implementation state changed materially;
-- create a focused commit if the working convention calls for it.
-
-When handing work back to the developer, state exactly:
-
-1. what changed;
-2. what was tested;
-3. what remains;
-4. the exact command(s) needed to continue locally.
+Before finishing a slice, inspect scope/diff, run relevant checks, update current state and module guide, and report what changed, what was tested, what remains and how to continue. The user has now requested committing the documentation and UI work after completing the favicon. No deployment or push was requested.

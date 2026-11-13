@@ -41,7 +41,7 @@ The real Docker host contains many containers, so it is suitable for exercising 
 
 ## Git workflow
 
-The active development branch for this phase is `feature/project-foundation`.
+The checkout reviewed on 2026-11-12 is `develop`. Confirm with `git branch --show-current` before working; do not switch branches based on older handoffs.
 
 Keep commits focused and use conventional-style messages such as:
 
@@ -54,4 +54,4 @@ Do not rewrite history or force-push unless explicitly requested.
 
 ## Immediate product rule
 
-The next logical milestone after the current state is to turn container lifecycle actions in the existing UI into real Docker operations (`start`, `stop`, `restart`, etc.) while preserving the existing design and handling loading, confirmation, errors and refresh correctly.
+Container lifecycle actions already exist. The current phase starts with documentation and proceeds in small slices according to `docs/modularization-plan.md`. Read `docs/modules/README.md` and the affected module guide before implementation. Preserve existing UI, routes and role enforcement. Address identity persistence/revocation before expanding privileged capabilities; track remaining security work in `docs/security.md`. Do not treat proposed module folders or security controls as implemented.

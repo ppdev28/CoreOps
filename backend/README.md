@@ -8,7 +8,7 @@ The API uses Docker's standard environment configuration. On a Linux host with D
 
 ```bash
 cd backend
-go mod tidy
+go test ./...
 go run ./cmd/coreops-api
 ```
 
@@ -29,7 +29,7 @@ Set `COREOPS_PORT` to change the HTTP port, `COREOPS_HOST` to change the bind ad
 
 Every endpoint except `GET /api/v1/health` and `POST /api/v1/auth/login` requires a session token sent as `Authorization: Bearer <token>`.
 
-Create the first user before (or while) starting the server:
+Create the first user before starting the server. For later CLI changes, stop the API first, use its service user and the same `COREOPS_DATA_DIR`, then restart: the running server does not reload CLI changes (SEC-01).
 
 ```bash
 printf '%s' "a-long-password" | go run ./cmd/coreops-api user add alice admin
@@ -37,7 +37,7 @@ printf '%s' "a-long-password" | go run ./cmd/coreops-api user add alice admin
 COREOPS_ADMIN_USER=alice COREOPS_ADMIN_PASSWORD=a-long-password go run ./cmd/coreops-api
 ```
 
-Other commands: `user passwd <name>` (revokes that user's sessions), `user remove <name>`, `user list`. Passwords need at least 10 characters and are stored as PBKDF2-SHA256 hashes.
+Other commands: `user passwd <name>` (removes sessions from the CLI store; the live server must be restarted as described above), `user remove <name>`, `user list`. Passwords need at least 10 characters and are stored as PBKDF2-SHA256 hashes.
 
 | Role | Can do |
 | --- | --- |
@@ -57,4 +57,6 @@ The server does not terminate TLS. Put it behind Tailscale Serve or a reverse pr
 
 The backend is intentionally designed to talk to Docker through the local Unix socket rather than exposing Docker Engine's TCP API. Access to the Docker socket is highly privileged and must be protected at the host level.
 
-For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization will be added before CoreOps is exposed beyond a trusted development network.
+For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization already exist. Remaining security risks are tracked in [security review](../docs/security.md); Tailscale does not replace them.
+
+See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. The proposed internal packages are not implemented yet.

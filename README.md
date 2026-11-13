@@ -46,7 +46,7 @@ The repository already contains UI and backend verticals for several infrastruct
 | **Terminal** | 🟡 In progress | Web terminal interface and command execution foundation; persistent PTY/WebSocket terminal is planned |
 | **Security** | 🟢 Backend + UI | Security/session information and selected remediation actions |
 | **Updates** | 🟢 Backend + UI | Update discovery, refresh and application workflow |
-| **Authentication / authorization** | 🔴 Planned | Secure access control for privileged operations |
+| **Authentication / authorization** | 🟡 Implemented, hardening pending | Sessions, roles, user CLI and audit; see security review |
 | **Multi-host / nodes** | 🔴 Planned | Manage multiple servers from one control plane |
 | **Kubernetes / cloud** | 🔴 Planned | Future integrations beyond the initial Linux/Docker focus |
 
@@ -198,11 +198,11 @@ The Vite development server proxies `/api` requests to the CoreOps backend on po
 
 ```bash
 cd backend
-go mod tidy
-go run ./cmd/CoreOps-api
+go test ./...
+go run ./cmd/coreops-api
 ```
 
-The API listens on `:8082` by default. Override it with:
+Create a user before login following [backend instructions](backend/README.md). The API listens on `127.0.0.1:8082` by default. Override it with:
 
 ```bash
 COREOPS_PORT=8082 go run ./cmd/coreops-api
@@ -234,7 +234,7 @@ CoreOps/
 │   └── src/lib        # API, types, data and utilities
 │
 ├── backend/           # Go API and infrastructure integrations
-│   └── cmd/CoreOps-api/   # CoreOps API server
+│   └── cmd/coreops-api/   # CoreOps API server
 │
 ├── docs/              # Product, architecture and development docs
 ├── AGENTS.md          # Development/Codex project instructions
@@ -271,7 +271,7 @@ CoreOps is being developed in vertical slices rather than attempting to implemen
 - Complete the real browser terminal with persistent PTY/WebSocket sessions
 - Improve host, services, storage, networking and monitoring integrations
 - Strengthen error handling and operational feedback
-- Establish authentication, authorization and auditability foundations
+- Harden existing authentication, authorization and auditability; address CLI/server identity coherence
 
 ### Longer term
 
@@ -283,6 +283,10 @@ CoreOps is being developed in vertical slices rather than attempting to implemen
 - Configuration/environment management
 - Kubernetes integration
 - Selected cloud infrastructure integrations
+
+## Architecture and module guides
+
+The proposed direction is a modular monolith: API contract, HTTP transport, backend capabilities/adapters and frontend features, with one Go backend process. Extraction is not implemented yet. Read [architecture](docs/architecture.md), [module guides](docs/modules/README.md), [migration plan](docs/modularization-plan.md) and [current state](docs/current-state.md).
 
 ## Development
 
@@ -302,7 +306,7 @@ Before submitting a change, validate the relevant frontend build and backend tes
 
 🚧 **Early active development**
 
-CoreOps is functional enough to operate against a real Docker host, but it is not yet a production-ready infrastructure control plane. Authentication, authorization, audit logging, hardened deployment and multi-host support remain part of the roadmap.
+CoreOps is functional enough to operate against a real Docker host, but it is not yet a production-ready infrastructure control plane. Authentication, roles and audit logging are implemented but require hardening. Identity persistence/revocation, privileged execution, session storage and deployment need further work; multi-host is still planned. See [security findings](docs/security.md).
 
 ---
 
