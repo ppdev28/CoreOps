@@ -15,13 +15,10 @@ import {
   RefreshCw,
   AlertTriangle,
 } from "lucide-react";
-import { T } from "../lib/tokens";
-import {
-  getContainers,
-  runContainerAction,
-  type ContainerAction,
-} from "../lib/api";
-import type { Container, ConfirmDialog } from "../lib/types";
+import { T } from "../../lib/tokens";
+import { getContainers, runContainerAction, type ContainerAction } from "./api";
+import type { Container } from "./model";
+import type { ConfirmDialog } from "../../lib/types";
 import {
   Card,
   StatusBadge,
@@ -32,7 +29,7 @@ import {
   EmptyState,
   FilterToggle,
   Input,
-} from "../components/ui";
+} from "../../components/ui";
 
 function CtxMenu({
   x,
@@ -273,13 +270,18 @@ function MobileContainerCard({
           { label: "Network", value: c.net },
           { label: "Uptime", value: c.uptime },
           { label: "Ports", value: c.ports },
-          { label: "Restarts", value: String(c.restarts) },
+          {
+            label: "Restarts",
+            value: c.restarts == null ? "—" : String(c.restarts),
+          },
         ].map((item) => (
           <div key={item.label} className="containers-mobile-metric">
             <span>{item.label}</span>
             <strong
               className={
-                item.label === "Restarts" && c.restarts > 2 ? "warning" : ""
+                item.label === "Restarts" && (c.restarts ?? 0) > 2
+                  ? "warning"
+                  : ""
               }
             >
               {item.value}
@@ -800,10 +802,11 @@ export default function ContainersView({
                               style={{
                                 fontSize: 11,
                                 fontFamily: "JetBrains Mono,monospace",
-                                color: c.restarts > 2 ? T.yellow : T.textDim,
+                                color:
+                                  (c.restarts ?? 0) > 2 ? T.yellow : T.textDim,
                               }}
                             >
-                              {c.restarts}
+                              {c.restarts ?? "—"}
                             </span>
                           </Td>
                           <Td style={{ textAlign: "right" }}>

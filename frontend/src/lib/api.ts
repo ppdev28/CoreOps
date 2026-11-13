@@ -1,14 +1,13 @@
-import {
-  getAuthToken,
-  getServerUrl,
-  setSession,
-  type AuthSession,
-} from "./auth";
+import { toLifecycleStatus as mapStatus } from "../shared/ui/status";
+import { ApiError, getApiBase, request } from "../shared/api/client";
+export {
+  getContainers,
+  getContainerDetail,
+  runContainerAction,
+} from "../features/containers";
+export type { ContainerAction } from "../features/containers";
+import { getAuthToken, setSession, type AuthSession } from "./auth";
 import type {
-  Container,
-  ContainerStatus,
-  ContainerDetailData,
-  HealthStatus,
   HostOverview,
   NetworkOverview,
   StorageOverview,
@@ -20,22 +19,6 @@ import type {
 } from "./types";
 import type { MonitoringOverview } from "./monitoring";
 
-type ApiPort = {
-  privatePort: number;
-  publicPort?: number;
-  type: string;
-  ip?: string;
-};
-type ApiContainer = {
-  id: string;
-  name: string;
-  image: string;
-  state: string;
-  status: string;
-  createdAt: number;
-  ports?: ApiPort[];
-  networks?: string[];
-};
 type ApiApplication = {
   id: string;
   name: string;
@@ -48,7 +31,6 @@ type ApiApplication = {
   containerIds?: string[];
 };
 type ApiService = SystemService;
-type ApiContainerActionResponse = { ok: boolean; id: string };
 type ApiServiceActionResponse = { ok: boolean; name: string; action: string };
 type ApiApplicationActionResponse = { ok: boolean; id: string; action: string };
 type ApiVirtualMachineActionResponse = {
@@ -56,7 +38,6 @@ type ApiVirtualMachineActionResponse = {
   name: string;
   action: string;
 };
-export type ContainerAction = "start" | "stop" | "restart";
 export type ServiceAction = "start" | "stop" | "restart";
 export type ApplicationAction = "start" | "stop" | "restart";
 export type VirtualMachineAction = "start" | "shutdown";
@@ -65,28 +46,6 @@ export interface ApplyUpdatesResponse {
   packages: string[];
   output: string;
 }
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
-  /\/+$/,
-  "",
-);
-// Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
-// proxy, so native builds (and anyone pointing the UI at another server) use the
-// server address saved on the login screen. VITE_API_BASE_URL overrides both.
-function getApiBase(): string {
-  if (configuredApiBase) return configuredApiBase;
-  const server = getServerUrl();
-  return server ? `${server}/api/v1` : "/api/v1";
-}
-
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
 export async function checkTerminalAvailability(
   signal?: AbortSignal,
 ): Promise<void> {
@@ -125,67 +84,6 @@ export function openTerminalSession(cols: number, rows: number): WebSocket {
   );
   return socket;
 }
-function mapStatus(state: string): ContainerStatus {
-  switch (state.toLowerCase()) {
-    case "running":
-      return "running";
-    case "paused":
-      return "paused";
-    case "restarting":
-      return "restarting";
-    case "created":
-    case "exited":
-    case "dead":
-      return "stopped";
-    default:
-      return "exited";
-  }
-}
-function mapHealth(status: string): HealthStatus {
-  const normalized = status.toLowerCase();
-  if (normalized.includes("(healthy)")) return "healthy";
-  if (normalized.includes("(unhealthy)")) return "unhealthy";
-  if (normalized.includes("(health: starting)")) return "starting";
-  return "none";
-}
-function formatPorts(ports: ApiPort[] = []) {
-  const published = ports
-    .filter((p) => p.publicPort !== undefined)
-    .map((p) => `${p.publicPort}:${p.privatePort}`);
-  return published.length ? published.join(", ") : "—";
-}
-function formatCreated(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleString();
-}
-function formatUptime(status: string, state: string) {
-  if (state.toLowerCase() === "running")
-    return (
-      status.replace(/^Up\s+/i, "").replace(/\s+\(healthy\)$/i, "") || "Running"
-    );
-  return status || state;
-}
-function toContainer(container: ApiContainer): Container {
-  return {
-    id: container.id,
-    name: container.name.replace(/^\//, ""),
-    image: container.image,
-    status: mapStatus(container.state),
-    health: mapHealth(container.status),
-    cpu: "—",
-    cpuNum: 0,
-    memory: "—",
-    memNum: 0,
-    memLimit: "—",
-    net: container.networks?.join(", ") || "—",
-    ports: formatPorts(container.ports),
-    created: formatCreated(container.createdAt),
-    uptime: formatUptime(container.status, container.state),
-    restarts: 0,
-    networkMode: container.networks?.[0] || "—",
-    ip: "—",
-    mac: "—",
-  };
-}
 function toApplication(app: ApiApplication): AppService {
   return {
     id: app.id,
@@ -198,57 +96,6 @@ function toApplication(app: ApiApplication): AppService {
     icon: app.icon,
     containerIds: app.containerIds,
   };
-}
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const apiBase = getApiBase();
-  const url = `${apiBase}${path}`;
-  let response: Response;
-
-  const token = getAuthToken();
-  const headers = new Headers(init?.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-
-  try {
-    response = await fetch(url, { ...init, headers });
-  } catch (error) {
-    throw new Error(
-      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
-    );
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  const bodyText = await response.text();
-
-  if (response.status === 401 && token) {
-    // The session expired or was revoked; send the user back to the login screen.
-    setSession(null);
-  }
-
-  if (!response.ok) {
-    let body: { error?: string } | null = null;
-    try {
-      body = JSON.parse(bodyText) as { error?: string };
-    } catch {
-      // Keep the HTTP status when the server returned HTML or another non-JSON body.
-    }
-    throw new ApiError(
-      response.status,
-      body?.error ||
-        `CoreOps API returned ${response.status} (${contentType || "unknown content type"})`,
-    );
-  }
-
-  if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error(
-      `CoreOps API returned a non-JSON response from ${url}. Check the API base URL; the server returned ${contentType || "unknown content type"}.`,
-    );
-  }
-
-  try {
-    return JSON.parse(bodyText) as T;
-  } catch {
-    throw new Error(`CoreOps API returned invalid JSON from ${url}`);
-  }
 }
 export async function login(
   username: string,
@@ -272,29 +119,6 @@ export async function logout(): Promise<void> {
 }
 export async function getHost(): Promise<HostOverview> {
   return request("/host");
-}
-export async function getContainers(): Promise<Container[]> {
-  const containers = await request<ApiContainer[]>("/containers");
-  return containers.map(toContainer);
-}
-
-export async function getContainerDetail(
-  id: string,
-): Promise<ContainerDetailData> {
-  return request(`/containers/${encodeURIComponent(id)}`);
-}
-export async function runContainerAction(
-  id: string,
-  action: ContainerAction,
-): Promise<void> {
-  const response = await request<ApiContainerActionResponse>(
-    `/containers/${encodeURIComponent(id)}/${action}`,
-    { method: "POST" },
-  );
-  if (!response.ok || response.id !== id)
-    throw new Error(
-      "CoreOps API returned an invalid container action response",
-    );
 }
 export async function getApplications(): Promise<AppService[]> {
   const applications = await request<ApiApplication[]>("/applications");

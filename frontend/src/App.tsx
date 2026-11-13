@@ -20,8 +20,12 @@ const lazyView = <C extends ComponentType<any>>(
   load: () => Promise<{ default: C }>,
 ) => lazy(load);
 const RealDashboardView = lazyView(() => import("./views/DashboardView"));
-const ContainersView = lazyView(() => import("./views/ContainersView"));
-const ContainerDetail = lazyView(() => import("./views/ContainerDetail"));
+const ContainersView = lazyView(
+  () => import("./features/containers/ContainersView"),
+);
+const ContainerDetail = lazyView(
+  () => import("./features/containers/ContainerDetail"),
+);
 const HostView = lazyView(() => import("./views/HostView"));
 const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
 const ServicesView = lazyView(() => import("./views/ServicesView"));

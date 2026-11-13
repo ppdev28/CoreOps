@@ -59,7 +59,7 @@ The backend is intentionally designed to talk to Docker through the local Unix s
 
 For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization already exist. Remaining security risks are tracked in [security review](../docs/security.md); Tailscale does not replace them.
 
-See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. The proposed internal packages are not implemented yet.
+See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. Containers now has real internal capability, Docker adapter and HTTP transport packages. Other capabilities remain in the executable package; see [architecture](../docs/architecture.md).
 
 ## Interactive terminal
 
@@ -68,3 +68,7 @@ See [backend module instructions](../docs/modules/backend.md), [API instructions
 Configure the exact external origin with `COREOPS_CORS_ORIGINS` when using HTTPS termination or a separate frontend. The proxy must forward WebSocket upgrades and allow long connections. Active sessions revalidate authentication every second and close on logout/expiry/shutdown. Limits: four PTYs per admin, 32 total connections, 32 KiB input frames and 64 KiB unacknowledged output. No automatic resume/replay; internal navigation preserves open shells. Existing `/terminal/exec` and `/terminal/complete` remain for compatibility.
 
 See [terminal protocol, proxy example and validation](../docs/modules/terminal.md). Use `go test -race ./...` to exercise real PTYs, roles/origins, state, resize, signals, hidden input, expiry/logout, flow control and shutdown.
+
+## Modules and contract
+
+`internal/containers` owns the container use cases and Runtime port; `internal/adapters/docker` implements it; `internal/transport/httpapi` owns container HTTP/DTOs and common JSON helpers. `main.go` wires them and `routes.go` preserves auth/roles/audit. The initial contract is [api/openapi.json](../api/openapi.json), validated in Go tests against real handlers and fake runtimes. The OpenAPI test dependency is not imported by the production binary. Identity persistence and other capabilities still await extraction; no new host privilege or endpoint is added.

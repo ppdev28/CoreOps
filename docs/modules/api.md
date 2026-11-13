@@ -2,9 +2,9 @@
 
 ## Responsabilidad
 
-Mantener la frontera HTTP/JSON para web y móvil: rutas, autenticación/autorización, validación de entrada, DTOs, errores y semántica de acciones. El contrato futuro vivirá en `api/`; los handlers en `backend/internal/transport/httpapi/`. Hoy no existe un OpenAPI ni estas carpetas.
+Mantener la frontera HTTP/JSON para web y móvil: rutas, autenticación/autorización, validación de entrada, DTOs, errores y semántica de acciones. El contrato inicial ya vive en [`api/`](../../api/README.md); handlers/DTOs de contenedores en [`backend/internal/transport/httpapi/`](../../backend/internal/transport/httpapi/README.md). Health/auth/contenedores están documentados; las demás capacidades se incorporarán gradualmente.
 
-`routes.go` es el inventario ejecutable de métodos y roles; [estado actual](../current-state.md) lo resume. `http.go` contiene JSON/CORS/logging y `handlers.go` muchos handlers. `containers.go` mezcla contrato e integración. Todas estas rutas pertenecen al mismo proceso Go.
+`routes.go` es el inventario ejecutable de métodos y roles; [estado actual](../current-state.md) lo resume. `http.go` conserva aliases JSON y CORS/logging; `handlers.go` aún contiene handlers legacy. Contenedores ya separa transporte, casos de uso y adaptador Moby. Todas estas rutas pertenecen al mismo proceso Go.
 
 La [terminal](terminal.md) añade `GET /api/v1/terminal/session`: upgrade WebSocket y auth admin en el primer frame antes de arrancar la PTY. No usa Bearer en URL. Consultar su guía para protocolo, límites, proxy y caducidad; no tratar el upgrade como acceso anónimo a una shell.
 
@@ -19,4 +19,4 @@ La [terminal](terminal.md) añade `GET /api/v1/terminal/session`: upgrade WebSoc
 
 ## Primera entrega y validación
 
-Capturar health, login/logout/me y list/inspect/start/stop/restart de contenedores en OpenAPI; incluir ejemplos sin secretos. Comprobar concordancia con Go y TypeScript mediante pruebas HTTP: 400/401/403/404/502, éxito y cancelación. Probar middleware real con dependencias falsas; no llamar a Docker de producción en tests. Futuras rutas se documentan al migrarlas.
+El contrato inicial captura health, login/logout/me y list/inspect/start/stop/restart de contenedores; incluir ejemplos sin secretos. Comprobar concordancia con Go y TypeScript mediante pruebas HTTP: 400/401/403/404/502, éxito y cancelación. Probar middleware real con dependencias falsas; no llamar a Docker de producción en tests. Futuras rutas se documentan al migrarlas.

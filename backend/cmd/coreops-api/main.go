@@ -13,11 +13,14 @@ import (
 	"time"
 
 	"github.com/moby/moby/client"
+	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
 )
 
 type API struct {
-	docker    *client.Client
-	terminals *terminalServer
+	docker     *client.Client
+	terminals  *terminalServer
+	containers *containers.Service
 }
 
 func main() {
@@ -43,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 	bootstrapAdmin(auth, logger)
-	api := &API{docker: docker}
+	api := &API{docker: docker, containers: containers.New(dockeradapter.NewContainers(docker))}
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")

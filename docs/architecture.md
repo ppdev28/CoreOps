@@ -10,17 +10,25 @@ This keeps local calls, straightforward deployments and reviewable changes while
 
 ## Current implementation
 
-- `backend/cmd/coreops-api` is one `package main`: startup, HTTP, authentication, persistence and host/Docker integration share a package. Files split by area are not enforced module boundaries.
-- `API` directly holds a concrete Moby client; several handlers call SDK/host functions directly. Container inspection still embeds SDK structures in its JSON response.
-- `frontend/src/lib/api.ts` mixes HTTP, API types, mapping and all feature clients. Views own fetching and action state; `App.tsx` owns shell/navigation/session composition.
-- `frontend/android` and `frontend/ios` reuse the web application through Capacitor. Deployment uses a host service; CI and unit installation paths currently disagree.
-- Authentication, roles and audit exist. See [security.md](security.md) for remaining risks; private networking does not replace access control.
+Primera extracción implementada en `refactor/modular-foundation`, desde `develop` limpio, base `b4d64db`:
+
+- `api/`: OpenAPI inicial health/auth/contenedores y DTOs TypeScript de contenedores. Sin proceso, framework o generador propio.
+- `backend/internal/containers`: casos de uso, modelos propios y puerto `Runtime`; sin HTTP/Moby. `internal/adapters/docker` implementa ese puerto y captura metadata inspect en valores JSON propios. `internal/transport/httpapi` posee handlers/DTOs de contenedores y helpers JSON.
+- `cmd/coreops-api/main.go` compone esos módulos. `routes.go` sigue aplicando mínimos roles antes de sus handlers; identidad, audit, terminal y demás capacidades permanecen en `package main`. Otras capacidades aún usan Moby directamente. No se declara una extracción global completada.
+- `frontend/src/features/containers`: cliente, mapeo, modelos y pantallas lazy. `shared/api` posee transporte HTTP, `shared/platform` la única sesión existente, `shared/ui` estados comunes. `lib/api.ts`, `lib/auth.ts` y `lib/types.ts` quedan como fachadas de compatibilidad y para capacidades no migradas. `App.tsx` mantiene navegación/composición.
+- Capacitor, UI, rutas y procesos de despliegue existentes se conservan. La coherencia de identidad SEC-01, almacenamiento de sesión SEC-03 y autoridad de host siguen pendientes.
+
+El inspect mantiene el JSON legacy (claves/casing/nulos) sin dejar pasar tipos del SDK entre paquetes. Sus objetos complejos aún no tienen un modelo fino estable: no se oculta esa deuda bajo DTOs gigantes. Frontend normaliza colecciones vacías/nulas válidas y representa reinicios sin medición como null/`—`.
 
 ```text
-Browser / Capacitor -> CoreOps HTTP API -> Docker / Linux / libvirt
+frontend/features -> shared/api -> /api/v1 -> HTTP handlers -> containers.Service -> Runtime <- adapter Docker
+                         ^                    ^
+                   contrato api/       auth/roles/audit en composición
 ```
 
-## Target layout (not yet implemented)
+Los tests Go validan contrato, HTTP/roles/auditoría y fronteras de imports; `pnpm check:boundaries` impide imports de features desde shared y lógica runtime en los tipos de contrato. CI ejecuta ambos. Estos controles sólo describen los módulos ya extraídos.
+
+## Target layout (partially implemented; see current scope above)
 
 ```text
 api/                              # versioned OpenAPI contract, no runtime
@@ -60,7 +68,7 @@ Create a directory only when moving real code into it. Avoid layers per trivial 
 6. The frontend depends on the CoreOps contract, not on Go or SDK models. Feature mappers turn wire types into presentation models, including unavailable values. Features cannot import each other's private implementation; the app composes features through narrow exports.
 7. Shared frontend code cannot import features. Native platform details stay behind platform interfaces. Roles used to hide UI actions are convenience; backend enforcement remains authoritative.
 
-Go `internal` restricts consumers outside the backend tree, not sibling imports. Enforce finer rules through review first; add import-boundary checks once the first slice establishes a useful pattern.
+Go `internal` restricts consumers outside the backend tree, not sibling imports. The first slice now includes AST import checks for the extracted capability/transport and frontend shared/features. Expand these checks as new modules become real; they are not proof that legacy code is decoupled.
 
 ## Contract and operations
 
@@ -70,4 +78,4 @@ Preserve cancellation and define per-operation deadlines. Long apt operations ne
 
 ## Migration
 
-See [modularization-plan.md](modularization-plan.md). First harden identity persistence, then extract the containers slice with characterization tests; preserve the Figma design and current URLs. Migrate one capability at a time and keep the app runnable after every step.
+See [modularization-plan.md](modularization-plan.md). The explicit modularization request advances a compatible containers extraction and initial contract while retaining identity behavior and existing privileges. SEC-01 remains the next security priority before new privileged functionality. Preserve the Figma design and current URLs. Migrate one capability at a time and keep the app runnable after every step.

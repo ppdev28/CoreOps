@@ -2,15 +2,15 @@
 
 ## Responsabilidad y estado
 
-React 19, TypeScript estricto, Vite 8, Tailwind 4; pnpm. Preservar el diseño Figma. `App.tsx` compone navegación, sesión y shell, con carga diferida de vistas. `views/` contiene pantallas, `components/` los elementos visuales y `lib/api.ts` mezcla peticiones, tipos y adaptación. `lib/auth.ts` guarda sesión y servidor en localStorage.
+React 19, TypeScript estricto, Vite 8, Tailwind 4; pnpm. Preservar el diseño Figma. `App.tsx` compone navegación, sesión y shell, con carga diferida de vistas. `features/containers/` ya contiene API, mapeo, modelos y pantallas propias; `shared/api` contiene transporte y `shared/platform` la única sesión existente. `views/`, `components/` y las fachadas `lib/*` permanecen para el resto. El almacenamiento sigue siendo localStorage; la extracción no cambia SEC-03.
 
 ## Instrucciones
 
-- Migrar primero contenedores a `features/containers/{api,model,hooks,components}` según necesidad; exponer entradas desde el módulo, sin trasladar cada función a un archivo.
+- Contenedores ya está extraído: leer su [guía](../../frontend/src/features/containers/README.md). Migrar otras features por necesidad; exponer entradas públicas y mantener lazy las pantallas, sin crear archivos vacíos o hooks sin reutilización.
 - Separar transporte compartido (`shared/api`) de peticiones y mapeos específicos. Las vistas no construyen cabeceras/token ni conocen el SDK Docker.
 - Hooks de cada flujo coordinan carga, cancelación, errores, acción pendiente y reconciliación. Conservar búsqueda/filtros, confirmaciones y prevención de duplicados. No añadir librería de estado sin un problema concreto.
 - Componer desde `app`; `shared` no importa features y una feature no accede a internos de otra. Mantener tokens/componentes Figma como primitivas comunes.
-- Modelar métricas desconocidas con `null` o estado explícito: hoy `toContainer` asigna `restarts: 0`, visible como cero en tarjetas/tabla pese a no venir del endpoint. Corregirlo en una entrega independiente; CPU/memoria también tienen ceros auxiliares que no deben alimentar gráficas como mediciones.
+- Reinicios sin medición ya se representan como `null`/`—`. Mantener desconocidos explícitos. CPU/memoria conservan ceros auxiliares legacy para presentación/ordenación que no deben alimentar gráficas como mediciones.
 - Diseñar sesiones por perfil de servidor: el token sólo puede enviarse al origen al que pertenece. Revisar cambios de URL y `VITE_API_BASE_URL` antes de persistir sesiones.
 - Mantener errores 401/403 y estados vacío/no disponible. Comprobar permisos en UI como ayuda al usuario; la autoridad está en la API.
 
@@ -26,6 +26,8 @@ La dirección visual monocroma y redondeada se aplica ahora a toda la aplicació
 
 El Dashboard conserva primitives shadcn y Tremor Raw con licencias; el resto reutiliza su API de componentes existente. `components/ui/` y el archivo legacy `components/ui.tsx` coexisten. Las fuentes son locales.
 
-Ver [guía visual](../ui-style.md). `pnpm test:ui` ejecuta 20 pruebas Playwright con fixtures aislados, incluidos todos los destinos y detalle en ocho formatos, persistencia y contraste. Los recursos nativos sin seguimiento siguen intactos; el chrome nativo tiene paleta estática y no refleja aún todos los ajustes web.
+Ver [guía visual](../ui-style.md). `pnpm test:ui` ejecuta 23 pruebas Playwright con fixtures aislados, incluidos todos los destinos y detalle en ocho formatos, persistencia y contraste. La limpieza Android ya se completó por separado; el chrome nativo tiene paleta estática y no refleja aún todos los ajustes web.
 
-La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tiene pestañas con conexiones independientes, resize real, teclado móvil y conserva sesiones al navegar. No reconstruir readline ni limpiar ANSI en React. El ACK de salida se envía en el callback de `term.write`, para respetar el control de flujo del servidor. La suite tiene ahora 20 pruebas, incluidas cinco específicas de terminal.
+La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tiene pestañas con conexiones independientes, resize real, teclado móvil y conserva sesiones al navegar. No reconstruir readline ni limpiar ANSI en React. El ACK de salida se envía en el callback de `term.write`, para respetar el control de flujo del servidor. La suite tiene ahora 23 pruebas, incluidas cinco específicas de terminal.
+
+`pnpm check:boundaries` y CI verifican que shared no importe features/views/lib, las features no vuelvan al cliente legacy y los tipos de contrato no contengan ejecución. Sólo cubre las fronteras migradas, no certifica toda la aplicación legacy.

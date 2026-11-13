@@ -2,11 +2,11 @@
 
 ## Responsabilidad y estado
 
-Un único módulo Go (`backend/go.mod`, Go 1.24), un paquete ejecutable en `cmd/coreops-api`. Mantener el cliente Moby actual. El backend posee todo acceso a Docker, `/proc`, archivos del host y comandos Linux/libvirt.
+Un único módulo Go (`backend/go.mod`, Go 1.24), un ejecutable en `cmd/coreops-api` y paquetes internos de contenedores, adaptador Docker y transporte HTTP. Mantener el cliente Moby actual. El backend posee todo acceso a Docker, `/proc`, archivos del host y comandos Linux/libvirt.
 
 | Capacidad | Archivos actuales en `cmd/coreops-api` | Límite previsto |
 | --- | --- | --- |
-| Contenedores | `containers.go` | Casos de uso propios + adaptador Docker |
+| Contenedores (extraído) | `internal/containers`, `internal/adapters/docker`, `internal/transport/httpapi` | [Casos de uso](../../backend/internal/containers/README.md), [adaptador](../../backend/internal/adapters/docker/README.md), [HTTP](../../backend/internal/transport/httpapi/README.md) |
 | Aplicaciones | `applications.go`, `handlers.go` | Agrupaciones Compose y coordinación de contenedores |
 | Host y servicios | `host.go`, `services.go`, `handlers.go` | Lectura Linux y acciones systemd |
 | Almacenamiento/red | `storage.go`, `network.go` | Información host/Docker; errores parciales explícitos |
@@ -26,3 +26,5 @@ Adaptadores validan argumentos y opciones; preferir ejecución por argumentos a 
 ## Validación
 
 Desde `backend/`: `go test ./...`, `go vet ./...`, `go build ./...`. Ya existen pruebas de auth, roles/auditoría, parsers apt/UFW/eventos y validadores. Faltan pruebas de handlers Docker y errores de integración. Tests unitarios no requieren Docker ni sudo. Integración explícita con contenedor desechable y verificación de estado real, nunca servicios arbitrarios.
+
+La primera extracción mantiene las demás capacidades legacy y los mínimos roles en `routes.go`. `contracts_test.go` y `architecture_test.go` prueban contrato/política y límites de imports. No usar esta separación para declarar SEC-01 resuelto o para ampliar privilegios.

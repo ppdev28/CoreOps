@@ -1,6 +1,11 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
+)
 
 // routes builds the API router. Every route except health and login requires
 // a session whose role is at least the one declared here:
@@ -11,6 +16,7 @@ import "net/http"
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux := http.NewServeMux()
 	a.terminals = newTerminalServer(auth, audit)
+	containerHTTP := httpapi.NewContainers(a.containers)
 	handle := func(pattern string, min Role, h http.HandlerFunc) {
 		mux.HandleFunc(pattern, auth.require(min, h))
 	}
@@ -21,11 +27,11 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
 
 	handle("GET /api/v1/host", RoleViewer, a.host)
-	handle("GET /api/v1/containers", RoleViewer, a.listContainers)
-	handle("GET /api/v1/containers/{id}", RoleOperator, a.getContainer)
-	handle("POST /api/v1/containers/{id}/start", RoleOperator, a.startContainer)
-	handle("POST /api/v1/containers/{id}/stop", RoleOperator, a.stopContainer)
-	handle("POST /api/v1/containers/{id}/restart", RoleOperator, a.restartContainer)
+	handle("GET /api/v1/containers", RoleViewer, containerHTTP.List)
+	handle("GET /api/v1/containers/{id}", RoleOperator, containerHTTP.Inspect)
+	handle("POST /api/v1/containers/{id}/start", RoleOperator, containerHTTP.Action(containers.Start))
+	handle("POST /api/v1/containers/{id}/stop", RoleOperator, containerHTTP.Action(containers.Stop))
+	handle("POST /api/v1/containers/{id}/restart", RoleOperator, containerHTTP.Action(containers.Restart))
 	handle("GET /api/v1/applications", RoleViewer, a.listApplications)
 	handle("POST /api/v1/applications/{id}/{action}", RoleOperator, a.applicationAction)
 	handle("GET /api/v1/virtual-machines", RoleViewer, a.listVirtualMachines)
