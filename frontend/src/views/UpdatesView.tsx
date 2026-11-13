@@ -347,6 +347,7 @@ export default function UpdatesView({
           },
         ].map((s) => (
           <div
+            data-surface="panel"
             key={s.label}
             style={{
               padding: "10px 14px",

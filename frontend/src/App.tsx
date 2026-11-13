@@ -138,9 +138,11 @@ function AppShell({ user }: { user: AuthUser }) {
     <>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}.anim-slide-down{animation:slideDown 140ms ease}.anim-toast-in{animation:toastIn 160ms ease}.pulse{animation:pulse 2s infinite}.cmd-backdrop{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding-top:72px;animation:fadeIn 100ms ease}.toast-stack{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:1001;pointer-events:none}@media(max-width:900px){.sidebar-desktop{display:none!important}.mobile-menu-btn{display:flex!important}.dash-metrics{grid-template-columns:repeat(2,1fr)!important}.dash-charts{grid-template-columns:1fr!important}.dash-bottom{grid-template-columns:1fr!important}.host-stats{grid-template-columns:1fr!important}.host-grid{grid-template-columns:1fr!important}}`}</style>
       <div
+        className="app-workspace"
+        data-view={view}
         style={{
           display: "flex",
-          height: "100vh",
+          height: "100dvh",
           background: T.bg,
           overflow: "hidden",
         }}
@@ -217,6 +219,7 @@ function AppShell({ user }: { user: AuthUser }) {
         >
           {!isNative && (
             <Header
+              dashboard
               user={user}
               onCmd={() => setShowCmd(true)}
               onMenuToggle={() => setMobileOpen((v) => !v)}
@@ -233,43 +236,55 @@ function AppShell({ user }: { user: AuthUser }) {
               padding: view === "terminal" ? 0 : undefined,
             }}
           >
-            <Suspense
-              fallback={
-                <div style={{ padding: 24, fontSize: 12, color: T.textDim }}>
-                  Loading…
-                </div>
-              }
+            <section
+              className={`coreops-screen ${view === "terminal" ? "terminal-screen" : ""}`}
+              data-screen={view}
             >
-              {view === "dashboard" && (
-                <RealDashboardView onNavigate={navigate} addToast={addToast} />
-              )}{" "}
-              {view === "host" && <HostView />}{" "}
-              {view === "containers" && (
-                <ContainersView onDetail={openContainerDetail} {...shell} />
-              )}{" "}
-              {view === "container-detail" && selectedContainerId && (
-                <ContainerDetail
-                  containerId={selectedContainerId}
-                  onBack={() => navigate("containers")}
-                  {...shell}
-                />
-              )}{" "}
-              {view === "applications" && (
-                <ApplicationsView addToast={addToast} />
-              )}{" "}
-              {view === "services" && <ServicesView {...shell} />}{" "}
-              {view === "storage" && <StorageView {...shell} />}{" "}
-              {view === "network" && <NetworkView />}{" "}
-              {view === "virtual-machines" && (
-                <VirtualMachinesView addToast={addToast} />
-              )}{" "}
-              {view === "monitoring" && <MonitoringView />}{" "}
-              {view === "logs" && <LogsView />}{" "}
-              {view === "terminal" && <TerminalView />}{" "}
-              {view === "security" && <SecurityView addToast={addToast} />}{" "}
-              {view === "updates" && <UpdatesView {...shell} />}{" "}
-              {view === "settings" && <SettingsView addToast={addToast} />}
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div
+                    data-screen-loading
+                    style={{ padding: 24, fontSize: 12, color: T.textDim }}
+                  >
+                    Loading…
+                  </div>
+                }
+              >
+                {view === "dashboard" && (
+                  <RealDashboardView
+                    onNavigate={navigate}
+                    onDetail={openContainerDetail}
+                    addToast={addToast}
+                  />
+                )}{" "}
+                {view === "host" && <HostView />}{" "}
+                {view === "containers" && (
+                  <ContainersView onDetail={openContainerDetail} {...shell} />
+                )}{" "}
+                {view === "container-detail" && selectedContainerId && (
+                  <ContainerDetail
+                    containerId={selectedContainerId}
+                    onBack={() => navigate("containers")}
+                    {...shell}
+                  />
+                )}{" "}
+                {view === "applications" && (
+                  <ApplicationsView addToast={addToast} />
+                )}{" "}
+                {view === "services" && <ServicesView {...shell} />}{" "}
+                {view === "storage" && <StorageView {...shell} />}{" "}
+                {view === "network" && <NetworkView />}{" "}
+                {view === "virtual-machines" && (
+                  <VirtualMachinesView addToast={addToast} />
+                )}{" "}
+                {view === "monitoring" && <MonitoringView />}{" "}
+                {view === "logs" && <LogsView />}{" "}
+                {view === "terminal" && <TerminalView />}{" "}
+                {view === "security" && <SecurityView addToast={addToast} />}{" "}
+                {view === "updates" && <UpdatesView {...shell} />}{" "}
+                {view === "settings" && <SettingsView addToast={addToast} />}
+              </Suspense>
+            </section>
           </main>
         </div>
       </div>

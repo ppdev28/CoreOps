@@ -27,6 +27,7 @@ import {
   MonitorCog,
 } from "lucide-react";
 import { T } from "../lib/tokens";
+import { ServerSelector } from "./dashboard/ServerSelector";
 import { getHost, logout } from "../lib/api";
 import type { AuthUser } from "../lib/auth";
 import type { View } from "../lib/types";
@@ -87,7 +88,6 @@ const NAV = [
         id: "updates",
         label: "Updates",
         icon: <RefreshCw size={14} />,
-        badge: "12",
       },
       { id: "settings", label: "Settings", icon: <Settings size={14} /> },
     ],
@@ -112,6 +112,7 @@ export function Sidebar({
     (view === "app-detail" && id === "applications");
   return (
     <aside
+      className="coreops-sidebar"
       style={{
         width: collapsed ? 52 : 220,
         flexShrink: 0,
@@ -142,14 +143,13 @@ export function Sidebar({
             height: 24,
             borderRadius: 7,
             flexShrink: 0,
-            background:
-              "linear-gradient(155deg, rgb(0, 97, 255) 24.79%, rgba(19, 37, 54, 1) 34.45%, rgb(0, 149, 255) 84.87%)",
+            background: T.primary,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Server size={13} color="#fff" />
+          <Server size={13} color={T.onAccent} />
         </div>
         {!collapsed && (
           <>
@@ -167,6 +167,9 @@ export function Sidebar({
             </span>
             <button
               onClick={onToggle}
+              aria-label={
+                collapsed ? "Expand navigation" : "Collapse navigation"
+              }
               style={{
                 background: "none",
                 border: "none",
@@ -184,6 +187,7 @@ export function Sidebar({
         {collapsed && (
           <button
             onClick={onToggle}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
             style={{
               position: "absolute",
               right: -12,
@@ -227,6 +231,9 @@ export function Sidebar({
               return (
                 <button
                   key={item.id}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={item.label}
+                  title={item.label}
                   onClick={() => onNavigate(item.id as View)}
                   style={{
                     display: "flex",
@@ -277,7 +284,7 @@ export function Sidebar({
                         padding: "1px 5px",
                         borderRadius: 4,
                         background: T.accentHover,
-                        color: "#fff",
+                        color: T.onAccent,
                       }}
                     >
                       {(item as any).badge}
@@ -319,12 +326,14 @@ export function Sidebar({
             height: 7,
             borderRadius: "50%",
             background: T.green,
-            boxShadow: `0 0 8px ${T.green}`,
+            boxShadow: "none",
             flexShrink: 0,
           }}
         />
         {!collapsed && (
-          <span style={{ fontSize: 11, color: T.textDim }}>Server online</span>
+          <span style={{ fontSize: 11, color: T.textDim }}>
+            CoreOps · Host control
+          </span>
         )}
       </div>
     </aside>
@@ -332,10 +341,12 @@ export function Sidebar({
 }
 
 export function Header({
+  dashboard = false,
   user,
   onCmd,
   onMenuToggle,
 }: {
+  dashboard?: boolean;
   user: AuthUser;
   onCmd: () => void;
   onMenuToggle: () => void;
@@ -343,10 +354,13 @@ export function Header({
   const [notifOpen, setNotifOpen] = useState(false),
     [userOpen, setUserOpen] = useState(false),
     [copied, setCopied] = useState(false);
+  const [serverOpen, setServerOpen] = useState(false);
+  const serverRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null),
     userRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => {
+      if (!serverRef.current?.contains(e.target as Node)) setServerOpen(false);
       if (!notifRef.current?.contains(e.target as Node)) setNotifOpen(false);
       if (!userRef.current?.contains(e.target as Node)) setUserOpen(false);
     };
@@ -354,10 +368,26 @@ export function Header({
     return () => document.removeEventListener("mousedown", h);
   }, []);
   const [hostname, setHostname] = useState("");
+  const [connected, setConnected] = useState<boolean | null>(null);
   useEffect(() => {
-    getHost()
-      .then((host) => setHostname(host.hostname))
-      .catch(() => {});
+    let active = true;
+    const check = () =>
+      getHost()
+        .then((host) => {
+          if (active) {
+            setHostname(host.hostname);
+            setConnected(true);
+          }
+        })
+        .catch(() => {
+          if (active) setConnected(false);
+        });
+    void check();
+    const timer = window.setInterval(check, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
   const copy = () => {
     if (!hostname) return;
@@ -367,6 +397,7 @@ export function Header({
   };
   return (
     <header
+      className="coreops-header"
       style={{
         height: 52,
         background: T.bgHeader,
@@ -380,6 +411,7 @@ export function Header({
     >
       <button
         onClick={onMenuToggle}
+        aria-label="Open navigation"
         className="mobile-menu-btn"
         style={{
           background: "none",
@@ -393,44 +425,80 @@ export function Header({
       >
         <LayoutDashboard size={16} />
       </button>
-      <button
-        onClick={copy}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "4px 8px",
-          background: "none",
-          border: "1px solid transparent",
-          borderRadius: 7,
-          cursor: "pointer",
-        }}
-      >
-        <Globe size={12} color={T.textDim} />
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: T.text,
-            fontFamily: "JetBrains Mono,monospace",
-          }}
-        >
-          {hostname || "—"}
-        </span>
-        <ChevronDown size={11} color={T.textDim} />
-        {copied ? (
-          <Check size={11} color={T.green} />
-        ) : (
-          <Copy size={11} color={T.textDim} />
-        )}
-      </button>
+      {dashboard ? (
+        <div className="header-server-picker mono-server-picker">
+          <span className="coreops-brand">
+            CoreOps <span>/</span>
+          </span>
+          <ServerSelector hostname={hostname} onCopy={copy} />
+        </div>
+      ) : (
+        <>
+          <div className="header-server-picker" ref={serverRef}>
+            <button
+              onClick={() => setServerOpen((open) => !open)}
+              aria-expanded={serverOpen}
+              aria-label="Select server"
+              className="header-server"
+              title="Current server"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 8px",
+                background: "none",
+                border: "1px solid transparent",
+                borderRadius: 7,
+                cursor: "pointer",
+              }}
+            >
+              <span className="coreops-brand">
+                CoreOps <span>/</span>
+              </span>
+              <Globe size={12} color={T.textDim} />
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: T.text,
+                  fontFamily: "JetBrains Mono,monospace",
+                }}
+              >
+                {hostname || "—"}
+              </span>
+              <ChevronDown size={11} color={T.textDim} />
+            </button>
+            {serverOpen && (
+              <div className="server-picker-panel">
+                <span className="page-eyebrow">CURRENT SERVER</span>
+                <strong>{hostname || "Unavailable"}</strong>
+                <span>
+                  Single-host mode. Additional servers are not configured.
+                </span>
+                <button onClick={copy} disabled={!hostname}>
+                  <Copy size={12} />
+                  {copied ? "Copied" : "Copy hostname"}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
       <div
+        className="header-status"
+        aria-label={
+          connected === null
+            ? "Connecting"
+            : connected
+              ? "Online"
+              : "Disconnected"
+        }
         style={{
           display: "flex",
           alignItems: "center",
           gap: 5,
           padding: "2px 8px",
-          background: `${T.green}12`,
+          background: `${connected === true ? T.green : T.textDim}12`,
           borderRadius: 5,
           border: `1px solid ${T.green}28`,
         }}
@@ -441,16 +509,28 @@ export function Header({
             width: 6,
             height: 6,
             borderRadius: "50%",
-            background: T.green,
+            background: connected === true ? T.green : T.textDim,
           }}
         />
-        <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>
-          Online
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: connected === true ? T.green : T.textDim,
+          }}
+        >
+          {connected === null
+            ? "Connecting"
+            : connected
+              ? "Online"
+              : "Disconnected"}
         </span>
       </div>
       <div style={{ flex: 1 }} />
       <button
         onClick={onCmd}
+        className="header-command"
+        aria-label="Open command palette"
         style={{
           display: "flex",
           alignItems: "center",
@@ -476,11 +556,19 @@ export function Header({
             color: T.textDim,
           }}
         >
-          ⌘ K
+          {typeof navigator !== "undefined" &&
+          /Mac|iPhone|iPad/.test(navigator.platform)
+            ? "⌘ K"
+            : "Ctrl K"}
         </kbd>
       </button>
-      <div ref={notifRef} style={{ position: "relative" }}>
+      <div
+        className="header-notifications"
+        ref={notifRef}
+        style={{ position: "relative" }}
+      >
         <button
+          aria-label="Notifications"
           onClick={() => {
             setNotifOpen((o) => !o);
             setUserOpen(false);
@@ -537,8 +625,14 @@ export function Header({
           </div>
         )}
       </div>
-      <div ref={userRef} style={{ position: "relative" }}>
+      <div
+        className="header-user-menu"
+        ref={userRef}
+        style={{ position: "relative" }}
+      >
         <button
+          className="header-user"
+          aria-label="User menu"
           onClick={() => {
             setUserOpen((o) => !o);
             setNotifOpen(false);
@@ -559,13 +653,13 @@ export function Header({
               width: 26,
               height: 26,
               borderRadius: "50%",
-              background: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
+              background: T.active,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 11,
               fontWeight: 700,
-              color: "#fff",
+              color: T.text,
             }}
           >
             {user.name.charAt(0).toUpperCase()}
@@ -799,6 +893,7 @@ export function CommandPalette({
     isRecent?: boolean;
   }) => (
     <button
+      className="command-menu-row"
       onClick={() => {
         if (item.view) {
           onNavigate(item.view);

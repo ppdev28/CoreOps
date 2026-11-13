@@ -34,3 +34,7 @@ frontend/ios/capacitor-cordova-ios-plugins/
 
 # Local runtime data (users, sessions, audit log)
 backend/data/
+
+# Browser test artifacts
+frontend/test-results/
+frontend/playwright-report/

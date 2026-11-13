@@ -273,6 +273,8 @@ export default function ApplicationsView({
           </div>
         </div>
         <div
+          data-layout="summary"
+          data-columns="3"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3,1fr)",
@@ -396,17 +398,18 @@ export default function ApplicationsView({
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {categories.map((c) => (
             <button
+              className="screen-filter-pill"
               key={c}
               onClick={() => setCat(c)}
               style={{
                 padding: "4px 10px",
-                background: cat === c ? T.accent : T.raised,
-                border: `1px solid ${cat === c ? T.accent : T.border}`,
+                background: cat === c ? T.primary : T.raised,
+                border: `1px solid ${cat === c ? T.primary : T.border}`,
                 borderRadius: 5,
                 cursor: "pointer",
                 fontSize: 11,
                 fontWeight: 500,
-                color: cat === c ? "#fff" : T.textSub,
+                color: cat === c ? T.onAccent : T.textSub,
                 fontFamily: "Inter,sans-serif",
               }}
             >
@@ -449,6 +452,8 @@ export default function ApplicationsView({
           ) : (
             filteredInstalled.map((app) => (
               <div
+                data-surface="panel"
+                className="installed-application-card"
                 key={app.id}
                 onClick={() => setSelected(app)}
                 style={{

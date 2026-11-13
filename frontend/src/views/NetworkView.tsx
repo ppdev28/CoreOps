@@ -43,6 +43,7 @@ function TopoNode({
       }}
     >
       <div
+        data-surface="panel"
         style={{
           padding: "9px 16px",
           background: T.raised,
@@ -183,7 +184,12 @@ export default function NetworkView() {
       )}
 
       <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}
+        data-layout="sidebar"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr) 260px",
+          gap: 14,
+        }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Card>
@@ -473,6 +479,7 @@ export default function NetworkView() {
                       {data.topology.containers.length ? (
                         data.topology.containers.map((c) => (
                           <div
+                            data-surface="panel"
                             key={`${c.name}-${c.ip}`}
                             style={{
                               display: "flex",

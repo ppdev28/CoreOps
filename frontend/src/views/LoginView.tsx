@@ -54,8 +54,9 @@ export default function LoginView() {
 
   return (
     <div
+      className="app-workspace login-screen"
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background: T.bg,
         display: "flex",
         alignItems: "center",
@@ -64,6 +65,7 @@ export default function LoginView() {
       }}
     >
       <form
+        className="coreops-card coreops-login"
         onSubmit={submit}
         style={{
           width: "100%",
@@ -83,13 +85,13 @@ export default function LoginView() {
               width: 34,
               height: 34,
               borderRadius: 9,
-              background: T.accent,
+              background: T.primary,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Server size={17} color="#fff" />
+            <Server size={17} color={T.onAccent} />
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>
@@ -166,14 +168,15 @@ export default function LoginView() {
           </div>
         )}
         <button
+          className="coreops-button"
           type="submit"
           disabled={busy || !username || !password}
           style={{
             height: 38,
             borderRadius: 8,
             border: "none",
-            background: T.accent,
-            color: "#fff",
+            background: T.primary,
+            color: T.onAccent,
             fontSize: 13,
             fontWeight: 600,
             cursor: busy ? "default" : "pointer",

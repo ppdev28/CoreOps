@@ -126,17 +126,18 @@ export default function LogsView() {
       >
         {sources.map((item) => (
           <button
+            className="screen-filter-pill"
             key={item}
             onClick={() => setSource(item)}
             style={{
               padding: "4px 10px",
-              background: source === item ? T.accent : T.raised,
-              border: `1px solid ${source === item ? T.accent : T.border}`,
+              background: source === item ? T.primary : T.raised,
+              border: `1px solid ${source === item ? T.primary : T.border}`,
               borderRadius: 5,
               cursor: "pointer",
               fontSize: 11,
               fontWeight: 500,
-              color: source === item ? "#fff" : T.textSub,
+              color: source === item ? T.onAccent : T.textSub,
               fontFamily: "Inter,sans-serif",
             }}
           >

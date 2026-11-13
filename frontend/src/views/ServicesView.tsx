@@ -165,6 +165,7 @@ export default function ServicesView({
           { label: "Failed", value: counts.failed, color: T.red },
         ].map((s) => (
           <div
+            data-surface="panel"
             key={s.label}
             style={{
               padding: "8px 14px",

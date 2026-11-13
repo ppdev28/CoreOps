@@ -22,6 +22,7 @@ export function Sparkline({
   w?: number;
   h?: number;
 }) {
+  if (data.length < 2) return null;
   const min = Math.min(...data),
     max = Math.max(...data),
     range = max - min || 1;
@@ -174,8 +175,8 @@ export function Btn({
     { bg: string; color: string; border: string; hbg: string }
   > = {
     primary: {
-      bg: T.accent,
-      color: "#fff",
+      bg: T.primary,
+      color: T.onAccent,
       border: T.accent,
       hbg: T.accentHover,
     },
@@ -212,6 +213,8 @@ export function Btn({
   const v = vs[variant];
   return (
     <button
+      className="coreops-button"
+      data-variant={variant}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setHov(true)}
@@ -224,7 +227,7 @@ export function Btn({
         fontSize: sz.fs,
         fontWeight: 500,
         fontFamily: "Inter,sans-serif",
-        background: hov ? v.hbg : v.bg,
+        background: !disabled && hov ? v.hbg : v.bg,
         color: v.color,
         border: `1px solid ${v.border}`,
         borderRadius: 7,
@@ -255,6 +258,7 @@ export function Card({
 }) {
   return (
     <div
+      className="coreops-card"
       style={{
         background: T.raised,
         border: `1px solid ${T.border}`,
@@ -314,22 +318,34 @@ export function Tabs({
   onChange: (t: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", borderBottom: `1px solid ${T.border}` }}>
+    <div
+      className="coreops-tabs"
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 3,
+        padding: 3,
+        background: T.overlay,
+        border: `1px solid ${T.border}`,
+        borderRadius: 999,
+      }}
+    >
       {tabs.map((t) => (
         <button
           key={t}
+          aria-pressed={active === t}
           onClick={() => onChange(t)}
           style={{
             padding: "8px 14px",
-            background: "none",
+            background: active === t ? T.primary : "transparent",
             border: "none",
             cursor: "pointer",
             fontSize: 12,
             fontWeight: 500,
             fontFamily: "Inter,sans-serif",
-            color: active === t ? T.text : T.textDim,
-            borderBottom: `2px solid ${active === t ? T.accent : "transparent"}`,
-            marginBottom: -1,
+            color: active === t ? T.onAccent : T.textDim,
+            borderRadius: 999,
+            marginBottom: 0,
             transition: "color 100ms",
           }}
           onMouseEnter={(e) => {
@@ -425,8 +441,11 @@ export function Input({
   const [focused, setFocused] = useState(false);
   return (
     <div
+      className="coreops-input"
       style={{
         position: "relative",
+        minWidth: 0,
+        width: "100%",
         display: "inline-flex",
         alignItems: "center",
         ...style,
@@ -524,26 +543,32 @@ export function FilterToggle<T extends string>({
 }) {
   return (
     <div
+      className="coreops-filter-group"
       style={{
         display: "flex",
         background: T.raised,
         border: `1px solid ${T.border}`,
-        borderRadius: 7,
+        borderRadius: 999,
+        padding: 3,
+        flexWrap: "wrap",
+        gap: 3,
         overflow: "hidden",
       }}
     >
       {options.map((o) => (
         <button
           key={o.value}
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           style={{
             padding: "0 12px",
             height: 32,
-            background: value === o.value ? T.active : "none",
+            background: value === o.value ? T.primary : "transparent",
+            borderRadius: 999,
             border: "none",
             cursor: "pointer",
             fontSize: 12,
-            color: value === o.value ? T.text : T.textDim,
+            color: value === o.value ? T.onAccent : T.textDim,
             fontFamily: "Inter,sans-serif",
             transition: "background 100ms, color 100ms",
           }}
@@ -848,14 +873,21 @@ export function QuickAction({
   label,
   icon,
   onClick,
+  disabled = false,
+  title,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   const [hov, setHov] = useState(false);
   return (
     <button
+      className="coreops-quick-action"
+      disabled={disabled}
+      title={title}
       onClick={onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}

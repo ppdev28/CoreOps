@@ -1,9 +1,11 @@
+import { isAccentColor } from "./appearance";
 export const SETTINGS_STORAGE_KEY = "coreops-web-settings";
 export const SETTINGS_CHANGED_EVENT = "coreops-settings-changed";
 
-export type ThemePreference = "dark" | "light" | "system";
+export type ThemePreference = "dark" | "light" | "gray" | "system";
 export interface WebSettings {
   theme: ThemePreference;
+  accentColor: string;
   compact: boolean;
   reduceMotion: boolean;
   autoRefresh: boolean;
@@ -15,6 +17,7 @@ export interface WebSettings {
 }
 export const DEFAULT_WEB_SETTINGS: WebSettings = {
   theme: "dark",
+  accentColor: "neutral",
   compact: false,
   reduceMotion: false,
   autoRefresh: true,
@@ -35,9 +38,15 @@ export function loadWebSettings(): WebSettings {
       ...DEFAULT_WEB_SETTINGS,
       ...raw,
       theme:
-        raw.theme === "light" || raw.theme === "system" || raw.theme === "dark"
+        raw.theme === "light" ||
+        raw.theme === "system" ||
+        raw.theme === "dark" ||
+        raw.theme === "gray"
           ? raw.theme
           : DEFAULT_WEB_SETTINGS.theme,
+      accentColor: isAccentColor(raw.accentColor)
+        ? raw.accentColor.toLowerCase()
+        : "neutral",
       refreshSeconds: [5, 10, 30, 60].includes(refreshSeconds)
         ? refreshSeconds
         : DEFAULT_WEB_SETTINGS.refreshSeconds,

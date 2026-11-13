@@ -26,15 +26,15 @@ import com.getcapacitor.BridgeActivity
 class MainActivity : BridgeActivity() {
     companion object {
         private const val DRAWER_WIDTH_DP = 300
-        private const val BG = 0xFF0B0D10.toInt()
-        private const val SURFACE = 0xFF11151B.toInt()
-        private const val ACTIVE = 0xFF18283A.toInt()
-        private const val BORDER = 0xFF252B34.toInt()
-        private const val TEXT = 0xFFF3F4F6.toInt()
-        private const val TEXT_SUB = 0xFFDCE0E8.toInt()
-        private const val TEXT_DIM = 0xFF7E8796.toInt()
-        private const val ACCENT = 0xFF3B82F6.toInt()
-        private const val GREEN = 0xFF22C55E.toInt()
+        private const val BG = 0xFF090909.toInt()
+        private const val SURFACE = 0xFF171717.toInt()
+        private const val ACTIVE = 0xFF272727.toInt()
+        private const val BORDER = 0xFF2D2D2D.toInt()
+        private const val TEXT = 0xFFEEEEEE.toInt()
+        private const val TEXT_SUB = 0xFFC2C2C2.toInt()
+        private const val TEXT_DIM = 0xFFA0A0A0.toInt()
+        private const val ACCENT = 0xFFE5E5E5.toInt()
+        private const val GREEN = 0xFF6DCA99.toInt()
     }
 
     private lateinit var drawerLayout: DrawerLayout
@@ -357,26 +357,6 @@ class MainActivity : BridgeActivity() {
             label,
             LinearLayout.LayoutParams(0, dp(42), 1f)
         )
-
-        if (destination.view == "updates") {
-            val badge = TextView(this).apply {
-                text = "12"
-                textSize = 10f
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(4).toFloat()
-                    setColor(0xFF245DAA.toInt())
-                }
-                setPadding(dp(5), 0, dp(5), 0)
-            }
-            row.addView(
-                badge,
-                LinearLayout.LayoutParams(dp(28), dp(20)).apply {
-                    rightMargin = dp(2)
-                }
-            )
-        }
 
         row.tag = NavigationRowRefs(accent, icon, label)
         applyNavigationState(row, destination.view == activeView)

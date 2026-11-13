@@ -116,6 +116,7 @@ function CtxMenu({
         onClick={onClose}
       />
       <div
+        data-surface="nested"
         className="anim-slide-down"
         style={{
           position: "fixed",
@@ -506,6 +507,7 @@ export default function ContainersView({
           { label: "Restarting", value: restarting, color: T.yellow },
         ].map((s) => (
           <div
+            data-surface="panel"
             key={s.label}
             className="containers-stat-card"
             style={{

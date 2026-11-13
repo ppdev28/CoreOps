@@ -303,6 +303,8 @@ export default function StorageView({
       ) : data ? (
         <>
           <div
+            data-layout="summary"
+            data-columns="3"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(3,1fr)",

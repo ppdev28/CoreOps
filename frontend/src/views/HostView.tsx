@@ -283,6 +283,8 @@ export default function HostView() {
         </div>
       )}
       <div
+        data-layout="summary"
+        data-columns="3"
         className="host-stats"
         style={{
           display: "grid",
@@ -314,6 +316,7 @@ export default function HostView() {
         />
       </div>
       <div
+        data-layout="content"
         className="host-grid"
         style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
       >
@@ -332,6 +335,8 @@ export default function HostView() {
           <CardHeader title="Load average" />
           <div style={{ padding: "14px 16px" }}>
             <div
+              data-layout="summary"
+              data-columns="3"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",

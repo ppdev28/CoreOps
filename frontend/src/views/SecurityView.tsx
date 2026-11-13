@@ -185,6 +185,8 @@ export default function SecurityView({
       ) : data ? (
         <>
           <div
+            data-layout="summary"
+            data-columns="3"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr 1fr",
@@ -193,6 +195,7 @@ export default function SecurityView({
             }}
           >
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -233,6 +236,7 @@ export default function SecurityView({
               </div>
             </div>
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -269,6 +273,7 @@ export default function SecurityView({
               </div>
             </div>
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -307,6 +312,7 @@ export default function SecurityView({
           </div>
 
           <div
+            data-layout="content"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
           >
             <Card>
