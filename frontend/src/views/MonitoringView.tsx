@@ -296,6 +296,8 @@ export default function MonitoringView() {
         <Skeleton w={280} h={12} />
         <div style={{ height: 14 }} />
         <div
+          data-layout="summary"
+          data-columns="4"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4,1fr)",
@@ -400,6 +402,8 @@ export default function MonitoringView() {
       {source === "system" ? (
         <>
           <div
+            data-layout="summary"
+            data-columns="4"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(4,1fr)",
@@ -437,6 +441,8 @@ export default function MonitoringView() {
             />
           </div>
           <div
+            data-layout="summary"
+            data-columns="4"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(4,1fr)",
@@ -470,6 +476,7 @@ export default function MonitoringView() {
             />
           </div>
           <div
+            data-layout="content"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
             <MetricChart
@@ -508,6 +515,7 @@ export default function MonitoringView() {
         </>
       ) : (
         <div
+          data-layout="content"
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
         >
           <Card>
@@ -653,7 +661,7 @@ export default function MonitoringView() {
                       style={{
                         height: "100%",
                         width: `${Math.min(100, c.memoryPercent)}%`,
-                        background: "#a78bfa",
+                        background: T.purple,
                       }}
                     />
                   </div>
@@ -677,6 +685,7 @@ export default function MonitoringView() {
             )}
           </Card>
           <div
+            data-layout="content"
             style={{
               gridColumn: "1/-1",
               display: "grid",

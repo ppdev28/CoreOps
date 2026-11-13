@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { T } from "../lib/tokens";
+import { ACCENT_PRESETS, resolveAppearance } from "../lib/appearance";
+import { logout } from "../lib/api";
 import { Card, CardHeader, Btn } from "../components/ui";
 import {
   Check,
@@ -72,7 +74,7 @@ function Toggle({
         position: "relative",
         cursor: "pointer",
         border: "none",
-        background: checked ? T.accent : T.overlay,
+        background: checked ? T.primary : T.overlay,
         transition: "background 180ms",
         padding: 0,
       }}
@@ -170,38 +172,20 @@ export default function SettingsView({
   const [active, setActive] = useState("General");
   const [settings, setSettings] = useState<WebSettings>(loadWebSettings);
   const [saved, setSaved] = useState(true);
-  useEffect(() => {
-    document.documentElement.dataset.scpReduceMotion = settings.reduceMotion
-      ? "true"
-      : "false";
-    document.documentElement.dataset.scpCompact = settings.compact
-      ? "true"
-      : "false";
-  }, [settings.reduceMotion, settings.compact]);
-  useEffect(
-    () => () => {
-      delete document.documentElement.dataset.scpReduceMotion;
-      delete document.documentElement.dataset.scpCompact;
-    },
-    [],
-  );
   const patch = (next: Partial<WebSettings>) => {
     setSettings((s) => ({ ...s, ...next }));
     setSaved(false);
   };
   const save = () => {
-    const previous = loadWebSettings();
     saveWebSettings(settings);
     setSaved(true);
     addToast("Web app settings saved", "success");
-    if (previous.theme !== settings.theme) window.location.reload();
   };
   const reset = () => {
     setSettings(DEFAULT_WEB_SETTINGS);
     resetWebSettings();
     setSaved(true);
     addToast("Web app settings reset", "success");
-    window.location.reload();
   };
 
   const renderSection = () => {
@@ -247,7 +231,7 @@ export default function SettingsView({
         <Card>
           <SettingRow
             label="Theme"
-            sub="Choose a dark, light, or operating-system controlled appearance."
+            sub="Choose a dark, light, gray, or operating-system controlled appearance."
           >
             <Select
               value={settings.theme}
@@ -255,9 +239,100 @@ export default function SettingsView({
             >
               <option value="dark">Dark</option>
               <option value="light">Light</option>
+              <option value="gray">Gray</option>
               <option value="system">System</option>
             </Select>
           </SettingRow>
+          <fieldset className="accent-settings">
+            <legend>Accent color</legend>
+            <p>
+              Use an accent for controls and selection. Status colors keep their
+              operational meaning.
+            </p>
+            <div
+              className="accent-presets"
+              role="group"
+              aria-label="Preset accent colors"
+            >
+              {ACCENT_PRESETS.map((preset) => (
+                <button
+                  type="button"
+                  key={preset.name}
+                  aria-label={`${preset.name} accent`}
+                  aria-pressed={settings.accentColor === preset.value}
+                  onClick={() => patch({ accentColor: preset.value })}
+                >
+                  <span style={{ background: preset.swatch }}>
+                    {settings.accentColor === preset.value && (
+                      <Check
+                        size={12}
+                        color={preset.name === "Indigo" ? "#fff" : "#171717"}
+                      />
+                    )}
+                  </span>
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+            <label className="custom-accent">
+              Custom color{" "}
+              <input
+                type="color"
+                aria-label="Custom accent color"
+                value={
+                  settings.accentColor === "neutral"
+                    ? "#e5e5e5"
+                    : settings.accentColor
+                }
+                onChange={(event) => patch({ accentColor: event.target.value })}
+              />
+              <code>
+                {settings.accentColor === "neutral"
+                  ? "Automatic neutral"
+                  : settings.accentColor.toUpperCase()}
+              </code>
+            </label>
+            {(() => {
+              const colors = resolveAppearance(
+                settings.theme === "light"
+                  ? "light"
+                  : settings.theme === "gray"
+                    ? "gray"
+                    : settings.theme === "system" &&
+                        window.matchMedia("(prefers-color-scheme: light)")
+                          .matches
+                      ? "light"
+                      : "dark",
+                settings.accentColor,
+              );
+              return (
+                <div
+                  className="appearance-preview"
+                  style={{
+                    background: colors.bg,
+                    color: colors.text,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <div>
+                    <strong>Theme preview</strong>
+                    <span style={{ color: colors.textDim }}>
+                      Changes apply after saving.
+                    </span>
+                  </div>
+                  <span
+                    className="appearance-preview-button"
+                    style={{
+                      background: colors.primary,
+                      color: colors.onAccent,
+                    }}
+                  >
+                    Primary action
+                  </span>
+                </div>
+              );
+            })()}
+          </fieldset>
           <SettingRow
             label="Reduce motion"
             sub="Disable non-essential transitions and animated interface effects."
@@ -373,12 +448,17 @@ export default function SettingsView({
               marginBottom: 14,
             }}
           >
-            SCP stores interface preferences locally in this browser. Server
+            CoreOps stores interface preferences locally in this browser. Server
             configuration, credentials and terminal data are not stored here.
           </div>
-          <Btn variant="danger" size="xs" onClick={reset}>
-            <RotateCcw size={11} /> Reset local settings
-          </Btn>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn variant="danger" size="xs" onClick={reset}>
+              <RotateCcw size={11} /> Reset local settings
+            </Btn>
+            <Btn variant="secondary" size="xs" onClick={() => void logout()}>
+              Sign out
+            </Btn>
+          </div>
         </div>
       </Card>
     );
@@ -386,21 +466,29 @@ export default function SettingsView({
 
   return (
     <div
-      style={{ padding: "22px 24px", display: "flex", gap: 24, maxWidth: 980 }}
+      className="settings-view"
+      style={{ padding: "22px 24px", display: "flex", gap: 24, maxWidth: 1100 }}
     >
-      <div style={{ width: 205, flexShrink: 0 }}>
+      <div
+        className="settings-navigation"
+        style={{ width: 205, flexShrink: 0 }}
+      >
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>
             Settings
           </div>
           <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>
-            Server Control web app
+            CoreOps web app
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div
+          className="settings-sections"
+          style={{ display: "flex", flexDirection: "column", gap: 2 }}
+        >
           {SECTIONS.map((section) => (
             <button
               key={section.id}
+              aria-current={active === section.id ? "page" : undefined}
               onClick={() => setActive(section.id)}
               style={{
                 display: "flex",
@@ -471,7 +559,7 @@ export default function SettingsView({
               {active}
             </h2>
             <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>
-              Configure how Server Control behaves in this browser.
+              Configure how CoreOps behaves in this browser.
             </div>
           </div>
           <div style={{ display: "flex", gap: 7 }}>

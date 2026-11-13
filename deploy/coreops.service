@@ -1,0 +1,30 @@
+# Install: copy the binary to /opt/coreops/coreops-api, this file to
+# /etc/systemd/system/coreops.service, create /etc/coreops/coreops.env and run
+#   sudo systemctl daemon-reload && sudo systemctl enable --now coreops
+#
+# Example /etc/coreops/coreops.env (chmod 600):
+#   COREOPS_HOST=100.x.y.z            # Tailscale IP, or 127.0.0.1 behind a reverse proxy
+#   COREOPS_PORT=8082
+#   COREOPS_CORS_ORIGINS=https://coreops.example.ts.net
+#   COREOPS_DATA_DIR=/var/lib/coreops
+[Unit]
+Description=CoreOps API
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/coreops/coreops.env
+ExecStart=/opt/coreops/coreops-api
+Restart=on-failure
+# The API needs Docker access (group docker) and sudo -n for apt/ufw/systemctl.
+# Prefer a dedicated user with a narrow sudoers file over running as root.
+User=coreops
+Group=docker
+StateDirectory=coreops
+NoNewPrivileges=false
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -22,10 +22,10 @@ import type { SecurityOverview } from "../lib/types";
 
 if (
   typeof document !== "undefined" &&
-  !document.getElementById("scp-sidebar-icon-hover-fix")
+  !document.getElementById("coreops-sidebar-icon-hover-fix")
 ) {
   const style = document.createElement("style");
-  style.id = "scp-sidebar-icon-hover-fix";
+  style.id = "coreops-sidebar-icon-hover-fix";
   style.textContent = `
     aside > div:first-child > button:last-child{right:3px!important;top:26px!important;z-index:30!important}
     aside > div:first-child > div:first-child:hover ~ button:last-child,
@@ -185,6 +185,8 @@ export default function SecurityView({
       ) : data ? (
         <>
           <div
+            data-layout="summary"
+            data-columns="3"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr 1fr",
@@ -193,6 +195,7 @@ export default function SecurityView({
             }}
           >
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -233,6 +236,7 @@ export default function SecurityView({
               </div>
             </div>
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -269,6 +273,7 @@ export default function SecurityView({
               </div>
             </div>
             <div
+              data-surface="panel"
               style={{
                 padding: "12px 14px",
                 background: T.raised,
@@ -307,6 +312,7 @@ export default function SecurityView({
           </div>
 
           <div
+            data-layout="content"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
           >
             <Card>

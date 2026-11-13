@@ -8,15 +8,6 @@ import type {
   ConfirmDialog,
   Toast,
 } from "../lib/types";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 // ─── Sparkline (SVG) ──────────────────────────────────────────────────────────
 
@@ -31,6 +22,7 @@ export function Sparkline({
   w?: number;
   h?: number;
 }) {
+  if (data.length < 2) return null;
   const min = Math.min(...data),
     max = Math.max(...data),
     range = max - min || 1;
@@ -183,8 +175,8 @@ export function Btn({
     { bg: string; color: string; border: string; hbg: string }
   > = {
     primary: {
-      bg: T.accent,
-      color: "#fff",
+      bg: T.primary,
+      color: T.onAccent,
       border: T.accent,
       hbg: T.accentHover,
     },
@@ -221,6 +213,8 @@ export function Btn({
   const v = vs[variant];
   return (
     <button
+      className="coreops-button"
+      data-variant={variant}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setHov(true)}
@@ -233,7 +227,7 @@ export function Btn({
         fontSize: sz.fs,
         fontWeight: 500,
         fontFamily: "Inter,sans-serif",
-        background: hov ? v.hbg : v.bg,
+        background: !disabled && hov ? v.hbg : v.bg,
         color: v.color,
         border: `1px solid ${v.border}`,
         borderRadius: 7,
@@ -264,6 +258,7 @@ export function Card({
 }) {
   return (
     <div
+      className="coreops-card"
       style={{
         background: T.raised,
         border: `1px solid ${T.border}`,
@@ -323,22 +318,34 @@ export function Tabs({
   onChange: (t: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", borderBottom: `1px solid ${T.border}` }}>
+    <div
+      className="coreops-tabs"
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 3,
+        padding: 3,
+        background: T.overlay,
+        border: `1px solid ${T.border}`,
+        borderRadius: 999,
+      }}
+    >
       {tabs.map((t) => (
         <button
           key={t}
+          aria-pressed={active === t}
           onClick={() => onChange(t)}
           style={{
             padding: "8px 14px",
-            background: "none",
+            background: active === t ? T.primary : "transparent",
             border: "none",
             cursor: "pointer",
             fontSize: 12,
             fontWeight: 500,
             fontFamily: "Inter,sans-serif",
-            color: active === t ? T.text : T.textDim,
-            borderBottom: `2px solid ${active === t ? T.accent : "transparent"}`,
-            marginBottom: -1,
+            color: active === t ? T.onAccent : T.textDim,
+            borderRadius: 999,
+            marginBottom: 0,
             transition: "color 100ms",
           }}
           onMouseEnter={(e) => {
@@ -434,8 +441,11 @@ export function Input({
   const [focused, setFocused] = useState(false);
   return (
     <div
+      className="coreops-input"
       style={{
         position: "relative",
+        minWidth: 0,
+        width: "100%",
         display: "inline-flex",
         alignItems: "center",
         ...style,
@@ -533,26 +543,32 @@ export function FilterToggle<T extends string>({
 }) {
   return (
     <div
+      className="coreops-filter-group"
       style={{
         display: "flex",
         background: T.raised,
         border: `1px solid ${T.border}`,
-        borderRadius: 7,
+        borderRadius: 999,
+        padding: 3,
+        flexWrap: "wrap",
+        gap: 3,
         overflow: "hidden",
       }}
     >
       {options.map((o) => (
         <button
           key={o.value}
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           style={{
             padding: "0 12px",
             height: 32,
-            background: value === o.value ? T.active : "none",
+            background: value === o.value ? T.primary : "transparent",
+            borderRadius: 999,
             border: "none",
             cursor: "pointer",
             fontSize: 12,
-            color: value === o.value ? T.text : T.textDim,
+            color: value === o.value ? T.onAccent : T.textDim,
             fontFamily: "Inter,sans-serif",
             transition: "background 100ms, color 100ms",
           }}
@@ -857,14 +873,21 @@ export function QuickAction({
   label,
   icon,
   onClick,
+  disabled = false,
+  title,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   const [hov, setHov] = useState(false);
   return (
     <button
+      className="coreops-quick-action"
+      disabled={disabled}
+      title={title}
       onClick={onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -899,173 +922,4 @@ export function QuickAction({
       <ArrowRight size={11} color={hov ? T.textDim : "transparent"} />
     </button>
   );
-}
-
-// ─── ResourceChart with time-range selector ───────────────────────────────────
-
-import { buildChartData } from "../lib/data";
-
-type TimeRange = "5m" | "15m" | "30m" | "1h" | "6h" | "24h" | "7d" | "30d";
-const RANGES_SM: TimeRange[] = ["5m", "30m", "1h", "6h", "24h"];
-const RANGES_LG: TimeRange[] = ["15m", "1h", "6h", "24h", "7d", "30d"];
-
-function ChartTip({ active, payload, label, unit = "%" }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div
-      style={{
-        background: T.overlay,
-        border: `1px solid ${T.borderStrong}`,
-        borderRadius: 6,
-        padding: "6px 10px",
-        fontSize: 11,
-        fontFamily: "JetBrains Mono,monospace",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-      }}
-    >
-      <div style={{ color: T.textDim, marginBottom: 2 }}>{label}</div>
-      {payload.map((p: any) => (
-        <div
-          key={p.dataKey}
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: p.stroke,
-              display: "inline-block",
-            }}
-          />
-          <span style={{ color: T.text, fontWeight: 600 }}>
-            {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
-            {unit}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function ResourceChart({
-  label,
-  color,
-  base,
-  noise,
-  seed,
-  unit = "%",
-  height = 100,
-  ranges = RANGES_SM,
-  showCard = true,
-}: {
-  label: string;
-  color: string;
-  base: number;
-  noise: number;
-  seed: number;
-  unit?: string;
-  height?: number;
-  ranges?: TimeRange[];
-  showCard?: boolean;
-}) {
-  const [range, setRange] = useState<TimeRange>(ranges[1] ?? "30m");
-  const data = buildChartData(base, noise, range, seed);
-  const tickInterval = Math.max(1, Math.floor(data.length / 6) - 1);
-
-  const content = (
-    <>
-      <div
-        style={{
-          padding: "12px 16px 0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 8,
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>
-          {label}
-        </span>
-        <div
-          style={{
-            display: "flex",
-            background: T.bg,
-            border: `1px solid ${T.border}`,
-            borderRadius: 5,
-            overflow: "hidden",
-          }}
-        >
-          {ranges.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              style={{
-                padding: "3px 8px",
-                background: range === r ? T.active : "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 10,
-                fontWeight: 600,
-                color: range === r ? T.text : T.textDim,
-                fontFamily: "JetBrains Mono,monospace",
-                letterSpacing: "0.02em",
-                transition: "none",
-              }}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div style={{ padding: "0 4px 12px" }}>
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart
-            data={data}
-            margin={{ top: 4, right: 12, left: -28, bottom: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="2 4"
-              stroke={T.borderMuted}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="t"
-              tick={{
-                fill: T.textDim,
-                fontSize: 9,
-                fontFamily: "JetBrains Mono,monospace",
-              }}
-              axisLine={false}
-              tickLine={false}
-              interval={tickInterval}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{
-                fill: T.textDim,
-                fontSize: 9,
-                fontFamily: "JetBrains Mono,monospace",
-              }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: number) => `${v}${unit}`}
-              width={36}
-            />
-            <Tooltip content={<ChartTip unit={unit} />} />
-            <Line
-              type="monotone"
-              dataKey="v"
-              stroke={color}
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3, fill: color, strokeWidth: 0 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </>
-  );
-
-  return showCard ? <Card>{content}</Card> : <div>{content}</div>;
 }

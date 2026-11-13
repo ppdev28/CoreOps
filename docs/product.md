@@ -1,10 +1,10 @@
-# SCP Product Definition
+# CoreOps Product Definition
 
-## What SCP is
+## What CoreOps is
 
-**Server Control Center (SCP)** is a self-hosted, all-in-one infrastructure control panel for real operational work.
+**CoreOps (CoreOps)** is a self-hosted, all-in-one infrastructure control panel for real operational work.
 
-It takes inspiration from tools such as Cockpit and Portainer, but the ambition is broader: SCP should bring together the tasks a DevOps engineer, sysadmin, SRE or cloud engineer repeatedly performs on servers and infrastructure into one coherent application.
+It takes inspiration from tools such as Cockpit and Portainer, but the ambition is broader: CoreOps should bring together the tasks a DevOps engineer, sysadmin, SRE or cloud engineer repeatedly performs on servers and infrastructure into one coherent application.
 
 The product should eventually cover, in a consistent UX:
 
@@ -26,7 +26,7 @@ This is a direction, not a commitment to implement every area immediately. Featu
 
 ## Product positioning
 
-SCP should feel closer to a professional infrastructure workstation than to a collection of unrelated admin pages.
+CoreOps should feel closer to a professional infrastructure workstation than to a collection of unrelated admin pages.
 
 The core promise is:
 
@@ -77,7 +77,7 @@ Frequent operations should require few clicks. Detailed inspection should remain
 
 ### 6. Consistency
 
-The same concepts should behave the same way throughout SCP. A container action, service action and future host action should share recognizable interaction patterns.
+The same concepts should behave the same way throughout CoreOps. A container action, service action and future host action should share recognizable interaction patterns.
 
 ### 7. Safe by default
 
@@ -85,7 +85,7 @@ The application has privileged infrastructure access. Safety, authentication, au
 
 ### 8. Responsive from the beginning
 
-SCP must work on desktop and remain genuinely usable from a phone. Mobile access is especially important for operational checks and emergency actions.
+CoreOps must work on desktop and remain genuinely usable from a phone. Mobile access is especially important for operational checks and emergency actions.
 
 ## Design direction
 

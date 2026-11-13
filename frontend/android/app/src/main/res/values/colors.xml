@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="coreops_background">#090909</color>
+    <color name="coreops_surface">#171717</color>
+    <color name="coreops_accent">#E5E5E5</color>
+    <color name="coreops_text">#EEEEEE</color>
+</resources>

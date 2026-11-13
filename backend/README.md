@@ -1,6 +1,6 @@
-# SCP backend
+# CoreOps backend
 
-The backend is a small Go HTTP API that exposes Server Control Center capabilities without leaking Docker Engine details into the frontend.
+The backend is a small Go HTTP API that exposes CoreOps capabilities without leaking Docker Engine details into the frontend.
 
 ## Local development
 
@@ -8,8 +8,8 @@ The API uses Docker's standard environment configuration. On a Linux host with D
 
 ```bash
 cd backend
-go mod tidy
-go run ./cmd/scp-api
+go test ./...
+go run ./cmd/coreops-api
 ```
 
 The default API address is `http://localhost:8082`.
@@ -22,22 +22,41 @@ Useful endpoints:
 - `POST /api/v1/containers/:id/start`
 - `POST /api/v1/containers/:id/stop`
 - `POST /api/v1/containers/:id/restart`
-- `GET /api/v1/terminal/ws`
 
-Set `SCP_PORT` to change the HTTP port.
+Set `COREOPS_PORT` to change the HTTP port, `COREOPS_HOST` to change the bind address (default `127.0.0.1`; use `0.0.0.0` or a Tailscale IP to reach it from other devices) and `COREOPS_CORS_ORIGINS` (comma-separated) to allow extra browser origins. The legacy `CoreOps_*` names still work.
 
-## Web terminal
+## Authentication and roles
 
-The terminal endpoint creates a real Unix PTY and launches the server user's login shell. Browser input and PTY output are streamed over a persistent WebSocket. `TERM=xterm-256color` and the server user's normal environment are inherited.
+Every endpoint except `GET /api/v1/health` and `POST /api/v1/auth/login` requires a session token sent as `Authorization: Bearer <token>`.
 
-Set `SCP_WEB_ORIGIN` to the exact allowed browser origin (or a comma-separated list) when CoreOps is not running from `http://localhost:5173`. The WebSocket rejects requests without a matching `Origin` header.
+Create the first user before starting the server. For later CLI changes, stop the API first, use its service user and the same `COREOPS_DATA_DIR`, then restart: the running server does not reload CLI changes (SEC-01).
 
-The terminal intentionally does not expose an HTTP command-execution endpoint. Commands are executed only inside the persistent PTY session, using the operating-system permissions of the CoreOps process user.
+```bash
+printf '%s' "a-long-password" | go run ./cmd/coreops-api user add alice admin
+# or, on first start only:
+COREOPS_ADMIN_USER=alice COREOPS_ADMIN_PASSWORD=a-long-password go run ./cmd/coreops-api
+```
+
+Other commands: `user passwd <name>` (removes sessions from the CLI store; the live server must be restarted as described above), `user remove <name>`, `user list`. Passwords need at least 10 characters and are stored as PBKDF2-SHA256 hashes.
+
+| Role | Can do |
+| --- | --- |
+| `viewer` | read-only overviews (host, containers list, services, storage, network, monitoring, updates) |
+| `operator` | viewer + container/application/VM/service actions, container detail (env vars), logs, security overview |
+| `admin` | operator + terminal, security changes, package updates, audit log |
+
+Login is rate limited (5 failures per client and user lock that pair for 15 minutes). Sessions last 12 hours (`COREOPS_SESSION_TTL`, e.g. `8h`).
+
+State lives in `COREOPS_DATA_DIR` (default `./data`, files are `0600`): `users.json`, `sessions.json` (token hashes only) and `audit.log`.
+
+`audit.log` is append-only JSON lines recording every non-GET request (including rejected ones and logins) with user, role, path, status, remote address and, for the terminal, the command. Admins can read it with `GET /api/v1/audit?limit=200`.
+
+The server does not terminate TLS. Put it behind Tailscale Serve or a reverse proxy with HTTPS before using it over a network you do not trust, because the token travels in a header.
 
 ## Security
 
 The backend is intentionally designed to talk to Docker through the local Unix socket rather than exposing Docker Engine's TCP API. Access to the Docker socket is highly privileged and must be protected at the host level.
 
-The terminal is equally privileged: it can execute anything permitted to the OS account running CoreOps. The current project does not yet contain a real authentication/authorization subsystem, so the WebSocket currently provides origin protection and random session IDs but **must not be considered an authenticated remote-access boundary**. Add CoreOps authentication/authorization before exposing the terminal beyond a trusted development/private network.
+For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization already exist. Remaining security risks are tracked in [security review](../docs/security.md); Tailscale does not replace them.
 
-For the first integration, SCP is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization will be added before SCP is exposed beyond a trusted development network.
+See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. The proposed internal packages are not implemented yet.

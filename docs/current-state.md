@@ -1,12 +1,15 @@
 # Current State
 
+Reviewed on **2026-11-12**, checkout **`develop`**, commit **`ece1b7a`**. Architecture and module layout proposals are documented in [architecture.md](architecture.md), [modules/README.md](modules/README.md) and [modularization-plan.md](modularization-plan.md). They have not been implemented. Security findings: [security.md](security.md).
+
 Last known working milestone: **the Figma-designed Containers UI displays real Docker data and performs tested start, stop and restart operations against the Ubuntu Server Docker Engine**.
 
 ## Repository
 
-- GitHub repository: `ppdev28/SCP`
-- Active branch: `feature/project-foundation`
-- The developer also has a local checkout on the Ubuntu server at `~/proyectos/SCP`.
+- GitHub repository: `ppdev28/CoreOps`
+- Reviewed checkout: `develop`; confirm the current branch rather than following historical branch names.
+- Existing untracked Android assets/tests were present during review and were left untouched.
+- The developer also has a local checkout on the Ubuntu server at `~/proyectos/CoreOps`.
 - GitHub authentication from the server uses SSH.
 - The JavaScript package manager is pnpm.
 
@@ -24,58 +27,63 @@ Stack:
 
 The frontend lives in `frontend/`.
 
+The latest UI slice (2026-11-13) is on **`feature/ui-redesign`**: the rounded flat visual system now covers every screen, login and workspace chrome. Settings → Appearance supports Dark/Gray/Light/System, eight accent presets and a custom color picker with contrast adjustment. Preferences persist and apply without reloading. Shared tokens/styles replace the Dashboard-only palette. Responsive checks cover all navigation destinations plus container inspection from 320px phones through tablets/laptops to 2560px desktops. The 15-test Playwright fixture suite also covers appearance persistence/System, status and action flows. See [UI style guide](ui-style.md) for commands, scope and native limitations.
+
 The UI originated in Figma Make and has been brought into the repository. It contains route-level views, reusable components, shared types, UI data and utility code.
 
-The Containers screen has been connected to the SCP API rather than relying on its original mock container list.
+The Containers screen has been connected to the CoreOps API rather than relying on its original mock container list. All Figma-era mock data has been removed: container detail now always uses the real inspect endpoint, the notifications menu is empty until alerting exists, the header/terminal hostname and user come from the server, and the "Available apps" catalog was dropped because installing apps is not implemented.
 
-The Vite development server proxies `/api` requests to the local backend on port `8080`.
+The Vite development server proxies `/api` requests to the local backend on port `8082`.
+
+The app shows a login screen until a session exists (`lib/auth.ts`, `views/LoginView.tsx`). `lib/api.ts` attaches the token to every request and returns to the login screen on a 401. The session is kept in `localStorage`.
 
 Known frontend validation command:
 
 ```bash
-cd ~/proyectos/SCP/frontend
+cd ~/proyectos/CoreOps/frontend
 pnpm install
 pnpm build
 pnpm dev --host 0.0.0.0
 ```
 
-The build currently succeeds. Vite may report a chunk-size warning for the main JavaScript bundle; this is not currently a release blocker.
+`pnpm build` passed on 2026-11-12, including strict TypeScript checking. Views are lazy-loaded and charts split into a separate chunk; no chunk-size warning appeared in this run. No browser or native validation was performed in this review.
 
 ## Backend
 
-Stack:
+Stack: Go (stdlib `net/http`), Moby Docker client, no database (JSON files under `COREOPS_DATA_DIR`).
 
-- Go
-- HTTP API
-- Moby Docker client
+The backend lives in `backend/cmd/coreops-api` and listens on `127.0.0.1:8082` by default (`COREOPS_HOST`, `COREOPS_PORT`). See `backend/README.md` for configuration.
 
-The backend lives in `backend/`.
+All backend source is still one `package main`; splitting files has not yet separated transport, use cases and adapters. `go test ./...`, `go vet ./...` and `go build ./...` passed on 2026-11-12.
 
-The API runs on `:8080`.
+Source layout: `main.go` (startup), `routes.go` (route table with minimum role per endpoint), `http.go` (JSON helpers, CORS, logging, env), `auth.go` (users, sessions, roles), `audit.go` (audit log), `users_cli.go` (`coreops-api user ...`), `containers.go` and one file per area (`host`, `services`, `storage`, `network`, `monitoring`, `logs`, `security`, `updates`, `applications`, `virtual_machines`, `terminal`).
 
-The backend can connect to the Docker Engine on the Ubuntu host through the normal Docker environment/local Unix socket.
-
-The health endpoint currently works:
+Implemented endpoints (all require a session except health and login):
 
 ```text
-GET /api/v1/health
+GET  /api/v1/health                              public
+POST /api/v1/auth/login | logout, GET /auth/me
+GET  /api/v1/host | storage | network | monitoring | updates
+GET  /api/v1/containers, GET /containers/{id}
+POST /api/v1/containers/{id}/start|stop|restart
+GET  /api/v1/applications, POST /applications/{id}/{action}
+GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
+GET  /api/v1/services, POST /services/{name}/start|stop|restart
+GET  /api/v1/logs, GET /security
+POST /api/v1/terminal/exec | complete             admin
+POST /api/v1/security/sessions/{pid}/terminate, /security/fix/{item}   admin
+POST /api/v1/updates/refresh | apply              admin
+GET  /api/v1/audit                                admin
 ```
 
-Expected shape:
+### Security model
 
-```json
-{"docker":"available","status":"ok"}
-```
-
-The containers endpoint currently works:
-
-```text
-GET /api/v1/containers
-```
-
-It returns real Docker containers with fields including IDs, names, images, state/status, creation time, published ports and networks.
-
-The frontend currently adapts this API response to the UI's container model. Values not exposed by the backend are not fabricated. Container start, stop and restart actions call the SCP API, show a pending state per container, prevent duplicate submissions and refresh the real Docker state after completion.
+- Opaque session tokens (`Authorization: Bearer`), stored server-side as SHA-256 hashes, 12 h TTL.
+- Users in `users.json` with PBKDF2-SHA256 hashes; roles `viewer` < `operator` < `admin` enforced per route in `routes.go`.
+- Login rate limit: 5 failures per client+user lock them for 15 minutes.
+- Mutating requests and login attempts, including rejected ones, are sent to `audit.log`; GET/HEAD/OPTIONS are excluded. Writes can fail after the operation and are not tamper-proof.
+- Identity files are cached per process: CLI changes are not reloaded by a running server. Manage users with the service stopped until coherent persistence/revocation is implemented (SEC-01).
+- No TLS termination: use Tailscale Serve or a reverse proxy.
 
 ## Real integration environment
 
@@ -114,7 +122,7 @@ The following path is working:
 Browser
   -> React/Vite UI
   -> /api proxy
-  -> Go SCP API :8080
+  -> Go CoreOps API :8082
   -> Docker Engine
   -> real containers
 ```
@@ -123,21 +131,27 @@ The Containers view now displays real containers from the server.
 
 The lifecycle workflow has also been manually validated against Docker on the Ubuntu Server: start, stop and restart operations update the UI and reconcile with the real container state, including stopping and starting a disposable test container.
 
+## Mobile
+
+`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly using the server address entered on the login screen (stored locally; `VITE_API_BASE_URL` overrides it).
+
 ## What is not finished
 
-The Containers workflow supports real lifecycle actions through the Go API:
+See [roadmap](../roadmap.md) for priorities and [security.md](security.md) for open security findings. Highlights:
 
-```text
-POST /api/v1/containers/{id}/start
-POST /api/v1/containers/{id}/stop
-POST /api/v1/containers/{id}/restart
-```
+- Container detail logs/metrics and richer inspection: aggregate `/logs` already reads Docker logs and `/monitoring` already uses ContainerStats; these are not absent from the backend.
+- The list mapper currently assigns `restarts: 0` and the UI displays it although the list response has no restart count. This violates the unavailable-data rule and needs a code fix.
+- Docker handler tests. Auth, roles/audit, apt/UFW/security-event parsers and input validators already have Go tests. Dashboard Playwright fixture tests now exist; broader frontend coverage remains pending.
+- UI for the audit log and for user management (users are managed through the CLI).
+- Hiding UI actions the current role cannot perform (the API already enforces them).
+- Server address configuration screen and secure token storage on mobile.
+- Multi-host, Kubernetes and cloud integrations.
 
-Stop and restart require confirmation in the UI. The API validates container IDs for lifecycle operations and returns Docker errors to the client. The next Containers milestone should extend the real workflow with inspection, logs, metrics and other operational details rather than simulated actions.
+Container-specific detail workflows still need explicit contract work; reuse existing real collectors where suitable. Do not fake missing values.
 
-CPU, memory, restart count and other richer operational data may still require additional backend endpoints/inspection/metrics work. Do not fake these values.
+## Deployment limitations
 
-Authentication, authorization, audit logging, production deployment, multi-host support and broader infrastructure integrations are future work.
+CI includes gofmt, vet, tests and frontend format/build, triggered for main only. The SSH deployment builds `backend/scp-api`, while the checked-in service executes `/opt/coreops/coreops-api`; no installation step reconciles them. Frontend production asset delivery is also not defined by that workflow. The effective server configuration was not inspected; see [operations guide](modules/operations.md).
 
 ## Important historical issue
 

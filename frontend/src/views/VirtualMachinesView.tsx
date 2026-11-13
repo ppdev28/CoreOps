@@ -205,6 +205,7 @@ export default function VirtualMachinesView({
       </div>
 
       <div
+        data-layout="content"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
