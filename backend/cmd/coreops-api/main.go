@@ -15,7 +15,10 @@ import (
 	"github.com/moby/moby/client"
 )
 
-type API struct{ docker *client.Client }
+type API struct {
+	docker    *client.Client
+	terminals *terminalServer
+}
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "user" {
@@ -48,6 +51,7 @@ func main() {
 	server := &http.Server{Addr: net.JoinHostPort(host, strconv.Itoa(port)), Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 40 * time.Second, WriteTimeout: 45 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		<-ctx.Done()
+		api.terminals.Close()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = server.Shutdown(shutdownCtx)

@@ -6,6 +6,8 @@ Mantener la frontera HTTP/JSON para web y móvil: rutas, autenticación/autoriza
 
 `routes.go` es el inventario ejecutable de métodos y roles; [estado actual](../current-state.md) lo resume. `http.go` contiene JSON/CORS/logging y `handlers.go` muchos handlers. `containers.go` mezcla contrato e integración. Todas estas rutas pertenecen al mismo proceso Go.
 
+La [terminal](terminal.md) añade `GET /api/v1/terminal/session`: upgrade WebSocket y auth admin en el primer frame antes de arrancar la PTY. No usa Bearer en URL. Consultar su guía para protocolo, límites, proxy y caducidad; no tratar el upgrade como acceso anónimo a una shell.
+
 ## Instrucciones
 
 - Mantener `/api/v1` y roles al extraer código. Documentar health/login públicos y todos los demás protegidos, incluido logout.

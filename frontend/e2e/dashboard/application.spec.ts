@@ -68,7 +68,9 @@ for (const format of formats)
         settings: "CoreOps web app",
       };
       if (id === "terminal")
-        await expect(screen.locator(".termx-input-card input")).toBeVisible();
+        await expect(
+          screen.locator('.pty-emulator[data-state="connected"]'),
+        ).toBeVisible();
       else
         await expect(
           screen

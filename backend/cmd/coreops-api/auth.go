@@ -308,10 +308,15 @@ func (s *AuthStore) Authenticate(token string) (User, bool) {
 	if token == "" {
 		return User{}, false
 	}
+	return s.authenticateKey(tokenKey(token))
+}
+
+// Revalidate a live connection without retaining the bearer token.
+func (s *AuthStore) authenticateKey(key string) (User, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	sess, ok := s.sessions[tokenKey(token)]
-	if !ok || s.now().After(sess.Expires) {
+	sess, ok := s.sessions[key]
+	if !ok || !s.now().Before(sess.Expires) {
 		return User{}, false
 	}
 	user, ok := s.users[sess.User]

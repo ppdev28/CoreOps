@@ -1,10 +1,24 @@
 # Codex Handoff
 
-Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current UI work is on `feature/ui-redesign`; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
+Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current terminal work is on `feature/terminal-redesign`; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
 
 ## Read and resume
 
 Read the five documents in `AGENTS.md` order, then [module instructions](modules/README.md), [security findings](security.md) and [modularization plan](modularization-plan.md). The user requested documentation first, followed by gradual code implementation and preservation of the Figma UI.
+
+## Latest terminal slice (2026-11-13)
+
+The explicit terminal request replaces the isolated-command UI with xterm.js and a real Linux PTY. Branch `feature/terminal-redesign` was already checked out; it was preserved. Backend transport is `terminal_session.go`; frontend remains `views/TerminalView.tsx` with shared API transport and new terminal CSS. No wholesale module extraction. See [terminal module](modules/terminal.md) for protocol, environment, limits, lifecycle, shortcuts and proxy configuration.
+
+Validated: Go race tests/vet/build; frontend format/build; 18 fixture browser tests; real Chromium → isolated API → PTY including `top`, state, signals, independent tabs, resize, >45 s and logout. Credentials/data/shell wrapper for live validation were temporary, with no personal history files or Docker mutations. No deployment or native build. A pre-existing typo in testify’s go.mod checksum was corrected after authenticating the canonical value through Go’s official proxy/sum database; integrity checking was retained.
+
+The frontend keeps shells mounted when navigating. Page reload/disconnect ends them; there is no resumable server session or replay. Lifecycle audit redacts content; legacy exec also redacts commands, but its old environment/output limits still need hardening. CLI/server identity coherence SEC-01 remains unresolved. This upgrades the existing admin shell capability, without adding host privileges or implementing a Linux-user identity mapping.
+
+## Terminal disconnect repair
+
+The active development API on 8082 was an older `go run` binary without `/terminal/session`; it returned 404 and the UI rendered a generic disconnect. Rebuilt/restarted that development process with its existing environment, working directory and identity files. The running corrected binary/log/PID are under `/tmp/coreops-terminal-fix/`; the prior binary was retained there for rollback. Future Go edits require a new build/restart; no systemd service was installed.
+
+Vite now preserves Host (`changeOrigin: false`). Verified 101 upgrades through localhost, LAN and Tailscale; an untrusted Origin still receives 403. Authenticated GET without upgrade returns admin-only capability JSON and starts no PTY. The frontend checks that before mounting xterm, explains outdated backend/404, permits retry and distinguishes failed upgrade from later disconnection. Real Chromium → Vite → isolated API → default login bash verified hostname prompt and commands. Go terminal race tests/vet/build and frontend format/build passed; the browser suite now has 20 passing tests including the two regressions. No existing user/password/session data changed.
 
 ## Latest UI slice (2026-11-13)
 
@@ -20,7 +34,7 @@ React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8
 
 Container list/inspect/start/stop/restart already exist; the prior milestone records manual validation on Ubuntu Docker. Host, applications, services, VMs, storage, network, monitoring, logs, terminal, security and updates have implementations with uneven real integration validation. Aggregate logs and metrics already use Docker. Never repeat production mutations merely to re-prove historical milestones.
 
-Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. CLI changes are not reloaded by the running auth store; stop the API before CLI user changes and use the same service user/data directory. See SEC-01. Terminal is admin-only shell execution with process privileges, not a persistent PTY. Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
+Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. CLI changes are not reloaded by the running auth store; stop the API before CLI user changes and use the same service user/data directory. See SEC-01. Terminal now has an admin-only persistent PTY/WebSocket with session revalidation and bounded flow control, alongside the legacy isolated exec/complete endpoints. It uses the service account’s host privileges; see [terminal guide](modules/terminal.md). Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
 
 ## Recommended next slice
 

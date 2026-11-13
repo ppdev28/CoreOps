@@ -21,7 +21,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8082',
-        changeOrigin: true,
+        // Keep Host aligned with the browser Origin for same-origin WebSocket
+        // validation when accessing Vite through a LAN or Tailscale address.
+        changeOrigin: false,
         ws: true,
       },
     },

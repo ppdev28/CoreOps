@@ -6,7 +6,7 @@
 .app-workspace { min-width: 0; width: 100%; font-variant-numeric: tabular-nums; }
 .app-workspace .coreops-main { min-width: 0; overflow-x: hidden; scrollbar-gutter: stable; }
 .app-workspace .coreops-main > .coreops-screen { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; width: 100% !important; max-width: none !important; padding: 0 !important; }
-.app-workspace .coreops-screen > div:not(.termx-root) { width: 100%; min-width: 0; max-width: 1700px; margin: 0 auto; }
+.app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { width: 100%; min-width: 0; max-width: 1700px; margin: 0 auto; }
 .app-workspace .coreops-card, .app-workspace [data-surface="panel"] { background: var(--coreops-raised); border-color: var(--coreops-border); border-radius: 24px !important; box-shadow: none !important; min-width: 0; }
 .app-workspace [data-surface="nested"], .app-workspace .native-network-card, .app-workspace .native-code-block { border-radius: 18px !important; box-shadow: none; }
 .app-workspace .coreops-button, .app-workspace .coreops-quick-action, .app-workspace .screen-filter-pill { border-radius: 999px !important; box-shadow: none !important; min-height: 34px; }
@@ -68,7 +68,7 @@
 .appearance-preview div > span { font-size: 10px; }
 .appearance-preview-button { padding: 9px 14px; border-radius: 999px; font-size: 11px; font-weight: 550; }
 html[data-coreops-compact="true"] .app-workspace .coreops-card { border-radius: 20px !important; }
-@media (min-width: 1920px) { .app-workspace .coreops-screen > div:not(.termx-root) { max-width: 1900px; } }
+@media (min-width: 1920px) { .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { max-width: 1900px; } }
 @media (min-width: 768px) and (max-width: 1150px) {
   .app-workspace .sidebar-desktop { display: block !important; }
   .app-workspace .coreops-sidebar { width: 64px !important; }
@@ -80,7 +80,7 @@ html[data-coreops-compact="true"] .app-workspace .coreops-card { border-radius: 
   .app-workspace .coreops-brand { display: none; }
 }
 @media (max-width: 1150px) {
-  .app-workspace .coreops-screen > div:not(.termx-root) { padding: 20px !important; }
+  .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { padding: 20px !important; }
   .app-workspace .coreops-screen [data-layout="summary"][data-columns="4"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
   .app-workspace .settings-navigation { width: 180px !important; }
   .accent-presets { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -88,7 +88,7 @@ html[data-coreops-compact="true"] .app-workspace .coreops-card { border-radius: 
 @media (max-width: 767px) {
   .app-workspace .sidebar-desktop { display: none !important; }
   .app-workspace .mobile-menu-btn { display: flex !important; }
-  .app-workspace .coreops-screen > div:not(.termx-root) { padding: 16px !important; }
+  .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { padding: 16px !important; }
   .app-workspace .coreops-screen [data-layout="content"], .app-workspace .coreops-screen [data-layout="summary"][data-columns="3"] { grid-template-columns: minmax(0,1fr) !important; }
   .app-workspace .settings-view { flex-direction: column !important; gap: 18px !important; }
   .app-workspace .settings-navigation { width: 100% !important; }
@@ -120,7 +120,7 @@ html[data-coreops-compact="true"] .app-workspace .coreops-card { border-radius: 
 }
 @media (max-height: 550px) and (orientation: landscape) {
   .app-workspace .coreops-header { height: 48px !important; }
-  .app-workspace .coreops-screen > div:not(.termx-root) { padding-top: 12px !important; }
+  .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { padding-top: 12px !important; }
   .app-workspace .termx-immersive .termx-welcome { padding: 12px !important; }
 }
 /* The terminal focuses its input surface as a unit rather than drawing two rings. */

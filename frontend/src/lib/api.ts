@@ -77,6 +77,54 @@ function getApiBase(): string {
   const server = getServerUrl();
   return server ? `${server}/api/v1` : "/api/v1";
 }
+
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export async function checkTerminalAvailability(
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    const capability = await request<{ available: boolean; protocol: number }>(
+      "/terminal/session",
+      { signal, cache: "no-store" },
+    );
+    if (capability.available !== true || capability.protocol !== 1)
+      throw new Error(
+        "The API returned an incompatible terminal protocol. Update and restart the CoreOps backend.",
+      );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404)
+      throw new Error(
+        "This API does not support interactive terminals. Rebuild and restart the CoreOps backend.",
+      );
+    throw error;
+  }
+}
+
+// Authenticate inside the connection, never in a URL or browser history.
+export function openTerminalSession(cols: number, rows: number): WebSocket {
+  const url = new URL(`${getApiBase()}/terminal/session`, window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(url);
+  socket.binaryType = "arraybuffer";
+  let token = getAuthToken();
+  socket.addEventListener(
+    "open",
+    () => {
+      socket.send(JSON.stringify({ type: "auth", token, cols, rows }));
+      token = null;
+    },
+    { once: true },
+  );
+  return socket;
+}
 function mapStatus(state: string): ContainerStatus {
   switch (state.toLowerCase()) {
     case "running":
@@ -183,7 +231,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // Keep the HTTP status when the server returned HTML or another non-JSON body.
     }
-    throw new Error(
+    throw new ApiError(
+      response.status,
       body?.error ||
         `CoreOps API returned ${response.status} (${contentType || "unknown content type"})`,
     );

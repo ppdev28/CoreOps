@@ -1,0 +1,38 @@
+.app-workspace .coreops-screen > .pty-terminal { padding: 0 !important; margin: 0; max-width: none; flex: 1; width: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--coreops-bg); }
+.pty-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--coreops-border); min-width: 0; background: var(--coreops-bgSidebar); }
+.pty-terminal button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--coreops-textSub); cursor: pointer; min-width: 34px; min-height: 34px; padding: 6px 9px; font: inherit; font-size: 12px; }
+.pty-terminal button:hover:not(:disabled) { background: var(--coreops-hover); color: var(--coreops-text); }
+.pty-terminal button:active:not(:disabled) { background: var(--coreops-active); }
+.pty-terminal button:focus-visible { outline: 2px solid var(--coreops-accent); outline-offset: -2px; }
+.pty-terminal button:disabled { opacity: .4; cursor: not-allowed; }
+.pty-tabs { display: flex; gap: 5px; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.pty-tab { display: flex; align-items: center; flex-shrink: 0; border-radius: 999px; border: 1px solid transparent; }
+.pty-tab[data-active="true"] { border-color: var(--coreops-border); background: var(--coreops-active); }
+.pty-tab button[role="tab"] { max-width: 220px; justify-content: flex-start; }
+.pty-tab button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pty-tab button svg { flex-shrink: 0; }
+.pty-tools { display: flex; margin-left: auto; flex-shrink: 0; }
+.pty-pane { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.pty-pane[hidden] { display: none; }
+.pty-emulator { flex: 1; min-height: 0; min-width: 0; overflow: hidden; padding: 14px 12px 4px; }
+.pty-emulator .xterm { height: 100%; }
+.pty-emulator .xterm-viewport { scrollbar-width: thin; scrollbar-color: var(--coreops-borderStrong) transparent; }
+.app-workspace .coreops-main .pty-emulator .xterm-helper-textarea { min-height: 0; border: 0; padding: 0; border-radius: 0; font-size: 16px; }
+.pty-status { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 7px 14px; font-size: 11px; color: var(--coreops-textDim); border-top: 1px solid var(--coreops-borderMuted); }
+.pty-status > span:first-child { flex-shrink: 0; color: var(--coreops-textSub); }
+.pty-status > span[data-state="connected"] { color: var(--coreops-green); }
+.pty-status > span[data-state="error"], .pty-status > span[data-state="disconnected"] { color: var(--coreops-yellow); }
+.pty-status > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.pty-keys { display: flex; overflow-x: auto; gap: 3px; padding: 6px 10px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--coreops-border); flex-shrink: 0; }
+.pty-keys button { flex-shrink: 0; background: var(--coreops-raised); min-width: 38px; font-size: 11px; }
+.pty-find { position: absolute; right: 12px; top: 8px; max-width: calc(100% - 24px); z-index: 5; display: flex; gap: 2px; padding: 6px; border-radius: 18px; border: 1px solid var(--coreops-borderStrong); background: var(--coreops-overlay); }
+.pty-find input { min-width: 0; width: 200px; padding: 6px 12px; border: 1px solid var(--coreops-border); color: var(--coreops-text); background: var(--coreops-bg); outline-color: var(--coreops-accent); }
+.pty-close-prompt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; background: var(--coreops-overlay); color: var(--coreops-textSub); font-size: 12px; }
+.pty-close-prompt > span { flex: 1; }
+.pty-close-prompt button { border-color: var(--coreops-borderStrong); }
+.pty-empty, .pty-unavailable { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--coreops-textSub); }
+.pty-empty h2, .pty-unavailable h2 { font-size: 18px; color: var(--coreops-text); }
+.pty-empty p, .pty-unavailable p { font-size: 13px; }
+.pty-empty > button { background: var(--coreops-primary); color: var(--coreops-onAccent); }
+@media (max-width: 767px) { .pty-toolbar { padding: 5px; gap: 2px; flex-wrap: wrap; } .pty-tabs { flex: 1; } .pty-tools { width: 100%; justify-content: flex-end; border-top: 1px solid var(--coreops-borderMuted); } .pty-tab button[role="tab"] { max-width: 180px; } .pty-emulator { padding: 8px 6px 2px; } .pty-status { padding: 6px 10px; font-size: 10px; } .pty-keys { padding-left: 5px; } }
+@media (max-height: 550px) { .pty-tools { width: auto; border: 0; } .pty-status { min-height: 24px; padding-block: 4px; } .pty-toolbar, .pty-keys { padding-block: 3px; } }

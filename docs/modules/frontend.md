@@ -26,4 +26,6 @@ La dirección visual monocroma y redondeada se aplica ahora a toda la aplicació
 
 El Dashboard conserva primitives shadcn y Tremor Raw con licencias; el resto reutiliza su API de componentes existente. `components/ui/` y el archivo legacy `components/ui.tsx` coexisten. Las fuentes son locales.
 
-Ver [guía visual](../ui-style.md). `pnpm test:ui` ejecuta 15 pruebas Playwright con fixtures aislados, incluidos todos los destinos y detalle en ocho formatos, persistencia y contraste. Los recursos nativos sin seguimiento siguen intactos; el chrome nativo tiene paleta estática y no refleja aún todos los ajustes web.
+Ver [guía visual](../ui-style.md). `pnpm test:ui` ejecuta 20 pruebas Playwright con fixtures aislados, incluidos todos los destinos y detalle en ocho formatos, persistencia y contraste. Los recursos nativos sin seguimiento siguen intactos; el chrome nativo tiene paleta estática y no refleja aún todos los ajustes web.
+
+La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tiene pestañas con conexiones independientes, resize real, teclado móvil y conserva sesiones al navegar. No reconstruir readline ni limpiar ANSI en React. El ACK de salida se envía en el callback de `term.write`, para respetar el control de flujo del servidor. La suite tiene ahora 20 pruebas, incluidas cinco específicas de terminal.

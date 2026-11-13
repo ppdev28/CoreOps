@@ -48,6 +48,12 @@ pnpm dev --host 0.0.0.0
 
 `pnpm build` passed on 2026-11-12, including strict TypeScript checking. Views are lazy-loaded and charts split into a separate chunk; no chunk-size warning appeared in this run. No browser or native validation was performed in this review.
 
+## Terminal interactiva (2026-11-13)
+
+Implementada en la rama actual `feature/terminal-redesign`: xterm.js con PTY Linux real y WebSocket bidireccional. Pestañas independientes, shell persistente, ANSI/TUI, señales, resize, búsqueda, copia y teclado móvil. Las sesiones sobreviven a la navegación interna y terminan al cerrar la pestaña, desconectar, cerrar sesión o apagar la API. Acceso admin antes de crear procesos, Origin exacto, límites de concurrencia/frame/salida y revalidación de sesión. Ver [contrato y operación](modules/terminal.md).
+
+Validado con `go test -race ./...`, vet/build, frontend formato/build y 20 pruebas Playwright. Además, Chromium conectado a una API aislada y una PTY real: estado, Ctrl+C, `top`, pestañas independientes, resize, conexión >45 s y logout. Se actualizó después la API de desarrollo activa de 8082, que aún devolvía 404 en el endpoint, conservando identidad y configuración. Verificación adicional: proxy Vite preserva Host por LAN/Tailscale; prompt real con `/bin/bash -l`. El cliente comprueba compatibilidad antes de abrir xterm y muestra errores accionables. No se instaló un servicio de producción ni se recompiló Capacitor. Las rutas aisladas legacy permanecen; SEC-01/03/04 y los riesgos legacy de SEC-02 siguen pendientes.
+
 ## Backend
 
 Stack: Go (stdlib `net/http`), Moby Docker client, no database (JSON files under `COREOPS_DATA_DIR`).
@@ -70,7 +76,8 @@ GET  /api/v1/applications, POST /applications/{id}/{action}
 GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
 GET  /api/v1/services, POST /services/{name}/start|stop|restart
 GET  /api/v1/logs, GET /security
-POST /api/v1/terminal/exec | complete             admin
+POST /api/v1/terminal/exec | complete             admin (legacy)
+GET  /api/v1/terminal/session                     WebSocket, admin first frame
 POST /api/v1/security/sessions/{pid}/terminate, /security/fix/{item}   admin
 POST /api/v1/updates/refresh | apply              admin
 GET  /api/v1/audit                                admin

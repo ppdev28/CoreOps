@@ -53,6 +53,10 @@ function AppShell({ user }: { user: AuthUser }) {
       null,
     );
   useEffect(() => subscribeWebSettings(setSettings), []);
+  const [terminalOpened, setTerminalOpened] = useState(false);
+  useEffect(() => {
+    if (view === "terminal") setTerminalOpened(true);
+  }, [view]);
   const playNotificationSound = useCallback(() => {
     try {
       const AudioContextClass =
@@ -113,6 +117,11 @@ function AppShell({ user }: { user: AuthUser }) {
   }, [navigate]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[data-terminal-input]")
+      )
+        return;
       if (
         (e.metaKey || e.ctrlKey) &&
         e.key.toLowerCase() === "k" &&
@@ -279,7 +288,9 @@ function AppShell({ user }: { user: AuthUser }) {
                 )}{" "}
                 {view === "monitoring" && <MonitoringView />}{" "}
                 {view === "logs" && <LogsView />}{" "}
-                {view === "terminal" && <TerminalView />}{" "}
+                {(terminalOpened || view === "terminal") && (
+                  <TerminalView visible={view === "terminal"} />
+                )}{" "}
                 {view === "security" && <SecurityView addToast={addToast} />}{" "}
                 {view === "updates" && <UpdatesView {...shell} />}{" "}
                 {view === "settings" && <SettingsView addToast={addToast} />}

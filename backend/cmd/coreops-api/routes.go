@@ -10,6 +10,7 @@ import "net/http"
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux := http.NewServeMux()
+	a.terminals = newTerminalServer(auth, audit)
 	handle := func(pattern string, min Role, h http.HandlerFunc) {
 		mux.HandleFunc(pattern, auth.require(min, h))
 	}
@@ -39,6 +40,8 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/logs", RoleOperator, a.logs)
 	handle("POST /api/v1/terminal/exec", RoleAdmin, a.terminalExec)
 	handle("POST /api/v1/terminal/complete", RoleAdmin, a.terminalComplete)
+	// WebSockets authenticate in their first frame, never in the URL.
+	mux.HandleFunc("GET /api/v1/terminal/session", a.terminals.serveHTTP)
 	handle("GET /api/v1/security", RoleOperator, a.security)
 	handle("POST /api/v1/security/sessions/{pid}/terminate", RoleAdmin, a.terminateSecuritySession)
 	handle("POST /api/v1/security/fix/{item}", RoleAdmin, a.fixSecurity)
