@@ -72,6 +72,7 @@ POST /api/v1/auth/login | logout, GET /auth/me
 GET  /api/v1/host | storage | network | monitoring | updates
 GET  /api/v1/containers, GET /containers/{id}
 POST /api/v1/containers                         admin (create)
+GET /api/v1/compose; POST /compose/validate | /compose/projects    admin
 DELETE /api/v1/containers/{id}                  admin (delete stopped container)
 POST /api/v1/containers/{id}/start|stop|restart
 GET  /api/v1/applications, POST /applications/{id}/{action}
@@ -218,3 +219,9 @@ Validation: full Go race tests/vet/build, 45 browser fixture tests and scoped re
 La terminal aprovecha móvil/tablet/escritorio con herramientas compactas, pestañas activas visibles, objetivos táctiles de 44 px, Enter/teclado fijos y atajos desplazables. Se evita abrir el teclado móvil por autofocus; el viewport visual adapta altura/desplazamiento y conserva la misma PTY al rotar. Modo foco ampliado, búsqueda móvil y medidas reales de filas/columnas. Se corrige el recorte por padding en el cálculo de xterm y se agrupan los ajustes por frame. Backend, permisos y protocolo no cambian. Ver [Terminal](modules/terminal.md#ajuste-responsive--2026-11-15).
 
 Formato/build y 57 pruebas de interfaz completadas (una prueba existente requirió reintento, después pasó aislada), más regresiones Go de terminal con race detector. Validación Chromium con PTY real y `stty size` en móvil, horizontal y escritorio; identidad/shell temporales limpiadas. Teclado visual simulado, sin dispositivo físico ni build nativa.
+
+## Docker Compose creation (`develop`, 2026-11-15)
+
+Create container now offers Single container / Docker Compose. Compose accepts YAML or a UTF-8 file, validates/previews services, and creates a new admin-owned project with optional start (off by default). Local images, named/anonymous volumes and project bridge networks are supported; external files/host binds/builds/privileged fields are rejected. The API uses a bounded, isolated Compose CLI against the same Unix Docker endpoint, private project manifests and real post-operation inventory. Existing projects are never updated by this flow; partial operations remain reserved for inspection. Applications already groups the resulting Compose labels. [Contract/security/recovery](modules/compose.md).
+
+Validation: full Go race tests/vet/build and focused Compose reruns including real CLI validation; frontend format/build and Compose/container creation tests. Real HTTP + mobile Chromium created two disposable projects (multi-service stopped and optional start), verified Docker states/loopback/HTTP, including relative data-directory configuration; all test resources/identity were removed. No production/native deployment.

@@ -6,6 +6,7 @@ Estas guías aplican a las rutas actuales indicadas y a sus futuras extracciones
 | --- | --- | --- |
 | Contrato de API y transporte | `backend/cmd/coreops-api/{routes,http,handlers,containers}.go`, `frontend/src/lib/api.ts` | [API](api.md) |
 | Backend y capacidades de infraestructura | `backend/cmd/coreops-api/*.go` | [Backend](backend.md) |
+| Creación con Compose | `compose*.go`, `CreateComposeForm.tsx` | [Compose](compose.md) |
 | Explorador de logs | `logs*.go`, `LogsView.tsx`, `LogPane.tsx` | [Logs](logs.md) |
 | Terminal interactiva | `terminal_session.go`, `views/TerminalView.tsx` | [Terminal](terminal.md) |
 | Identidad y auditoría | `auth.go`, `users_cli.go`, `audit.go` en el paquete actual | [Identidad](identity-audit.md) |

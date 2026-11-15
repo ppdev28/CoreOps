@@ -16,6 +16,7 @@ import (
 )
 
 type API struct {
+	compose      *composeManager
 	logRoot      string
 	auditLogPath string
 	docker       *client.Client
