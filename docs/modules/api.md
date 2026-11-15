@@ -36,3 +36,7 @@ Capturar health, login/logout/me y list/inspect/start/stop/restart de contenedor
 ## Historial y fuentes del host (2026-11-15)
 
 `GET /logs/sources` y `GET /logs?source=system|file|events` mantienen operator/admin. Journal: categoría/unidad/fecha y cursor entre boots retenidos; archivos: raíz confinada, texto y gzip paginados; eventos: buffer finito Docker. `nextCursor` y `historyOrder` amplían el DTO compatible. El agregado conserva su snapshot de journal/contenedores y los archivos/eventos se consultan como fuentes separadas. CoreOps audit conserva su endpoint admin. Consultar [contrato y límites completos](logs.md), incluidos permisos, rotación, scans de servicios y descompresión.
+
+## Creación Compose (2026-11-15)
+
+GET `/compose`, POST `/compose/validate` y `/compose/projects` son admin. Preview con hash y servicios, creación sólo de proyecto nuevo, DTO propio con inventario real y 201/202 parcial explícito. [Contrato/límites](compose.md). No sustituir este flujo por comandos o YAML arbitrarios; preservar los rechazos previos al CLI y los errores sin contenido sensible.

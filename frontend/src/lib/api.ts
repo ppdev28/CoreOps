@@ -320,6 +320,89 @@ export async function createContainer(
   return result;
 }
 
+export interface ComposeInput {
+  project: string;
+  compose: string;
+  start: boolean;
+  validationHash?: string;
+}
+export interface ComposePreview {
+  project: string;
+  hash: string;
+  services: { name: string; image: string; ports: string[] }[];
+  volumes: string[];
+  warnings: string[];
+}
+export interface ComposeResult {
+  project: string;
+  state: "created" | "started" | "partial";
+  containers: { id: string; name: string; service: string; status: string }[];
+  warnings: string[];
+  operationError?: string;
+}
+export async function getComposeCapabilities(
+  signal?: AbortSignal,
+): Promise<{ available: boolean; version: string; reason: string }> {
+  try {
+    const result = await request<{
+      available: boolean;
+      version: string;
+      reason: string;
+    }>("/compose", { signal });
+    if (
+      typeof result.available !== "boolean" ||
+      typeof result.reason !== "string"
+    )
+      throw new Error(
+        "The API returned invalid Compose capabilities. Update and restart the CoreOps backend.",
+      );
+    return result;
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.status === 404)
+      throw new Error(
+        "This API does not support Compose creation. Rebuild and restart the CoreOps backend, then retry.",
+      );
+    throw cause;
+  }
+}
+export async function validateCompose(
+  input: ComposeInput,
+): Promise<ComposePreview> {
+  const result = await request<ComposePreview>("/compose/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (
+    result.project !== input.project ||
+    !result.hash ||
+    !Array.isArray(result.services) ||
+    !result.services.length
+  )
+    throw new Error(
+      "Compose validation returned an invalid response. Update the CoreOps API.",
+    );
+  return result;
+}
+export async function createComposeProject(
+  input: ComposeInput,
+): Promise<ComposeResult> {
+  const result = await request<ComposeResult>("/compose/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (
+    result.project !== input.project ||
+    !["created", "started", "partial"].includes(result.state) ||
+    !Array.isArray(result.containers)
+  )
+    throw new Error(
+      "Compose creation could not be confirmed. Refresh the container list before retrying.",
+    );
+  return result;
+}
+
 export async function getContainerDetail(
   id: string,
 ): Promise<ContainerDetailData> {

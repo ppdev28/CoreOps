@@ -222,3 +222,33 @@
   background: var(--coreops-overlay);
   cursor: pointer;
 }
+
+.container-create-modes { display: flex; gap: 6px; margin-top: 20px; padding: 4px; border: 1px solid var(--coreops-border); border-radius: 12px; background: var(--coreops-bg); }
+.container-create-modes button { flex: 1; min-height: 40px; padding: 8px; border: 1px solid transparent; border-radius: 8px; color: var(--coreops-textSub); background: transparent; cursor: pointer; font: inherit; }
+.container-create-modes button[aria-selected="true"] { color: var(--coreops-text); background: var(--coreops-active); border-color: var(--coreops-borderStrong); }
+.container-create-surface [role="tabpanel"][hidden] { display: none; }
+.compose-create { min-width: 0; }
+.compose-file-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.compose-create .container-create-section-heading { flex-wrap: wrap; }
+.compose-create h3 { display: flex; align-items: center; gap: 6px; }
+.compose-editor-label { margin-top: 10px; min-width: 0; }
+.compose-create textarea.compose-editor { font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.6; min-height: 240px; resize: vertical; overflow: auto; tab-size: 2; }
+.compose-scope-note { padding: 12px; border: 1px solid var(--coreops-border); border-radius: 12px; color: var(--coreops-textSub); font-size: 11px; line-height: 1.6; }
+.compose-validate { display: inline-flex; align-items: center; justify-content: center; gap: 6px; justify-self: start; }
+.compose-preview { display: grid; gap: 10px; border: 1px solid var(--coreops-borderStrong); border-radius: 14px; padding: 14px; }
+.compose-preview ul, .compose-created-containers { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.compose-preview li { display: grid; gap: 4px; overflow-wrap: anywhere; min-width: 0; }
+.compose-preview li span { color: var(--coreops-textSub); }
+.compose-preview code { font-size: 11px; overflow-wrap: anywhere; }
+.compose-created-containers li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.compose-created-containers li > div { display: grid; gap: 4px; overflow-wrap: anywhere; min-width: 0; }
+.compose-created-containers span { color: var(--coreops-textSub); font-size: 11px; }
+.compose-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.compose-spin { animation: compose-spin 1s linear infinite; }
+@keyframes compose-spin { to { transform: rotate(360deg); } }
+@media (max-width:600px) {
+ .compose-create textarea.compose-editor { font-size: 16px; min-height: 220px; }
+ .container-create-modes button { min-height: 44px; }
+ .compose-create footer { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion:reduce) { .compose-spin { animation: none; } }

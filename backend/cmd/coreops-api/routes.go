@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+	"path/filepath"
+)
 
 // routes builds the API router. Every route except health and login requires
 // a session whose role is at least the one declared here:
@@ -10,6 +13,9 @@ import "net/http"
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	a.auditLogPath = audit.path
+	if a.compose == nil {
+		a.compose = newComposeManager(filepath.Join(auth.dir, "compose"), a.docker)
+	}
 	mux := http.NewServeMux()
 	a.terminals = newTerminalServer(auth, audit)
 	handle := func(pattern string, min Role, h http.HandlerFunc) {
@@ -24,6 +30,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/host", RoleViewer, a.host)
 	handle("GET /api/v1/containers", RoleViewer, a.listContainers)
 	handle("POST /api/v1/containers", RoleAdmin, a.createContainer)
+	handle("GET /api/v1/compose", RoleAdmin, a.composeCapabilities)
+	handle("POST /api/v1/compose/validate", RoleAdmin, a.validateCompose)
+	handle("POST /api/v1/compose/projects", RoleAdmin, a.createCompose)
 	handle("DELETE /api/v1/containers/{id}", RoleAdmin, a.deleteContainer)
 	handle("GET /api/v1/containers/{id}", RoleOperator, a.getContainer)
 	handle("GET /api/v1/containers/{id}/logs", RoleOperator, a.containerLogs)

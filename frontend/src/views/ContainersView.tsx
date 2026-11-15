@@ -563,6 +563,15 @@ export default function ContainersView({
               created.startError ? "info" : "success",
             );
           }}
+          onComposeCreated={async (created) => {
+            setSearch("");
+            setFilter("all");
+            await refreshAfterAction();
+            addToast(
+              `${created.project}: ${created.state === "partial" ? "inspect partial Compose result" : created.state === "started" ? "Compose start requested" : "Compose project created"}`,
+              created.state === "partial" ? "info" : "success",
+            );
+          }}
           onInspect={(id) => {
             setCreating(false);
             onDetail(id);
