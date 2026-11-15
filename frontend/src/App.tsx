@@ -246,7 +246,7 @@ function AppShell({ user }: { user: AuthUser }) {
             />
           )}
           <main
-            className="coreops-main"
+            className={`coreops-main ${view === "terminal" ? "terminal-main" : ""}`}
             style={{
               flex: 1,
               overflowY:

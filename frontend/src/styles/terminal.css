@@ -1,38 +1,277 @@
-.app-workspace .coreops-screen > .pty-terminal { padding: 0 !important; margin: 0; max-width: none; flex: 1; width: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--coreops-bg); }
-.pty-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--coreops-border); min-width: 0; background: var(--coreops-bgSidebar); }
-.pty-terminal button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--coreops-textSub); cursor: pointer; min-width: 34px; min-height: 34px; padding: 6px 9px; font: inherit; font-size: 12px; }
-.pty-terminal button:hover:not(:disabled) { background: var(--coreops-hover); color: var(--coreops-text); }
+.app-workspace .coreops-main.terminal-main {
+  scrollbar-gutter: auto;
+}
+.app-workspace .coreops-screen > .pty-terminal {
+  position: relative;
+  top: var(--pty-content-offset, 0px);
+  padding: 0 !important;
+  margin: 0;
+  max-width: none;
+  max-height: var(--pty-viewport-height, 100dvh);
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--coreops-bg);
+  color: var(--coreops-text);
+}
+.app-workspace .coreops-screen > .pty-terminal.pty-focus-mode {
+  position: fixed;
+  z-index: 1500;
+  top: var(--pty-viewport-top, 0px);
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--pty-viewport-height, 100dvh);
+}
+.pty-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--coreops-border);
+  min-width: 0;
+  background: var(--coreops-bgSidebar);
+}
+.app-workspace .pty-terminal button,
+.pty-action-menu button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--coreops-textSub);
+  cursor: pointer;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+.pty-terminal button:hover:not(:disabled),
+.pty-action-menu button:hover:not(:disabled) {
+  background: var(--coreops-hover);
+  color: var(--coreops-text);
+}
 .pty-terminal button:active:not(:disabled) { background: var(--coreops-active); }
-.pty-terminal button:focus-visible { outline: 2px solid var(--coreops-accent); outline-offset: -2px; }
-.pty-terminal button:disabled { opacity: .4; cursor: not-allowed; }
-.pty-tabs { display: flex; gap: 5px; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-.pty-tab { display: flex; align-items: center; flex-shrink: 0; border-radius: 999px; border: 1px solid transparent; }
-.pty-tab[data-active="true"] { border-color: var(--coreops-border); background: var(--coreops-active); }
+.pty-terminal button:focus-visible,
+.pty-action-menu button:focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: -2px;
+}
+.pty-terminal button:disabled,
+.pty-action-menu button:disabled { opacity: .4; cursor: not-allowed; }
+.pty-tabs {
+  display: flex;
+  flex: 1;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.pty-tabs::-webkit-scrollbar,
+.pty-key-scroll::-webkit-scrollbar { display: none; }
+.pty-tab {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+.pty-tab[data-active="true"] {
+  border-color: var(--coreops-borderStrong);
+  background: var(--coreops-active);
+}
 .pty-tab button[role="tab"] { max-width: 220px; justify-content: flex-start; }
 .pty-tab button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pty-tab button svg { flex-shrink: 0; }
-.pty-tools { display: flex; margin-left: auto; flex-shrink: 0; }
-.pty-pane { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.pty-tools { display: flex; margin-left: auto; flex-shrink: 0; gap: 2px; }
+.app-workspace .pty-terminal .pty-more { display: none; }
+.pty-action-menu {
+  z-index: 1601;
+  display: grid;
+  gap: 2px;
+  width: 232px;
+  max-width: calc(100vw - 16px);
+  max-height: var(--radix-popover-content-available-height);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 14px;
+  background: var(--coreops-overlay);
+  color: var(--coreops-text);
+  box-shadow: 0 12px 32px #0002;
+}
+.pty-action-menu button { justify-content: flex-start; min-height: 44px; }
+.pty-action-menu button > :first-child { width: 20px; flex-shrink: 0; }
+.pty-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .pty-pane[hidden] { display: none; }
-.pty-emulator { flex: 1; min-height: 0; min-width: 0; overflow: hidden; padding: 14px 12px 4px; }
+.pty-emulator {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 10px 12px 4px;
+}
+.pty-surface { flex: 1; min-height: 0; min-width: 0; }
 .pty-emulator .xterm { height: 100%; }
-.pty-emulator .xterm-viewport { scrollbar-width: thin; scrollbar-color: var(--coreops-borderStrong) transparent; }
-.app-workspace .coreops-main .pty-emulator .xterm-helper-textarea { min-height: 0; border: 0; padding: 0; border-radius: 0; font-size: 16px; }
-.pty-status { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 7px 14px; font-size: 11px; color: var(--coreops-textDim); border-top: 1px solid var(--coreops-borderMuted); }
+.pty-emulator .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--coreops-borderStrong) transparent;
+  overscroll-behavior: contain;
+}
+.app-workspace .coreops-main .pty-emulator .xterm-helper-textarea {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  font-size: 16px;
+}
+.pty-status {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  min-height: 30px;
+  max-height: 30%;
+  overflow-y: auto;
+  padding: 5px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--coreops-textDim);
+  border-top: 1px solid var(--coreops-borderMuted);
+}
 .pty-status > span:first-child { flex-shrink: 0; color: var(--coreops-textSub); }
 .pty-status > span[data-state="connected"] { color: var(--coreops-green); }
-.pty-status > span[data-state="error"], .pty-status > span[data-state="disconnected"] { color: var(--coreops-yellow); }
-.pty-status > span:last-child { min-width: 0; overflow-wrap: anywhere; }
-.pty-keys { display: flex; overflow-x: auto; gap: 3px; padding: 6px 10px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--coreops-border); flex-shrink: 0; }
-.pty-keys button { flex-shrink: 0; background: var(--coreops-raised); min-width: 38px; font-size: 11px; }
-.pty-find { position: absolute; right: 12px; top: 8px; max-width: calc(100% - 24px); z-index: 5; display: flex; gap: 2px; padding: 6px; border-radius: 18px; border: 1px solid var(--coreops-borderStrong); background: var(--coreops-overlay); }
-.pty-find input { min-width: 0; width: 200px; padding: 6px 12px; border: 1px solid var(--coreops-border); color: var(--coreops-text); background: var(--coreops-bg); outline-color: var(--coreops-accent); }
-.pty-close-prompt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; background: var(--coreops-overlay); color: var(--coreops-textSub); font-size: 12px; }
-.pty-close-prompt > span { flex: 1; }
+.pty-status > span[data-state="error"],
+.pty-status > span[data-state="disconnected"] { color: var(--coreops-yellow); }
+.pty-status-detail { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.pty-status[data-state="connected"]:not([data-notice="true"]) .pty-status-detail {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.pty-dimensions { flex-shrink: 0; margin-left: auto; font-variant-numeric: tabular-nums; }
+.pty-keys {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  padding: 5px max(8px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  border-top: 1px solid var(--coreops-border);
+  flex-shrink: 0;
+  background: var(--coreops-bgSidebar);
+}
+.pty-key-scroll {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  min-width: 0;
+  gap: 4px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.pty-keys button { flex-shrink: 0; background: var(--coreops-raised); font-size: 11px; }
+.app-workspace .pty-terminal .pty-enter-key {
+  flex-shrink: 0;
+  min-width: 48px;
+  font-size: 19px;
+  color: var(--coreops-text);
+  border-color: var(--coreops-borderStrong);
+}
+.pty-find {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: min(420px, calc(100% - 16px));
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--coreops-borderStrong);
+  background: var(--coreops-overlay);
+}
+.pty-find input {
+  min-width: 0;
+  width: 0;
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--coreops-border);
+  color: var(--coreops-text);
+  background: var(--coreops-bg);
+  outline-color: var(--coreops-accent);
+  font-size: 16px;
+}
+.pty-close-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--coreops-overlay);
+  color: var(--coreops-textSub);
+  font-size: 12px;
+}
+.pty-close-prompt > span { flex: 1 1 180px; }
 .pty-close-prompt button { border-color: var(--coreops-borderStrong); }
-.pty-empty, .pty-unavailable { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--coreops-textSub); }
-.pty-empty h2, .pty-unavailable h2 { font-size: 18px; color: var(--coreops-text); }
-.pty-empty p, .pty-unavailable p { font-size: 13px; }
+.pty-empty,
+.pty-unavailable {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: var(--coreops-textSub);
+}
+.pty-empty h2,
+.pty-unavailable h2 { font-size: 18px; color: var(--coreops-text); }
+.pty-empty p,
+.pty-unavailable p { font-size: 13px; }
 .pty-empty > button { background: var(--coreops-primary); color: var(--coreops-onAccent); }
-@media (max-width: 767px) { .pty-toolbar { padding: 5px; gap: 2px; flex-wrap: wrap; } .pty-tabs { flex: 1; } .pty-tools { width: 100%; justify-content: flex-end; border-top: 1px solid var(--coreops-borderMuted); } .pty-tab button[role="tab"] { max-width: 180px; } .pty-emulator { padding: 8px 6px 2px; } .pty-status { padding: 6px 10px; font-size: 10px; } .pty-keys { padding-left: 5px; } }
-@media (max-height: 550px) { .pty-tools { width: auto; border: 0; } .pty-status { min-height: 24px; padding-block: 4px; } .pty-toolbar, .pty-keys { padding-block: 3px; } }
+@media (max-width: 767px), (pointer: coarse) {
+  .app-workspace .pty-terminal button { min-height: 44px; min-width: 44px; }
+  .pty-tab button[role="tab"] { max-width: 160px; }
+  .pty-toolbar { padding: 4px max(4px, env(safe-area-inset-right)) 4px max(4px, env(safe-area-inset-left)); gap: 3px; }
+  .pty-emulator { padding: 6px 6px 2px; }
+  .pty-status { padding: 4px 8px; font-size: 10px; gap: 7px; min-height: 25px; }
+  .pty-find button { padding: 4px; }
+}
+@media (max-width: 767px) {
+  .pty-tools { display: none; }
+  .app-workspace .pty-terminal .pty-more { display: inline-flex; }
+  .pty-tab button[role="tab"] { max-width: 130px; }
+}
+@media (max-height: 480px) {
+  .pty-toolbar { padding-block: 2px; }
+  .pty-emulator { padding-top: 4px; }
+  .pty-status { min-height: 22px; padding-block: 2px; }
+  .pty-keys { padding-top: 2px; padding-bottom: max(2px, env(safe-area-inset-bottom)); }
+}
+.app-workspace .pty-find input:focus-visible {
+  outline: none;
+  border-color: var(--coreops-accent);
+}
