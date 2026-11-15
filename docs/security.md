@@ -53,3 +53,7 @@ Se corrigió primero SEC-01 con bloqueo/recarga entre CLI y servidor, manteniend
 ## Eliminación de contenedores — 2026-11-15
 
 Endpoint DELETE exclusivo de admin con ID validado, sin body/query, deadline y auditoría. Sin force, eliminación de volúmenes ni links; Docker rechaza contenedores activos incluso si arrancan después de listar. UI exige confirmación siempre, oculta Delete a viewer/operator y conserva errores ante fallos. Se verificó conservación de volúmenes nombrados/anónimos y datos con un contenedor desechable; no cambia los hallazgos abiertos de sesión/autoridad del servicio.
+
+## Explorador de logs — 2026-11-15
+
+Se conserva operator/admin para agregado, journal y contenedor dirigido. Snapshots con no-store, contexto cancelable y límites de bytes/líneas/tiempo/concurrencia; warnings para fuentes fallidas. El navegador representa logs como texto React, limpia ANSI/OSC en un recorrido lineal y no ejecuta HTML/enlaces/comandos del payload. Filtros literales locales, caché sólo en memoria y exportación explícita del buffer visible. No hay socket Docker ni nuevo acceso directo del navegador a infraestructura. Los riesgos existentes de contenido sensible en logs/sesiones/autoridad de la cuenta siguen vigentes.

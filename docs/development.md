@@ -145,10 +145,12 @@ Check local Markdown links, referenced paths, `git diff --check` and scope. Runt
 
 ## Browser UI checks
 
-`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (34 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (42 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
 
 Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal WebSocket traffic. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.
 
 For terminal changes, read [the terminal guide](modules/terminal.md) and run `go test -race ./...`. Backend tests use real PTYs without touching the user’s shell startup/history files; browser fixtures do not execute host commands. Production proxies must support WebSocket upgrade and explicitly configure the external Origin.
 
 After changing Go source, rebuild/restart the API process; a running `go run` binary does not hot reload. Terminal first performs an authenticated capability GET before WebSocket upgrade. A 404 means the active API lacks this feature, even if health succeeds. Vite preserves Host (`changeOrigin: false`) so the browser Origin remains valid over LAN/Tailscale.
+
+For log viewer changes, read [Logs](modules/logs.md). Run Go race tests for the bounded parallel collector and parser. Targeted API reads require operator/admin; automatic updates are cancellable snapshots at 2 s intervals, with the app auto-refresh preference providing the initial state. The Playwright suite uses isolated fixtures, including source endpoints; live Docker validation should be read only.

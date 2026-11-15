@@ -35,6 +35,13 @@ test("terminal streams keys, keeps independent tabs and survives navigation", as
   await page.getByRole("tab", { name: "Shell 1", exact: true }).click();
   await page
     .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Logs", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Find in logs", exact: true }),
+  ).toBeVisible();
+  await page
+    .locator(".sidebar-desktop")
     .getByRole("button", { name: "Files", exact: true })
     .click();
   await page

@@ -131,3 +131,10 @@ The Containers action menu **Delete** now calls `DELETE /api/v1/containers/{id}`
 No query options or request body are accepted. `Force`, `RemoveVolumes` and `RemoveLinks` are always false. Container writable-layer data is removed; named/anonymous volumes, bind-mount data and images are preserved. The operation has a 30 s deadline, is audited and never retries automatically.
 
 Success: HTTP 200 `{ "ok": true, "id": "…" }`. Invalid ID/options/body return 400, insufficient role 403, missing container 404, running/current-state conflict 409, other Docker failures 502. If the request fails or is interrupted, refresh the list before retrying. UI pending state blocks duplicate/concurrent mutations and navigation into a disappearing container; only a validated success removes its row/selection and refreshes inventory. Errors remain visible even with notifications disabled.
+
+
+## Log explorer
+
+The Dozzle-inspired CoreOps reader uses the existing operator/admin permission for logs. `GET /api/v1/logs` remains compatible; `?source=system` restricts reading to journal. `GET /api/v1/containers/{id}/logs?tail=500` reads one container (tail 1–1000). These are bounded JSON snapshots with no-store and explicit errors/warnings. Automatic updates poll after 2 s, can be paused and never alter host logs.
+
+Docker stdout/stderr and TTY output retain real timestamps and whitespace; missing timestamps are empty. Journal uses JSON timestamps/priorities. Limits: 2 MiB per read, 64 KiB per line, 1000 container lines; aggregate keeps 500 records with up to four concurrent Docker reads. Container deadline: 10 s; aggregate: 12 s. Snapshots add optional `stream`, `warnings` and `truncated` metadata. Downloads/copy contain the displayed filtered buffer, not the complete historical log. See [Logs guide](../docs/modules/logs.md) for data contract, roles, UI and validation.

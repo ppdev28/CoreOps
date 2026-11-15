@@ -37,3 +37,7 @@ La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tie
 ## Eliminación de contenedores (2026-11-15)
 
 Delete deja de emitir un éxito simulado: llama a la API con admin, exige confirmación mediante `ConfirmDialog.requireConfirmation` y sólo retira la fila al confirmar `{ok,id}`. Mantener el bloqueo por ID durante todas las mutaciones, selección reconciliada, mensajes persistentes y rechazo de estados activos. La suite tiene 34 pruebas, ocho nuevas para cancelación/confirmación obligatoria, pending, fallos, roles y móvil. No añadir force ni eliminación de volúmenes sin una decisión de producto explícita.
+
+## Explorador de logs (2026-11-15)
+
+Vista inspirada en Dozzle, con panel de contenedores, pestañas/comparación, filtros, JSON, exportación y modo foco. Mantener el estilo aislado, roles operator/admin y snapshots de datos reales. Contrato, límites y validación en [Logs](logs.md). La suite tiene 42 pruebas; la carga diferida de Logs no debe interrumpir PTY.

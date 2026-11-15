@@ -146,12 +146,15 @@ export interface NetworkOverview {
   topology: NetworkTopology;
 }
 export interface LogEntry {
+  stream?: "stdout" | "stderr" | "tty" | "journal";
   timestamp: string;
   level: string;
   source: string;
   message: string;
 }
 export interface LogsOverview {
+  warnings?: string[];
+  truncated?: boolean;
   entries: LogEntry[];
   sources: string[];
   updatedAt: string;

@@ -6,6 +6,7 @@ import {
 } from "./auth";
 import type {
   Container,
+  LogsOverview,
   ContainerStatus,
   ContainerDetailData,
   HealthStatus,
@@ -273,8 +274,10 @@ export async function logout(): Promise<void> {
 export async function getHost(): Promise<HostOverview> {
   return request("/host");
 }
-export async function getContainers(): Promise<Container[]> {
-  const containers = await request<ApiContainer[]>("/containers");
+export async function getContainers(
+  signal?: AbortSignal,
+): Promise<Container[]> {
+  const containers = await request<ApiContainer[]>("/containers", { signal });
   return containers.map(toContainer);
 }
 
@@ -321,6 +324,7 @@ export async function getContainerDetail(
 ): Promise<ContainerDetailData> {
   return request(`/containers/${encodeURIComponent(id)}`);
 }
+
 export async function deleteContainer(id: string): Promise<void> {
   const response = await request<ApiContainerActionResponse>(
     `/containers/${encodeURIComponent(id)}`,
@@ -385,17 +389,20 @@ export async function getNetwork(): Promise<NetworkOverview> {
 export async function getMonitoring(): Promise<MonitoringOverview> {
   return request("/monitoring");
 }
-export async function getLogs(): Promise<{
-  entries: Array<{
-    timestamp: string;
-    level: string;
-    source: string;
-    message: string;
-  }>;
-  sources: string[];
-  updatedAt: string;
-}> {
-  return request("/logs");
+export async function getLogs(
+  options: {
+    containerId?: string;
+    system?: boolean;
+    tail?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<LogsOverview> {
+  const path = options.containerId
+    ? `/containers/${encodeURIComponent(options.containerId)}/logs?tail=${options.tail ?? 500}`
+    : options.system
+      ? "/logs?source=system"
+      : "/logs";
+  return request(path, { signal: options.signal });
 }
 export async function getSecurity(): Promise<SecurityOverview> {
   return request("/security");

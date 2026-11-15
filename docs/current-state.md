@@ -77,7 +77,8 @@ POST /api/v1/containers/{id}/start|stop|restart
 GET  /api/v1/applications, POST /applications/{id}/{action}
 GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
 GET  /api/v1/services, POST /services/{name}/start|stop|restart
-GET  /api/v1/logs, GET /security
+GET  /api/v1/logs[?source=system], GET /containers/{id}/logs?tail=500  operator
+GET  /api/v1/security
 POST /api/v1/terminal/exec | complete             admin (legacy)
 GET  /api/v1/terminal/session                     WebSocket, admin first frame
 POST /api/v1/security/sessions/{pid}/terminate, /security/fix/{item}   admin
@@ -195,3 +196,12 @@ The previous Delete action only showed a toast; it never called Docker. `contain
 The UI removes rows/selection only after validated API success, refreshes inventory, guards duplicate/concurrent actions and retains a persistent error on failure. Delete is hidden for viewer/operator. Mobile context menus are clamped to the viewport. [Contract](../backend/README.md#container-deletion).
 
 Validation: Go tests/vet/build plus race tests for deletion; frontend format/build and all 34 browser fixture tests, including cancellation, required confirmation, pending/success/error, roles and mobile. Live mobile Chromium → isolated API → Docker deleted only a disposable stopped container. A running deletion returned 409 and left it running; both named/anonymous volumes survived deletion, and a stored marker was read back unchanged. Test containers/volumes and temporary identity were cleaned up. Native builds remain untested.
+
+
+## Dozzle-inspired log explorer (`develop`, 2026-11-15)
+
+Logs now uses a full-height source sidebar, tabs, two-source comparison, dense timestamped rows, level/search/case/exclude filters, JSON expansion, wrap/display options, per-line/pane copy, filtered download, autoscroll and focus mode. It follows the local Dozzle reader layout with CoreOps themes and responsive layouts. Containers menu and inspect now open the selected container's logs.
+
+New operator-only targeted container snapshots and system-only journal reads avoid collecting every container when opening one. Reads preserve Docker timestamps, whitespace and stdout/stderr/TTY framing; journal uses actual timestamps/priorities. Unknown timestamps remain unavailable, partial/unavailable sources show warnings and byte/line/time limits bound reads. Automatic refresh uses 2 s polling with pause/cancellation; this is a bounded buffer, not a persistent history store or SSE stream. [Contract and module guide](modules/logs.md).
+
+Validation: Go race/vet/build; web format/build and all 42 browser fixtures, including eight viewport sizes. Additional scoped logs/terminal/responsive checks after visual refinements. Real Chromium → isolated API → Docker logs matched Docker CLI data, including stream/timestamp; polling/pause, menu/inspect and dark/light/mobile were checked. Infrastructure was read only; no production/native deployment.

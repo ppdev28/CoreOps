@@ -313,11 +313,13 @@ function MobileContainerCard({
 }
 
 export default function ContainersView({
+  onLogs,
   onDetail,
   addToast,
   onConfirm,
 }: {
   onDetail: (id: string) => void;
+  onLogs: (id: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -480,6 +482,10 @@ export default function ContainersView({
 
   const handleAction = (action: string, c: Container) => {
     if (actionLocks.current.has(c.id)) return;
+    if (action === "logs") {
+      onLogs(c.id);
+      return;
+    }
     if (action === "start") {
       void executeContainerAction("start", c);
       return;

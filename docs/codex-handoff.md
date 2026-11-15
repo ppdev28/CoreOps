@@ -105,3 +105,14 @@ Validation: full Go tests/vet/build, targeted deletion race tests and web format
 Development API rebuilt/restarted on 8082 with the same environment/data and unchanged user/session files. Binary `/tmp/coreops-container-delete-api`, log/PID `/tmp/coreops-container-delete-run/`. DELETE is reachable through Vite 5173 and Tailscale and rejects anonymous requests before Docker. The repair is recorded in its own commit on `develop`.
 
 Final browser run: 34/34 passed. Earlier runs saw transient Chromium `ERR_NETWORK_CHANGED` module-load failures on creation/terminal screens; the full rerun passed without needing a test retry (`--retries=1` was available for infrastructure flakes). Go full tests/vet/build and targeted DELETE race tests passed.
+
+
+## Dozzle-inspired logs — 2026-11-15
+
+Implemented on the same `develop` worktree after the identity/create/delete changes. Logs recreates the installed Dozzle reading layout using CoreOps themes: source sidebar, up to eight tabs, comparison, dense rows, search/case/exclusion/levels, JSON expansion, copy/download, wrap/time/font options and focus mode. Containers menu/inspect now open the actual source. `LogsView.tsx`, `components/LogPane.tsx`, `lib/logs.ts`, scoped CSS and backend `logs.go` own the slice. Read [Logs](modules/logs.md) before continuing.
+
+New targeted container and system-only snapshot routes retain operator permissions. Bounded, cancellable polling replaces full-host collection when selecting a container. Timestamp/whitespace/stream parsing was corrected; no fabricated event timestamps. Pause actually suspends reads; failed refresh keeps explicitly stale data and errors. Lazy Logs has its own Suspense boundary to preserve terminals.
+
+Go race/vet/build, frontend format/build and all 42 fixture tests passed, with scoped reruns after visual/escape-parser refinements. Real Chromium used an isolated operator identity/API to read actual Dozzle container logs, matching Docker CLI timestamps/messages/streams and checking polling/pause, themes and mobile. No infrastructure mutation or native build. Temporary credentials/API are cleaned up; screenshots remain temporary artifacts under `/tmp`.
+
+Development API rebuilt/restarted on 8082 with the existing environment/data, unchanged users/session files and all existing capabilities. Binary `/tmp/coreops-logs-api`; log/PID `/tmp/coreops-logs-run/`. Vite 5173 and Tailscale expose the new authenticated routes. Changes are recorded as separate local feature commits on `develop`.

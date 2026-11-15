@@ -28,3 +28,7 @@ Capturar health, login/logout/me y list/inspect/start/stop/restart de contenedor
 ## Eliminación de contenedores (2026-11-15)
 
 `DELETE /api/v1/containers/{id}` exige admin y no admite query/body ni opciones de force/volúmenes. Handler: `container_delete.go`; DTO de éxito compatible con acciones `{ok,id}`. `container_delete_test.go` verifica políticas/revocación, CORS, opciones SDK seguras, 400/403/404/409/502, éxito y auditoría con middleware/Moby reales contra un Engine HTTP de prueba. [Contrato y límites](../../backend/README.md#container-deletion).
+
+## Logs dirigidos y journal (2026-11-15)
+
+`GET /api/v1/containers/{id}/logs?tail=500` y `GET /api/v1/logs?source=system` usan el mismo mínimo operator de `/logs`. DTOs aditivos, límites, errores y semántica de snapshots documentados en [Logs](logs.md). Conservar `Cache-Control: no-store`, cancelación y timestamps reales; no sustituir fallos de fuentes por estado vacío saludable.

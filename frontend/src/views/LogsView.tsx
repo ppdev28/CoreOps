@@ -1,373 +1,674 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Download, RefreshCw, AlertCircle } from "lucide-react";
-import { T } from "../lib/tokens";
-import { Card, Btn, Input, Select } from "../components/ui";
-import { getLogs } from "../lib/api";
-import type { LogEntry } from "../lib/types";
-import { loadWebSettings, subscribeWebSettings } from "../lib/webSettings";
+import {
+  AlertCircle,
+  ArrowDownWideNarrow,
+  Box,
+  CaseSensitive,
+  ChevronDown,
+  ChevronRight,
+  Columns2,
+  FileText,
+  Filter,
+  ListFilter,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pause,
+  Play,
+  RefreshCw,
+  Search,
+  Server,
+  Settings2,
+  WrapText,
+  X,
+} from "lucide-react";
+import { getContainers } from "../lib/api";
+import { getSession } from "../lib/auth";
+import { ALL_LOGS, LOG_LEVELS, SYSTEM_LOGS, type LogSource } from "../lib/logs";
+import type { Container } from "../lib/types";
+import { loadWebSettings } from "../lib/webSettings";
+import LogPane, { type LogCache, type LogFilters } from "../components/LogPane";
+import "../styles/logs.css";
 
-const LEVEL_COLOR: Record<string, string> = {
-  INFO: "#22c55e",
-  WARN: "#f59e0b",
-  ERROR: "#ef4444",
-  notice: "#3b82f6",
-  access: "#8b92a5",
+const defaultFilters: LogFilters = {
+  search: "",
+  matchCase: false,
+  exclude: false,
+  levels: [...LOG_LEVELS],
+  wrap: true,
+  timestamps: true,
+  lineNumbers: false,
+  fontSize: 12,
+  tail: 500,
 };
-function formatUpdated(value: string) {
-  if (!value) return "—";
-  return new Date(value).toLocaleTimeString();
-}
 
-export default function LogsView() {
-  const [entries, setEntries] = useState<LogEntry[]>([]),
-    [sources, setSources] = useState<string[]>(["All"]),
-    [search, setSearch] = useState(""),
-    [level, setLevel] = useState("All"),
-    [source, setSource] = useState("All"),
-    [autoScroll, setAutoScroll] = useState(true),
-    [follow, setFollow] = useState(true),
-    [loading, setLoading] = useState(true),
-    [refreshing, setRefreshing] = useState(false),
-    [error, setError] = useState(""),
-    [updatedAt, setUpdatedAt] = useState(""),
-    [settings, setSettings] = useState(loadWebSettings);
-  const viewerRef = useRef<HTMLDivElement>(null);
-  const load = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const data = await getLogs();
-      setEntries(data.entries);
-      setSources(data.sources.length ? data.sources : ["All"]);
-      setUpdatedAt(data.updatedAt);
-      setError("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load logs");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-  useEffect(() => subscribeWebSettings(setSettings), []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useEffect(() => {
-    if (!follow || !settings.autoRefresh) return;
-    const timer = window.setInterval(
-      () => void load(true),
-      settings.refreshSeconds * 1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [follow, settings.autoRefresh, settings.refreshSeconds, load]);
-  const filtered = useMemo(
-    () =>
-      entries.filter((line) => {
-        const q = search.toLowerCase();
-        return (
-          (!q ||
-            line.message.toLowerCase().includes(q) ||
-            line.source.toLowerCase().includes(q)) &&
-          (level === "All" || line.level === level) &&
-          (source === "All" || line.source === source)
-        );
-      }),
-    [entries, search, level, source],
+export default function LogsView({
+  initialContainerId,
+}: {
+  initialContainerId?: string | null;
+}) {
+  const canRead = ["admin", "operator"].includes(getSession()?.user.role || "");
+  const [containers, setContainers] = useState<Container[] | null>(null);
+  const [catalogError, setCatalogError] = useState("");
+  const [tabs, setTabs] = useState<LogSource[]>(() =>
+    initialContainerId
+      ? [
+          ALL_LOGS,
+          {
+            id: `container:${initialContainerId}`,
+            name: initialContainerId.slice(0, 12),
+            kind: "container",
+            containerId: initialContainerId,
+          },
+        ]
+      : [ALL_LOGS],
   );
+  const [activeId, setActiveId] = useState(() =>
+    initialContainerId ? `container:${initialContainerId}` : "all",
+  );
+  const [compareId, setCompareId] = useState<string | null>(null);
+  const [split, setSplit] = useState(false);
+  const [following, setFollowing] = useState(
+    () => loadWebSettings().autoRefresh,
+  );
+  const [filters, setFilters] = useState(defaultFilters);
+  const [findSource, setFindSource] = useState("");
+  const [runningOnly, setRunningOnly] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [sourcesHidden, setSourcesHidden] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [notice, setNotice] = useState("");
+  const cache = useRef<LogCache>(new Map());
+  const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!autoScroll || !viewerRef.current || filtered.length === 0) return;
-    viewerRef.current.scrollTop = viewerRef.current.scrollHeight;
-  }, [filtered.length, autoScroll]);
-  function downloadLogs() {
-    const text = filtered
-      .map(
-        (line) =>
-          `${line.timestamp} ${line.level.padEnd(5)} ${line.source.padEnd(18)} ${line.message}`,
+    const find = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", find);
+    return () => window.removeEventListener("keydown", find);
+  }, []);
+
+  useEffect(() => {
+    if (!canRead) return;
+    const controller = new AbortController();
+    let timer: number | undefined;
+    const load = async () => {
+      try {
+        const next = await getContainers(controller.signal);
+        if (!controller.signal.aborted) {
+          setContainers(next);
+          setCatalogError("");
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted)
+          setCatalogError(
+            cause instanceof Error
+              ? cause.message
+              : "Unable to load log sources",
+          );
+      } finally {
+        if (!controller.signal.aborted && following)
+          timer = window.setTimeout(() => void load(), 15000);
+      }
+    };
+    void load();
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [following, canRead, refresh]);
+  useEffect(() => {
+    if (!focus) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFocus(false);
+        setSourcesOpen(false);
+        setSettingsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [focus]);
+  const openSource = useCallback(
+    (source: LogSource, compare = false) => {
+      setNotice("");
+      if (!tabs.some((tab) => tab.id === source.id) && tabs.length >= 8) {
+        setNotice(
+          "Up to eight sources can be open. Close a tab to open another.",
+        );
+        return;
+      }
+      setTabs((previous) =>
+        previous.some((tab) => tab.id === source.id)
+          ? previous
+          : [...previous, source],
+      );
+      if (compare) {
+        setCompareId(source.id);
+        setSplit(true);
+      } else {
+        setActiveId(source.id);
+      }
+      setSourcesOpen(false);
+    },
+    [tabs],
+  );
+  const openedInitial = useRef<string | null>(initialContainerId || null);
+  useEffect(() => {
+    if (!initialContainerId || openedInitial.current === initialContainerId)
+      return;
+    openedInitial.current = initialContainerId;
+    openSource({
+      id: `container:${initialContainerId}`,
+      name: initialContainerId.slice(0, 12),
+      kind: "container",
+      containerId: initialContainerId,
+    });
+  }, [initialContainerId, openSource]);
+  const resolveSource = (source: LogSource): LogSource =>
+    source.kind === "container"
+      ? {
+          ...source,
+          name:
+            containers?.find((container) => container.id === source.containerId)
+              ?.name || source.name,
+        }
+      : source;
+  const active = resolveSource(
+    tabs.find((tab) => tab.id === activeId) || tabs[0],
+  );
+  const compared =
+    tabs.find((tab) => tab.id === compareId && tab.id !== active.id) ||
+    tabs.find((tab) => tab.id !== active.id);
+  const compare = compared ? resolveSource(compared) : null;
+  const closeTab = (id: string) => {
+    const remaining = tabs.filter((tab) => tab.id !== id);
+    if (!remaining.length) {
+      remaining.push(ALL_LOGS);
+    }
+    setTabs(remaining);
+    cache.current.delete(id);
+    if (activeId === id) setActiveId(remaining[0].id);
+    if (remaining.length < 2) setSplit(false);
+  };
+  const visibleContainers = useMemo(() => {
+    const query = findSource.toLowerCase();
+    return (containers || [])
+      .filter(
+        (container) =>
+          (!runningOnly || container.status === "running") &&
+          `${container.name} ${container.image}`.toLowerCase().includes(query),
       )
-      .join("\n");
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `coreops-logs-${new Date().toISOString().replace(/[:.]/g, "-")}.log`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [containers, findSource, runningOnly]);
+  const running = containers?.filter(
+    (container) => container.status === "running",
+  ).length;
+  const toggleLevel = (level: string) =>
+    setFilters((previous) => ({
+      ...previous,
+      levels: previous.levels.includes(level)
+        ? previous.levels.filter((item) => item !== level)
+        : [...previous.levels, level],
+    }));
+  const sourceButton = (source: LogSource, icon: React.ReactNode) => (
+    <button
+      key={source.id}
+      className={`logs-source-button ${active.id === source.id ? "is-active" : ""}`}
+      onClick={() => openSource(source)}
+      aria-pressed={active.id === source.id}
+    >
+      {icon}
+      <span>{source.name}</span>
+      <ChevronRight size={12} />
+    </button>
+  );
   return (
     <div
-      style={{
-        padding: "22px 24px",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
+      className={`logs-workspace ${sourcesHidden ? "sources-hidden" : ""} ${focus ? "is-focused" : ""}`}
+      onKeyDown={(event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+          event.preventDefault();
+          event.stopPropagation();
+          searchRef.current?.focus();
+        }
       }}
     >
-      <div style={{ marginBottom: 14 }}>
-        <h1
-          style={{
-            fontSize: 17,
-            fontWeight: 700,
-            color: T.text,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Logs
-        </h1>
-        <p style={{ fontSize: 12, color: T.textDim, marginTop: 2 }}>
-          Centralized log explorer ·{" "}
-          {settings.autoRefresh && follow
-            ? `refreshing every ${settings.refreshSeconds}s`
-            : "manual refresh"}
-          .
-        </p>
-      </div>
-      <div
-        style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}
-      >
-        {sources.map((item) => (
+      <header className="logs-workspace-header">
+        <div className="logs-heading">
+          <FileText size={19} />
+          <h1>Logs</h1>
+          <span className="logs-heading-divider" />
+          <span className="logs-heading-subtitle">Log explorer</span>
+        </div>
+        <div className="logs-workspace-actions">
           <button
-            className="screen-filter-pill"
-            key={item}
-            onClick={() => setSource(item)}
-            style={{
-              padding: "4px 10px",
-              background: source === item ? T.primary : T.raised,
-              border: `1px solid ${source === item ? T.primary : T.border}`,
-              borderRadius: 5,
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 500,
-              color: source === item ? T.onAccent : T.textSub,
-              fontFamily: "Inter,sans-serif",
-            }}
+            className="logs-mobile-source-toggle"
+            aria-label="Select log source"
+            aria-expanded={sourcesOpen}
+            onClick={() => setSourcesOpen(!sourcesOpen)}
           >
-            {item}
+            <Box size={15} />
+            <span>Sources</span>
+            <ChevronDown size={12} />
           </button>
-        ))}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          marginBottom: 10,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <Input
-          value={search}
-          onChange={setSearch}
-          placeholder="Search logs…"
-          icon={<Search size={12} />}
-          style={{ flex: 1, maxWidth: 340 }}
-        />
-        <Select
-          value={level}
-          onChange={setLevel}
-          options={["All", "INFO", "WARN", "ERROR", "notice", "access"].map(
-            (v) => ({ label: v, value: v }),
-          )}
-        />
-        <div style={{ flex: 1 }} />
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            cursor: "pointer",
-            userSelect: "none",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={autoScroll}
-            onChange={(e) => setAutoScroll(e.target.checked)}
-            style={{ accentColor: T.accent }}
-          />
-          <span style={{ fontSize: 11, color: T.textDim }}>Auto-scroll</span>
-        </label>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            cursor: "pointer",
-            userSelect: "none",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={follow}
-            onChange={(e) => setFollow(e.target.checked)}
-            style={{ accentColor: T.accent }}
-          />
-          <span style={{ fontSize: 11, color: T.textDim }}>Follow logs</span>
-        </label>
-        <Btn
-          variant="ghost"
-          size="xs"
-          icon={<RefreshCw size={11} />}
-          onClick={() => void load(true)}
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Btn>
-        <Btn
-          variant="ghost"
-          size="xs"
-          icon={<Download size={11} />}
-          onClick={downloadLogs}
-        >
-          Download
-        </Btn>
-      </div>
-      {error && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "9px 12px",
-            marginBottom: 10,
-            border: `1px solid ${T.red}40`,
-            background: `${T.red}0d`,
-            borderRadius: 7,
-            color: T.red,
-            fontSize: 11,
-          }}
-        >
-          <AlertCircle size={13} />
-          <span>{error}</span>
-        </div>
-      )}
-      <Card
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          ref={viewerRef}
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "12px 16px",
-            background: T.bg,
-            fontFamily: "JetBrains Mono,monospace",
-            fontSize: 11.5,
-            lineHeight: 1.9,
-            minHeight: 400,
-          }}
-        >
-          {loading ? (
-            <div
-              style={{ color: T.textDim, textAlign: "center", paddingTop: 40 }}
-            >
-              Loading logs…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div
-              style={{ color: T.textDim, textAlign: "center", paddingTop: 40 }}
-            >
-              No log entries match your filters
-            </div>
-          ) : (
-            filtered.map((line, i) => (
-              <div
-                key={`${line.timestamp}-${i}`}
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  padding: "1px 0",
-                  borderBottom: `1px solid ${T.borderMuted}10`,
-                }}
-              >
-                <span
-                  style={{
-                    color: T.textDim,
-                    flexShrink: 0,
-                    userSelect: "none",
-                    width: 156,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {line.timestamp}
-                </span>
-                <span
-                  style={{
-                    width: 52,
-                    flexShrink: 0,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    color: LEVEL_COLOR[line.level] || T.textDim,
-                  }}
-                >
-                  {line.level}
-                </span>
-                <span
-                  style={{
-                    width: 110,
-                    flexShrink: 0,
-                    color: T.textDim,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {line.source}
-                </span>
-                <span
-                  style={{
-                    color: T.textSub,
-                    flex: 1,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {line.message}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-        <div
-          style={{
-            padding: "8px 16px",
-            borderTop: `1px solid ${T.border}`,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 11,
-              color: T.textDim,
-              fontFamily: "JetBrains Mono,monospace",
-            }}
+          <button
+            className="logs-desktop-source-toggle"
+            aria-label={sourcesHidden ? "Show log sources" : "Hide log sources"}
+            title={sourcesHidden ? "Show sources" : "Hide sources"}
+            onClick={() => setSourcesHidden(!sourcesHidden)}
           >
-            {filtered.length} entries
-          </span>
-          <span style={{ fontSize: 10, color: T.textDim, marginLeft: 8 }}>
-            Updated {formatUpdated(updatedAt)}
-          </span>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: follow && settings.autoRefresh ? T.green : T.textDim,
-              marginLeft: "auto",
-            }}
-            className={follow && settings.autoRefresh ? "pulse" : ""}
-          />
-          <span style={{ fontSize: 11, color: T.textDim }}>
-            {follow && settings.autoRefresh ? "Live" : "Paused"}
-          </span>
+            {sourcesHidden ? (
+              <PanelLeftOpen size={16} />
+            ) : (
+              <PanelLeftClose size={16} />
+            )}
+          </button>
+          <button
+            aria-label="Compare log sources"
+            title="Compare two open sources"
+            disabled={tabs.length < 2}
+            aria-pressed={split}
+            onClick={() => setSplit(!split)}
+          >
+            <Columns2 size={16} />
+            <span className="logs-action-label">Compare</span>
+          </button>
+          <button
+            aria-label={following ? "Pause log updates" : "Resume log updates"}
+            className={`logs-follow ${following ? "is-following" : ""}`}
+            onClick={() => setFollowing(!following)}
+          >
+            {following ? <Pause size={14} /> : <Play size={14} />}
+            <span>{following ? "Pause" : "Resume"}</span>
+          </button>
+          <button
+            aria-label={focus ? "Exit logs focus mode" : "Focus log viewer"}
+            title={focus ? "Exit focus mode (Escape)" : "Focus mode"}
+            onClick={() => setFocus(!focus)}
+          >
+            {focus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
         </div>
-      </Card>
+      </header>
+      <div className="logs-workspace-body">
+        {sourcesOpen && (
+          <button
+            className="logs-source-backdrop"
+            aria-label="Close log sources"
+            onClick={() => setSourcesOpen(false)}
+          />
+        )}
+        <aside
+          className={`logs-sources ${sourcesOpen ? "is-open" : ""}`}
+          aria-label="Log sources"
+        >
+          <div className="logs-source-search">
+            <Search size={14} />
+            <input
+              aria-label="Find containers"
+              value={findSource}
+              onChange={(event) => setFindSource(event.target.value)}
+              placeholder="Find containers…"
+            />
+            <button
+              aria-label="Show running containers only"
+              title="Running containers only"
+              aria-pressed={runningOnly}
+              onClick={() => setRunningOnly(!runningOnly)}
+            >
+              <ListFilter size={14} />
+            </button>
+          </div>
+          <nav aria-label="Log source navigation">
+            <div className="logs-source-section">
+              <span>HOST</span>
+              <Server size={12} />
+            </div>
+            {sourceButton(ALL_LOGS, <FileText size={15} />)}
+            {sourceButton(SYSTEM_LOGS, <Server size={15} />)}
+            <div className="logs-source-section">
+              <span>CONTAINERS</span>
+              <span>{containers ? visibleContainers.length : "—"}</span>
+            </div>
+            {catalogError && (
+              <div className="logs-catalog-error" role="alert">
+                <AlertCircle size={14} />
+                <span>{catalogError}</span>
+                <button
+                  aria-label="Retry log sources"
+                  onClick={() => setRefresh((value) => value + 1)}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+            )}
+            {!containers && !catalogError && canRead && (
+              <p className="logs-source-placeholder">Loading containers…</p>
+            )}
+            {!canRead && (
+              <p className="logs-source-placeholder">
+                Operator access required
+              </p>
+            )}
+            {visibleContainers.map((container) => {
+              const source: LogSource = {
+                id: `container:${container.id}`,
+                name: container.name,
+                kind: "container",
+                containerId: container.id,
+              };
+              return (
+                <div
+                  className={`logs-container-source ${active.id === source.id ? "is-active" : ""}`}
+                  key={container.id}
+                >
+                  <button
+                    className="logs-source-button"
+                    aria-label={`Open logs for ${container.name}`}
+                    aria-pressed={active.id === source.id}
+                    onClick={() => openSource(source)}
+                  >
+                    <i
+                      className={`logs-source-status is-${container.status}`}
+                      title={container.status}
+                    />
+                    <span>
+                      <strong>{container.name}</strong>
+                      <small title={container.image}>{container.image}</small>
+                    </span>
+                  </button>
+                  <button
+                    className="logs-source-compare"
+                    aria-label={`Compare logs for ${container.name}`}
+                    title="Open in comparison pane"
+                    onClick={() => openSource(source, true)}
+                  >
+                    <Columns2 size={13} />
+                  </button>
+                </div>
+              );
+            })}
+            {containers && visibleContainers.length === 0 && (
+              <p className="logs-source-placeholder">
+                {containers.length
+                  ? "No matching containers"
+                  : "No containers found"}
+              </p>
+            )}
+          </nav>
+          <footer className="logs-sources-footer">
+            <Server size={13} />
+            <span>Docker containers</span>
+            <span>{running === undefined ? "—" : `${running} running`}</span>
+          </footer>
+        </aside>
+        <div className="logs-reader">
+          <div
+            className="logs-tabs"
+            role="tablist"
+            aria-label="Open log sources"
+          >
+            {tabs.map((tab) => {
+              const source = resolveSource(tab);
+              return (
+                <div
+                  className={`logs-tab ${active.id === tab.id ? "is-active" : ""}`}
+                  key={tab.id}
+                >
+                  <button
+                    role="tab"
+                    aria-selected={active.id === tab.id}
+                    title={source.name}
+                    onClick={() => setActiveId(tab.id)}
+                  >
+                    {tab.kind === "container" ? (
+                      <Box size={13} />
+                    ) : (
+                      <FileText size={13} />
+                    )}
+                    <span>{source.name}</span>
+                  </button>
+                  {tabs.length > 1 && (
+                    <button
+                      className="logs-tab-close"
+                      aria-label={`Close ${source.name} logs tab`}
+                      onClick={() => closeTab(tab.id)}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="logs-toolbar">
+            <label className="logs-find">
+              <Search size={14} />
+              <input
+                ref={searchRef}
+                aria-label="Find in logs"
+                placeholder="Find in logs…"
+                maxLength={200}
+                value={filters.search}
+                onChange={(event) =>
+                  setFilters((previous) => ({
+                    ...previous,
+                    search: event.target.value,
+                  }))
+                }
+              />
+              {filters.search && (
+                <button
+                  aria-label="Clear log search"
+                  onClick={() =>
+                    setFilters((previous) => ({ ...previous, search: "" }))
+                  }
+                >
+                  <X size={13} />
+                </button>
+              )}
+              <button
+                aria-label="Match case"
+                aria-pressed={filters.matchCase}
+                title="Match case"
+                onClick={() =>
+                  setFilters((previous) => ({
+                    ...previous,
+                    matchCase: !previous.matchCase,
+                  }))
+                }
+              >
+                <CaseSensitive size={16} />
+              </button>
+              <button
+                aria-label="Exclude matching log lines"
+                aria-pressed={filters.exclude}
+                title="Exclude matches"
+                onClick={() =>
+                  setFilters((previous) => ({
+                    ...previous,
+                    exclude: !previous.exclude,
+                  }))
+                }
+              >
+                <ListFilter size={16} />
+              </button>
+            </label>
+            <div className="logs-level-filters" aria-label="Log levels">
+              <Filter size={13} />
+              {LOG_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  className={`logs-level-filter logs-level-${level.toLowerCase()}`}
+                  aria-label={`Toggle ${level} logs`}
+                  aria-pressed={filters.levels.includes(level)}
+                  onClick={() => toggleLevel(level)}
+                >
+                  <i />
+                  {level}
+                </button>
+              ))}
+            </div>
+            <div className="logs-reader-tools">
+              <button
+                aria-label="Wrap log lines"
+                title="Wrap lines"
+                aria-pressed={filters.wrap}
+                onClick={() =>
+                  setFilters((previous) => ({
+                    ...previous,
+                    wrap: !previous.wrap,
+                  }))
+                }
+              >
+                <WrapText size={16} />
+              </button>
+              <button
+                aria-label="Refresh all log panes"
+                title="Refresh"
+                onClick={() => setRefresh((value) => value + 1)}
+              >
+                <RefreshCw size={15} />
+              </button>
+              <button
+                aria-label="Log display settings"
+                title="Display settings"
+                aria-expanded={settingsOpen}
+                onClick={() => setSettingsOpen(!settingsOpen)}
+              >
+                <Settings2 size={16} />
+              </button>
+            </div>
+          </div>
+          {settingsOpen && (
+            <div className="logs-display-settings">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={filters.timestamps}
+                  onChange={(event) =>
+                    setFilters((previous) => ({
+                      ...previous,
+                      timestamps: event.target.checked,
+                    }))
+                  }
+                />{" "}
+                Timestamps (UTC)
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={filters.lineNumbers}
+                  onChange={(event) =>
+                    setFilters((previous) => ({
+                      ...previous,
+                      lineNumbers: event.target.checked,
+                    }))
+                  }
+                />{" "}
+                Line numbers
+              </label>
+              <label>
+                Text size
+                <select
+                  aria-label="Log text size"
+                  value={filters.fontSize}
+                  onChange={(event) =>
+                    setFilters((previous) => ({
+                      ...previous,
+                      fontSize: Number(event.target.value),
+                    }))
+                  }
+                >
+                  {[11, 12, 13, 14, 16].map((size) => (
+                    <option value={size} key={size}>
+                      {size}px
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Container tail
+                <select
+                  aria-label="Container log tail"
+                  value={filters.tail}
+                  onChange={(event) =>
+                    setFilters((previous) => ({
+                      ...previous,
+                      tail: Number(event.target.value),
+                    }))
+                  }
+                >
+                  {[100, 500, 1000].map((count) => (
+                    <option key={count} value={count}>
+                      {count} lines
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button onClick={() => setFilters(defaultFilters)}>
+                <ArrowDownWideNarrow size={13} /> Reset display
+              </button>
+              <button
+                aria-label="Close log display settings"
+                onClick={() => setSettingsOpen(false)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          {notice && (
+            <div className="logs-notice" role="status">
+              {notice}
+              <button
+                aria-label="Dismiss log notice"
+                onClick={() => setNotice("")}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
+          <div className={`logs-panes ${split && compare ? "is-split" : ""}`}>
+            <LogPane
+              key={active.id}
+              source={active}
+              following={following}
+              filters={filters}
+              cache={cache.current}
+              refresh={refresh}
+              canRead={canRead}
+            />
+            {split && compare && (
+              <LogPane
+                key={`compare:${compare.id}`}
+                source={compare}
+                following={following}
+                filters={filters}
+                cache={cache.current}
+                refresh={refresh}
+                canRead={canRead}
+              />
+            )}
+          </div>
+          <footer className="logs-workspace-footer">
+            <span
+              className={`logs-follow-status ${following ? "is-live" : ""}`}
+            >
+              <i />
+              {following ? "Automatic refresh enabled" : "Log updates paused"}
+            </span>
+            <span>Read only · buffered output</span>
+            <span className="logs-shortcut">Ctrl / ⌘ F to find</span>
+          </footer>
+        </div>
+      </div>
     </div>
   );
 }

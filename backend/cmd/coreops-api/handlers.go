@@ -141,6 +141,16 @@ func (a *API) monitoring(w http.ResponseWriter, r *http.Request) {
 func (a *API) logs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()
+	w.Header().Set("Cache-Control", "no-store")
+	if r.URL.Query().Get("source") == "system" {
+		entries, err := collectJournalLogs(ctx)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, ErrorResponse{Error: "System journal is unavailable to the API service account"})
+			return
+		}
+		writeJSON(w, http.StatusOK, LogsOverview{Entries: entries, Sources: []string{"System"}, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano)})
+		return
+	}
 	overview, err := collectLogs(ctx, a.docker)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)

@@ -25,6 +25,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/containers", RoleAdmin, a.createContainer)
 	handle("DELETE /api/v1/containers/{id}", RoleAdmin, a.deleteContainer)
 	handle("GET /api/v1/containers/{id}", RoleOperator, a.getContainer)
+	handle("GET /api/v1/containers/{id}/logs", RoleOperator, a.containerLogs)
 	handle("POST /api/v1/containers/{id}/start", RoleOperator, a.startContainer)
 	handle("POST /api/v1/containers/{id}/stop", RoleOperator, a.stopContainer)
 	handle("POST /api/v1/containers/{id}/restart", RoleOperator, a.restartContainer)

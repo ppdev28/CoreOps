@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   CircleStop,
+  FileText,
   Copy,
   Network,
   Play,
@@ -23,11 +24,13 @@ type Tab = "Overview" | "Network" | "Mounts" | "Environment" | "Inspect";
 export default function ContainerDetail({
   containerId,
   onBack,
+  onLogs,
   addToast,
   onConfirm,
 }: {
   containerId: string;
   onBack: () => void;
+  onLogs: (id: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -193,6 +196,13 @@ export default function ContainerDetail({
             onClick={() => void action("restart")}
           >
             Restart
+          </Btn>
+          <Btn
+            variant="secondary"
+            icon={<FileText size={11} />}
+            onClick={() => onLogs(container.id)}
+          >
+            Logs
           </Btn>
           <Btn
             variant="secondary"

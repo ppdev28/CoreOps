@@ -55,6 +55,7 @@ function AppShell({ user }: { user: AuthUser }) {
       null,
     );
   useEffect(() => subscribeWebSettings(setSettings), []);
+  const [logContainerId, setLogContainerId] = useState<string | null>(null);
   const [terminalOpened, setTerminalOpened] = useState(false);
   useEffect(() => {
     if (view === "terminal") setTerminalOpened(true);
@@ -96,7 +97,13 @@ function AppShell({ user }: { user: AuthUser }) {
   );
   const navigate = useCallback((v: View) => {
     if (v === "files") setFilesVisited(true);
+    if (v === "logs") setLogContainerId(null);
     setView(v);
+    setMobileOpen(false);
+  }, []);
+  const openContainerLogs = useCallback((id: string) => {
+    setLogContainerId(id);
+    setView("logs");
     setMobileOpen(false);
   }, []);
   const openContainerDetail = useCallback((id: string) => {
@@ -242,15 +249,16 @@ function AppShell({ user }: { user: AuthUser }) {
             className="coreops-main"
             style={{
               flex: 1,
-              overflowY: view === "terminal" ? "hidden" : "auto",
+              overflowY:
+                view === "terminal" || view === "logs" ? "hidden" : "auto",
               display: "flex",
               flexDirection: "column",
               minHeight: 0,
-              padding: view === "terminal" ? 0 : undefined,
+              padding: view === "terminal" || view === "logs" ? 0 : undefined,
             }}
           >
             <section
-              className={`coreops-screen ${view === "terminal" ? "terminal-screen" : ""}`}
+              className={`coreops-screen ${view === "terminal" ? "terminal-screen" : view === "logs" ? "logs-screen" : ""}`}
               data-screen={view}
             >
               <Suspense
@@ -272,11 +280,16 @@ function AppShell({ user }: { user: AuthUser }) {
                 )}{" "}
                 {view === "host" && <HostView />}{" "}
                 {view === "containers" && (
-                  <ContainersView onDetail={openContainerDetail} {...shell} />
+                  <ContainersView
+                    onDetail={openContainerDetail}
+                    onLogs={openContainerLogs}
+                    {...shell}
+                  />
                 )}{" "}
                 {view === "container-detail" && selectedContainerId && (
                   <ContainerDetail
                     containerId={selectedContainerId}
+                    onLogs={openContainerLogs}
                     onBack={() => navigate("containers")}
                     {...shell}
                   />
@@ -305,7 +318,17 @@ function AppShell({ user }: { user: AuthUser }) {
                   <VirtualMachinesView addToast={addToast} />
                 )}{" "}
                 {view === "monitoring" && <MonitoringView />}{" "}
-                {view === "logs" && <LogsView />}{" "}
+                {view === "logs" && (
+                  <Suspense
+                    fallback={
+                      <div data-screen-loading style={{ padding: 24 }}>
+                        Loading logs…
+                      </div>
+                    }
+                  >
+                    <LogsView initialContainerId={logContainerId} />
+                  </Suspense>
+                )}{" "}
                 {(terminalOpened || view === "terminal") && (
                   <TerminalView visible={view === "terminal"} />
                 )}{" "}

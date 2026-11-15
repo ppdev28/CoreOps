@@ -10,7 +10,7 @@ Un único módulo Go (`backend/go.mod`, Go 1.24), un paquete ejecutable en `cmd/
 | Aplicaciones | `applications.go`, `handlers.go` | Agrupaciones Compose y coordinación de contenedores |
 | Host y servicios | `host.go`, `services.go`, `handlers.go` | Lectura Linux y acciones systemd |
 | Almacenamiento/red | `storage.go`, `network.go` | Información host/Docker; errores parciales explícitos |
-| Monitorización/logs | `monitoring.go`, `logs.go` | Muestreos Docker/host, journald y snapshots de logs |
+| Monitorización/logs | `monitoring.go`, `logs.go` | Muestreos Docker/host, journald y snapshots de logs; ver [Logs](logs.md) |
 | Máquinas virtuales | `virtual_machines.go` | libvirt mediante `virsh` |
 | Seguridad/updates | `security.go`, `updates.go` | Consultas y mutaciones privilegiadas acotadas |
 | Terminal | `terminal_session.go`, `terminal.go`, `handlers.go` | PTY/WebSocket admin y endpoints aislados legacy; ver [guía](terminal.md) |
