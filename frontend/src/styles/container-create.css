@@ -1,0 +1,224 @@
+.container-create-dialog {
+  padding: 0;
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 20px;
+  background: var(--coreops-raised);
+  color: var(--coreops-text);
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow: auto;
+  font-size: 13px;
+}
+.container-create-dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+.container-create-surface {
+  padding: 24px;
+}
+.container-create-surface header,
+.container-create-section-heading,
+.container-create-actions,
+.container-create-surface footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.container-create-surface h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 650;
+}
+.container-create-surface header p {
+  margin-top: 5px;
+  color: var(--coreops-textDim);
+}
+.container-create-surface h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.container-create-surface fieldset {
+  border: 0;
+  margin: 22px 0 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+.container-create-surface label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.container-create-surface input:not([type="checkbox"]),
+.container-create-surface textarea,
+.container-create-surface select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 12px;
+  background: var(--coreops-overlay);
+  color: var(--coreops-text);
+  font-size: 13px;
+}
+.container-create-surface textarea {
+  resize: vertical;
+  font-family: "JetBrains Mono", monospace;
+}
+.container-create-surface :focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: 2px;
+}
+.container-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.container-create-port {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.4fr) repeat(3, minmax(0, 1fr)) 32px;
+  align-items: end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.container-create-help {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--coreops-textDim);
+  font-weight: 400;
+}
+.container-create-section-heading + p {
+  margin-top: 6px;
+}
+.container-create-section-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--coreops-textSub);
+  background: var(--coreops-overlay);
+  cursor: pointer;
+}
+.container-create-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--coreops-textSub);
+  border: 0;
+  padding: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.container-create-surface details summary {
+  color: var(--coreops-textSub);
+  cursor: pointer;
+}
+.container-create-surface details > label {
+  margin-top: 16px;
+}
+.container-create-surface .container-create-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+}
+.container-create-check input {
+  accent-color: var(--coreops-accent);
+  width: 16px;
+  height: 16px;
+}
+.container-create-surface footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--coreops-border);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.container-create-submit {
+  border: 1px solid var(--coreops-accent);
+  border-radius: 999px;
+  padding: 9px 16px;
+  background: var(--coreops-primary);
+  color: var(--coreops-onAccent);
+  cursor: pointer;
+  font-weight: 500;
+}
+.container-create-surface button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.container-create-error {
+  color: var(--coreops-red);
+  padding-top: 14px;
+  overflow-wrap: anywhere;
+}
+.container-create-warning {
+  color: var(--coreops-yellow);
+  overflow-wrap: anywhere;
+}
+.container-create-result {
+  display: grid;
+  gap: 14px;
+  padding-top: 24px;
+}
+.container-create-result > svg {
+  color: var(--coreops-green);
+}
+.container-create-result code {
+  overflow-wrap: anywhere;
+  color: var(--coreops-textSub);
+  font-size: 12px;
+}
+.container-create-result p {
+  line-height: 1.6;
+}
+.container-create-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .container-create-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .container-create-surface {
+    padding: 16px;
+  }
+  .container-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .container-create-port {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+    border: 1px solid var(--coreops-border);
+    border-radius: 14px;
+  }
+  .container-create-surface input:not([type="checkbox"]),
+  .container-create-surface textarea,
+  .container-create-surface select {
+    font-size: 16px;
+  }
+  .container-create-surface button {
+    min-height: 40px;
+  }
+}
+
+.container-create-cancel {
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 999px;
+  padding: 9px 16px;
+  color: var(--coreops-textSub);
+  background: var(--coreops-overlay);
+  cursor: pointer;
+}

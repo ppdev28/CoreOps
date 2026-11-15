@@ -1,42 +1,492 @@
-import type { Container, ContainerStatus, HealthStatus, HostOverview, NetworkOverview, StorageOverview, SystemService, SecurityOverview, UpdatesOverview, AppService } from './types'
-import type { MonitoringOverview } from './monitoring'
+import {
+  getAuthToken,
+  getServerUrl,
+  setSession,
+  type AuthSession,
+} from "./auth";
+import type {
+  Container,
+  LogsOverview,
+  HostLogCatalog,
+  ContainerStatus,
+  ContainerDetailData,
+  HealthStatus,
+  HostOverview,
+  NetworkOverview,
+  StorageOverview,
+  SystemService,
+  SecurityOverview,
+  UpdatesOverview,
+  AppService,
+  VirtualMachine,
+} from "./types";
+import type { MonitoringOverview } from "./monitoring";
 
-type ApiPort = { privatePort:number; publicPort?:number; type:string; ip?:string }
-type ApiContainer = { id:string; name:string; image:string; state:string; status:string; createdAt:number; ports?:ApiPort[]; networks?:string[] }
-type ApiApplication = { id:string; name:string; description:string; status:string; containers:number; version:string; category:string; icon:string; containerIds?:string[] }
-type ApiService = SystemService
-type ApiContainerActionResponse = { ok:boolean; id:string }
-type ApiServiceActionResponse = { ok:boolean; name:string; action:string }
-type ApiApplicationActionResponse = { ok:boolean; id:string; action:string }
-export type ContainerAction = 'start'|'stop'|'restart'
-export type ServiceAction = 'start'|'stop'|'restart'
-export type ApplicationAction = 'start'|'stop'|'restart'
-export interface TerminalExecResponse { output:string; exitCode:number; cwd:string }
-export interface ApplyUpdatesResponse { ok:boolean; packages:string[]; output:string }
-const apiBase='/api/v1'
-function mapStatus(state:string):ContainerStatus{switch(state.toLowerCase()){case'running':return'running';case'paused':return'paused';case'restarting':return'restarting';case'created':case'exited':case'dead':return'stopped';default:return'exited'}}
-function mapHealth(status:string):HealthStatus{const normalized=status.toLowerCase();if(normalized.includes('(healthy)'))return'healthy';if(normalized.includes('(unhealthy)'))return'unhealthy';if(normalized.includes('(health: starting)'))return'starting';return'none'}
-function formatPorts(ports:ApiPort[]=[]){const published=ports.filter(p=>p.publicPort!==undefined).map(p=>`${p.publicPort}:${p.privatePort}`);return published.length?published.join(', '):'—'}
-function formatCreated(timestamp:number){return new Date(timestamp*1000).toLocaleString()}
-function formatUptime(status:string,state:string){if(state.toLowerCase()==='running')return status.replace(/^Up\s+/i,'').replace(/\s+\(healthy\)$/i,'')||'Running';return status||state}
-function toContainer(container:ApiContainer):Container{return{id:container.id,name:container.name.replace(/^\//,''),image:container.image,status:mapStatus(container.state),health:mapHealth(container.status),cpu:'—',cpuNum:0,memory:'—',memNum:0,memLimit:'—',net:container.networks?.join(', ')||'—',ports:formatPorts(container.ports),created:formatCreated(container.createdAt),uptime:formatUptime(container.status,container.state),restarts:0,networkMode:container.networks?.[0]||'—',ip:'—',mac:'—'}}
-function toApplication(app:ApiApplication):AppService{return{id:app.id,name:app.name,description:app.description,status:mapStatus(app.status),containers:app.containers,version:app.version,category:app.category,icon:app.icon,containerIds:app.containerIds}}
-async function request<T>(path:string,init?:RequestInit):Promise<T>{const response=await fetch(`${apiBase}${path}`,init);if(!response.ok){const body=await response.json().catch(()=>null) as {error?:string}|null;throw new Error(body?.error||`SCP API returned ${response.status}`)}return response.json() as Promise<T>}
-export async function getHost():Promise<HostOverview>{return request('/host')}
-export async function getContainers():Promise<Container[]>{const containers=await request<ApiContainer[]>('/containers');return containers.map(toContainer)}
-export async function runContainerAction(id:string,action:ContainerAction):Promise<void>{const response=await request<ApiContainerActionResponse>(`/containers/${encodeURIComponent(id)}/${action}`,{method:'POST'});if(!response.ok||response.id!==id)throw new Error('SCP API returned an invalid container action response')}
-export async function getApplications():Promise<AppService[]>{const applications=await request<ApiApplication[]>('/applications');return applications.map(toApplication)}
-export async function runApplicationAction(id:string,action:ApplicationAction):Promise<void>{const response=await request<ApiApplicationActionResponse>(`/applications/${encodeURIComponent(id)}/${action}`,{method:'POST'});if(!response.ok||response.id!==id||response.action!==action)throw new Error('SCP API returned an invalid application action response')}
-export async function getServices():Promise<SystemService[]>{return request('/services')}
-export async function runServiceAction(name:string,action:ServiceAction):Promise<void>{const response=await request<ApiServiceActionResponse>(`/services/${encodeURIComponent(name)}/${action}`,{method:'POST'});if(!response.ok||response.name!==name||response.action!==action)throw new Error('SCP API returned an invalid service action response')}
-export async function getStorage():Promise<StorageOverview>{return request('/storage')}
-export async function getNetwork():Promise<NetworkOverview>{return request('/network')}
-export async function getMonitoring():Promise<MonitoringOverview>{return request('/monitoring')}
-export async function getLogs():Promise<{entries:Array<{timestamp:string;level:string;source:string;message:string}>;sources:string[];updatedAt:string}>{return request('/logs')}
-export async function getSecurity():Promise<SecurityOverview>{return request('/security')}
-export async function terminateSecuritySession(pid:number):Promise<void>{const response=await request<{ok:boolean;pid:number}>(`/security/sessions/${pid}/terminate`,{method:'POST'});if(!response.ok||response.pid!==pid)throw new Error('SCP API returned an invalid session response')}
-export async function fixSecurityItem(item:'auto-updates'):Promise<void>{const response=await request<{ok:boolean;item:string}>(`/security/fix/${item}`,{method:'POST'});if(!response.ok||response.item!==item)throw new Error('SCP API returned an invalid security fix response')}
-export async function execTerminal(command:string,cwd?:string):Promise<TerminalExecResponse>{return request('/terminal/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command,cwd})})}
-export async function getUpdates():Promise<UpdatesOverview>{return request('/updates')}
-export async function refreshUpdates():Promise<UpdatesOverview>{return request('/updates/refresh',{method:'POST'})}
-export async function applyUpdates(packages:string[],all=false):Promise<ApplyUpdatesResponse>{return request('/updates/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({packages,all})})}
+type ApiPort = {
+  privatePort: number;
+  publicPort?: number;
+  type: string;
+  ip?: string;
+};
+type ApiContainer = {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  createdAt: number;
+  ports?: ApiPort[];
+  networks?: string[];
+};
+type ApiApplication = {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  containers: number;
+  version: string;
+  category: string;
+  icon: string;
+  containerIds?: string[];
+};
+type ApiService = SystemService;
+type ApiContainerActionResponse = { ok: boolean; id: string };
+type ApiServiceActionResponse = { ok: boolean; name: string; action: string };
+type ApiApplicationActionResponse = { ok: boolean; id: string; action: string };
+type ApiVirtualMachineActionResponse = {
+  ok: boolean;
+  name: string;
+  action: string;
+};
+export type ContainerAction = "start" | "stop" | "restart";
+export type ServiceAction = "start" | "stop" | "restart";
+export type ApplicationAction = "start" | "stop" | "restart";
+export type VirtualMachineAction = "start" | "shutdown";
+export interface ApplyUpdatesResponse {
+  ok: boolean;
+  packages: string[];
+  output: string;
+}
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+  /\/+$/,
+  "",
+);
+// Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
+// proxy, so native builds (and anyone pointing the UI at another server) use the
+// server address saved on the login screen. VITE_API_BASE_URL overrides both.
+export function getApiBase(): string {
+  if (configuredApiBase) return configuredApiBase;
+  const server = getServerUrl();
+  return server ? `${server}/api/v1` : "/api/v1";
+}
+
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export async function checkTerminalAvailability(
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    const capability = await request<{ available: boolean; protocol: number }>(
+      "/terminal/session",
+      { signal, cache: "no-store" },
+    );
+    if (capability.available !== true || capability.protocol !== 1)
+      throw new Error(
+        "The API returned an incompatible terminal protocol. Update and restart the CoreOps backend.",
+      );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404)
+      throw new Error(
+        "This API does not support interactive terminals. Rebuild and restart the CoreOps backend.",
+      );
+    throw error;
+  }
+}
+
+// Authenticate inside the connection, never in a URL or browser history.
+export function openTerminalSession(cols: number, rows: number): WebSocket {
+  const url = new URL(`${getApiBase()}/terminal/session`, window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(url);
+  socket.binaryType = "arraybuffer";
+  let token = getAuthToken();
+  socket.addEventListener(
+    "open",
+    () => {
+      socket.send(JSON.stringify({ type: "auth", token, cols, rows }));
+      token = null;
+    },
+    { once: true },
+  );
+  return socket;
+}
+function mapStatus(state: string): ContainerStatus {
+  switch (state.toLowerCase()) {
+    case "running":
+      return "running";
+    case "paused":
+      return "paused";
+    case "restarting":
+      return "restarting";
+    case "created":
+    case "exited":
+    case "dead":
+      return "stopped";
+    default:
+      return "exited";
+  }
+}
+function mapHealth(status: string): HealthStatus {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("(healthy)")) return "healthy";
+  if (normalized.includes("(unhealthy)")) return "unhealthy";
+  if (normalized.includes("(health: starting)")) return "starting";
+  return "none";
+}
+function formatPorts(ports: ApiPort[] = []) {
+  const published = ports
+    .filter((p) => p.publicPort !== undefined)
+    .map((p) => `${p.publicPort}:${p.privatePort}`);
+  return published.length ? published.join(", ") : "—";
+}
+function formatCreated(timestamp: number) {
+  return new Date(timestamp * 1000).toLocaleString();
+}
+function formatUptime(status: string, state: string) {
+  if (state.toLowerCase() === "running")
+    return (
+      status.replace(/^Up\s+/i, "").replace(/\s+\(healthy\)$/i, "") || "Running"
+    );
+  return status || state;
+}
+function toContainer(container: ApiContainer): Container {
+  return {
+    id: container.id,
+    name: container.name.replace(/^\//, ""),
+    image: container.image,
+    status: mapStatus(container.state),
+    health: mapHealth(container.status),
+    cpu: "—",
+    cpuNum: 0,
+    memory: "—",
+    memNum: 0,
+    memLimit: "—",
+    net: container.networks?.join(", ") || "—",
+    ports: formatPorts(container.ports),
+    created: formatCreated(container.createdAt),
+    uptime: formatUptime(container.status, container.state),
+    restarts: 0,
+    networkMode: container.networks?.[0] || "—",
+    ip: "—",
+    mac: "—",
+  };
+}
+function toApplication(app: ApiApplication): AppService {
+  return {
+    id: app.id,
+    name: app.name,
+    description: app.description,
+    status: mapStatus(app.status),
+    containers: app.containers,
+    version: app.version,
+    category: app.category,
+    icon: app.icon,
+    containerIds: app.containerIds,
+  };
+}
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const apiBase = getApiBase();
+  const url = `${apiBase}${path}`;
+  let response: Response;
+
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  try {
+    response = await fetch(url, { ...init, headers });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
+    );
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
+
+  if (response.status === 401 && token) {
+    // The session expired or was revoked; send the user back to the login screen.
+    setSession(null);
+  }
+
+  if (!response.ok) {
+    let body: { error?: string } | null = null;
+    try {
+      body = JSON.parse(bodyText) as { error?: string };
+    } catch {
+      // Keep the HTTP status when the server returned HTML or another non-JSON body.
+    }
+    throw new ApiError(
+      response.status,
+      body?.error ||
+        `CoreOps API returned ${response.status} (${contentType || "unknown content type"})`,
+    );
+  }
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      `CoreOps API returned a non-JSON response from ${url}. Check the API base URL; the server returned ${contentType || "unknown content type"}.`,
+    );
+  }
+
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`CoreOps API returned invalid JSON from ${url}`);
+  }
+}
+export async function login(
+  username: string,
+  password: string,
+): Promise<AuthSession> {
+  const session = await request<AuthSession>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  setSession(session);
+  return session;
+}
+export async function logout(): Promise<void> {
+  try {
+    await request("/auth/logout", { method: "POST" });
+  } catch {
+    // The local session is dropped regardless of the server response.
+  }
+  setSession(null);
+}
+export async function getHost(): Promise<HostOverview> {
+  return request("/host");
+}
+export async function getContainers(
+  signal?: AbortSignal,
+): Promise<Container[]> {
+  const containers = await request<ApiContainer[]>("/containers", { signal });
+  return containers.map(toContainer);
+}
+
+export interface CreateContainerInput {
+  name: string;
+  image: string;
+  environment: string[];
+  command: string[];
+  ports: {
+    hostIp: string;
+    hostPort: number;
+    containerPort: number;
+    protocol: "tcp" | "udp";
+  }[];
+  restartPolicy: "no" | "always" | "unless-stopped" | "on-failure";
+  start: boolean;
+}
+
+export interface CreateContainerResult {
+  id: string;
+  name: string;
+  started: boolean;
+  warnings: string[];
+  startError?: string;
+}
+
+export async function createContainer(
+  input: CreateContainerInput,
+): Promise<CreateContainerResult> {
+  const result = await request<CreateContainerResult>("/containers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!result.id || result.name !== input.name)
+    throw new Error(
+      "Creation could not be confirmed. Refresh the container list before retrying.",
+    );
+  return result;
+}
+
+export async function getContainerDetail(
+  id: string,
+): Promise<ContainerDetailData> {
+  return request(`/containers/${encodeURIComponent(id)}`);
+}
+
+export async function deleteContainer(id: string): Promise<void> {
+  const response = await request<ApiContainerActionResponse>(
+    `/containers/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok || response.id !== id)
+    throw new Error(
+      "Deletion could not be confirmed. Refresh the container list before retrying.",
+    );
+}
+
+export async function runContainerAction(
+  id: string,
+  action: ContainerAction,
+): Promise<void> {
+  const response = await request<ApiContainerActionResponse>(
+    `/containers/${encodeURIComponent(id)}/${action}`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.id !== id)
+    throw new Error(
+      "CoreOps API returned an invalid container action response",
+    );
+}
+export async function getApplications(): Promise<AppService[]> {
+  const applications = await request<ApiApplication[]>("/applications");
+  return applications.map(toApplication);
+}
+export async function runApplicationAction(
+  id: string,
+  action: ApplicationAction,
+): Promise<void> {
+  const response = await request<ApiApplicationActionResponse>(
+    `/applications/${encodeURIComponent(id)}/${action}`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.id !== id || response.action !== action)
+    throw new Error(
+      "CoreOps API returned an invalid application action response",
+    );
+}
+export async function getServices(): Promise<SystemService[]> {
+  return request("/services");
+}
+export async function runServiceAction(
+  name: string,
+  action: ServiceAction,
+): Promise<void> {
+  const response = await request<ApiServiceActionResponse>(
+    `/services/${encodeURIComponent(name)}/${action}`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.name !== name || response.action !== action)
+    throw new Error("CoreOps API returned an invalid service action response");
+}
+export async function getStorage(): Promise<StorageOverview> {
+  return request("/storage");
+}
+export async function getNetwork(): Promise<NetworkOverview> {
+  return request("/network");
+}
+export async function getMonitoring(): Promise<MonitoringOverview> {
+  return request("/monitoring");
+}
+export async function getHostLogSources(
+  signal?: AbortSignal,
+): Promise<HostLogCatalog> {
+  const result = await request<HostLogCatalog>("/logs/sources", { signal });
+  if (!Array.isArray(result.files) || !Array.isArray(result.warnings))
+    throw new Error("Update and restart the API to discover host log files.");
+  return result;
+}
+export async function getLogs(
+  options: {
+    containerId?: string;
+    system?: boolean;
+    events?: boolean;
+    filePath?: string;
+    category?: string;
+    cursor?: string;
+    since?: string;
+    until?: string;
+    unit?: string;
+    tail?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<LogsOverview> {
+  const params = new URLSearchParams();
+  let path = "/logs";
+  if (options.containerId) {
+    path = `/containers/${encodeURIComponent(options.containerId)}/logs`;
+    params.set("tail", String(options.tail ?? 500));
+  } else if (options.system || options.events || options.filePath) {
+    params.set(
+      "source",
+      options.system ? "system" : options.events ? "events" : "file",
+    );
+    if (options.filePath) params.set("file", options.filePath);
+    if (options.tail) params.set("limit", String(options.tail));
+    for (const key of [
+      "category",
+      "cursor",
+      "since",
+      "until",
+      "unit",
+    ] as const) {
+      if (options[key]) params.set(key, options[key]);
+    }
+  }
+  return request(`${path}${params.size ? `?${params}` : ""}`, {
+    signal: options.signal,
+  });
+}
+export async function getSecurity(): Promise<SecurityOverview> {
+  return request("/security");
+}
+export async function terminateSecuritySession(pid: number): Promise<void> {
+  const response = await request<{ ok: boolean; pid: number }>(
+    `/security/sessions/${pid}/terminate`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.pid !== pid)
+    throw new Error("CoreOps API returned an invalid session response");
+}
+export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
+  const response = await request<{ ok: boolean; item: string }>(
+    `/security/fix/${item}`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.item !== item)
+    throw new Error("CoreOps API returned an invalid security fix response");
+}
+export async function getVirtualMachines(): Promise<VirtualMachine[]> {
+  return request("/virtual-machines");
+}
+export async function runVirtualMachineAction(
+  name: string,
+  action: VirtualMachineAction,
+): Promise<void> {
+  const response = await request<ApiVirtualMachineActionResponse>(
+    `/virtual-machines/${encodeURIComponent(name)}/${action}`,
+    { method: "POST" },
+  );
+  if (!response.ok || response.name !== name || response.action !== action)
+    throw new Error(
+      "CoreOps API returned an invalid virtual machine action response",
+    );
+}
+export async function getUpdates(): Promise<UpdatesOverview> {
+  return request("/updates");
+}
+export async function refreshUpdates(): Promise<UpdatesOverview> {
+  return request("/updates/refresh", { method: "POST" });
+}
+export async function applyUpdates(
+  packages: string[],
+  all = false,
+): Promise<ApplyUpdatesResponse> {
+  return request("/updates/apply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ packages, all }),
+  });
+}

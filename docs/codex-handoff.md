@@ -1,151 +1,128 @@
 # Codex Handoff
 
-This file is the short operational handoff for continuing SCP work in Codex without losing the context of the current development conversation.
+Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current terminal work is on `feature/terminal-redesign`; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
 
-## Where we are
+## Read and resume
 
-The project has moved from a Figma-only prototype to a working first vertical slice.
+Read the five documents in `AGENTS.md` order, then [module instructions](modules/README.md), [security findings](security.md) and [modularization plan](modularization-plan.md). The user requested documentation first, followed by gradual code implementation and preservation of the Figma UI.
 
-The Figma Make design for **Server Control Center Dashboard** was used as the visual basis for the application. The design is intentionally being preserved while real backend capabilities are added behind it.
+## Authorized Android cleanup
 
-The repository is:
+The user explicitly authorized cleanup of the 36 previously untracked Android files after the terminal commit. All 36 were copied and SHA-256 verified outside the repo under `/tmp/coreops-android-cleanup-05romax3/` (temporary storage). Removed 34 unused/conflicting Capacitor template files; retained and versioned two reviewed `.gitignore` files, including exclusions for local signing keys. No previously tracked native code/resources changed, no `cap sync` and no app/security redesign. Do not restore the template resources merely because older handoffs said to preserve them.
 
-```text
-https://github.com/ppdev28/SCP
-```
+Validation: frontend build passed; XML/Kotlin resource references resolve, no duplicate resource IDs, backup hashes verified and ignore rules cover generated/local files without hiding tracked source. Android assemble could not start: Java/JAVA_HOME missing and no Android SDK configured. See [mobile guide](modules/mobile.md). Native build/device validation remains pending.
 
-The active development branch is:
+## Latest terminal slice (2026-11-13)
 
-```text
-feature/project-foundation
-```
+The explicit terminal request replaces the isolated-command UI with xterm.js and a real Linux PTY. Branch `feature/terminal-redesign` was already checked out; it was preserved. Backend transport is `terminal_session.go`; frontend remains `views/TerminalView.tsx` with shared API transport and new terminal CSS. No wholesale module extraction. See [terminal module](modules/terminal.md) for protocol, environment, limits, lifecycle, shortcuts and proxy configuration.
 
-The latest important milestone is:
+Validated: Go race tests/vet/build; frontend format/build; 18 fixture browser tests; real Chromium → isolated API → PTY including `top`, state, signals, independent tabs, resize, >45 s and logout. Credentials/data/shell wrapper for live validation were temporary, with no personal history files or Docker mutations. No deployment or native build. A pre-existing typo in testify’s go.mod checksum was corrected after authenticating the canonical value through Go’s official proxy/sum database; integrity checking was retained.
 
-> The Containers view displays real containers and its start, stop and restart operations have been manually verified against the developer's Ubuntu Server Docker Engine through the SCP Go API.
+The frontend keeps shells mounted when navigating. Page reload/disconnect ends them; there is no resumable server session or replay. Lifecycle audit redacts content; legacy exec also redacts commands, but its old environment/output limits still need hardening. CLI/server identity coherence SEC-01 remains unresolved. This upgrades the existing admin shell capability, without adding host privileges or implementing a Linux-user identity mapping.
 
-## Current architecture
+## Terminal disconnect repair
 
-```text
-                         private network / Tailscale
-                                  |
-Browser / mobile -----------------+
-       |
-       v
-React + TypeScript + Vite
-       |
-       | /api/* via Vite dev proxy
-       v
-Go SCP API :8080
-       |
-       v
-Docker client / infrastructure adapters
-       |
-       v
-Docker Engine on Ubuntu Server
-       |
-       v
-real containers
-```
+The active development API on 8082 was an older `go run` binary without `/terminal/session`; it returned 404 and the UI rendered a generic disconnect. Rebuilt/restarted that development process with its existing environment, working directory and identity files. The running corrected binary/log/PID are under `/tmp/coreops-terminal-fix/`; the prior binary was retained there for rollback. Future Go edits require a new build/restart; no systemd service was installed.
 
-The browser must never talk directly to Docker Engine.
+Vite now preserves Host (`changeOrigin: false`). Verified 101 upgrades through localhost, LAN and Tailscale; an untrusted Origin still receives 403. Authenticated GET without upgrade returns admin-only capability JSON and starts no PTY. The frontend checks that before mounting xterm, explains outdated backend/404, permits retry and distinguishes failed upgrade from later disconnection. Real Chromium → Vite → isolated API → default login bash verified hostname prompt and commands. Go terminal race tests/vet/build and frontend format/build passed; the browser suite now has 20 passing tests including the two regressions. No existing user/password/session data changed.
 
-## Current working endpoints
+## Latest UI slice (2026-11-13)
 
-```text
-GET /api/v1/health
-GET /api/v1/containers
-POST /api/v1/containers/{id}/start
-POST /api/v1/containers/{id}/stop
-POST /api/v1/containers/{id}/restart
-```
+The user expanded the rounded monochrome styling to all application screens and requested configurable accents and responsive mobile/tablet/laptop/desktop layouts. `.app-workspace` now covers the whole app and login. `lib/appearance.ts` owns palette/contrast policy; `webSettings.ts` persists `accentColor`; `tokens.ts` applies live CSS variables. Settings has eight presets plus custom color and preserves the active view on Save/Reset. Semantic status colors remain independent. See [UI style](ui-style.md).
 
-Health returns Docker availability and API status.
+Existing route and operation behavior remains. Keep the current working tree, including unrelated prior documentation/native assets, intact. Default native chrome is aligned with neutral colors but does not mirror web accent/light preferences; no native build was performed.
 
-Containers returns real Docker container information including ID, name, image, state/status, creation timestamp, ports and networks.
+Validation commands: `pnpm --dir frontend build`, `pnpm --dir frontend format:check`, `pnpm --dir frontend test:ui` (Chromium required). The suite has 15 tests, including every navigation screen and inspect at eight viewports, plus appearance persistence, System, invalid stored color, gaps, stale data, roles and actions. API calls, including terminal identity lookup, are intercepted in these tests. Live API/device integration remains to be verified separately.
 
-## Current frontend behavior
+## Actual implementation
 
-The Containers screen:
+React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8082` by default and owns Docker/Linux/libvirt access. Backend remains one `package main`; frontend API transport, types and mapping remain concentrated in `lib/api.ts`. Proposed modules are not extracted yet.
 
-- calls the SCP API rather than using Figma mock data;
-- adapts API data into the UI model;
-- shows loading and error states;
-- supports retry/refresh;
-- calculates container status counts from real API data;
-- supports the existing UI search/filter/table/grid behavior;
-- executes start, stop and restart actions through the API;
-- shows an in-progress state per container and prevents duplicate submissions;
-- confirms stop and restart operations and refreshes real state after completion;
-- does not fabricate metrics that the backend does not expose.
+Container list/inspect/start/stop/restart already exist; the prior milestone records manual validation on Ubuntu Docker. Host, applications, services, VMs, storage, network, monitoring, logs, terminal, security and updates have implementations with uneven real integration validation. Aggregate logs and metrics already use Docker. Never repeat production mutations merely to re-prove historical milestones.
 
-## The next task
+Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. Updated CLI/server binaries reload locked identity files per operation; use the same service user/data directory and stop older binaries before upgrading. See SEC-01 and the 2026-11-15 follow-up below. Terminal now has an admin-only persistent PTY/WebSocket with session revalidation and bounded flow control, alongside the legacy isolated exec/complete endpoints. It uses the service account’s host privileges; see [terminal guide](modules/terminal.md). Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
 
-The next Containers milestone should build on the real lifecycle workflow with inspection, logs or metrics. Before adding an endpoint, inspect the existing backend implementation and frontend action handlers, and preserve the existing UI.
+## Recommended next slice
 
-All future infrastructure actions should follow the same pattern: validate the target in the backend, execute through a Go adapter, return useful errors, show a pending state, prevent duplicates, reconcile real state after success and use confirmation for disruptive operations.
+SEC-01 is corrected for updated binaries through file locking, reload and revocation ordering; see the identity follow-up below. Next capture auth/health/containers API contracts, including creation, and extract the containers backend slice: consumer-owned interface, Docker adapter, HTTP mapping and composition. Preserve current URLs, JSON behavior and minimum roles. Follow with the frontend containers feature, honest unavailable values and action-flow tests. Remaining P0 risks must precede broader exposure.
 
-## What to do before coding
+Do not do a repository-wide move. Do not introduce microservices or multiple Go modules. Do not generate clients until a contract/tooling decision has been reviewed. New guide per extracted capability should live beside its code and be indexed from the module map.
 
-Run:
+## Validation completed in this review
+
+- `cd backend && go test ./... && go vet ./... && go build ./...`: passed.
+- `cd frontend && pnpm build`: passed, no chunk-size warning.
+- No live API, Docker mutation, privileged host command, browser test, native build, dependency audit or deployment was performed.
+
+The earlier untracked Android resources/tests were subsequently cleaned with explicit authorization; see the cleanup section above. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. `toContainer` currently sets restart count to zero without source data, and the UI displays it: fix rather than claim all unavailable values are honest.
+
+## Commands for the next session
 
 ```bash
-cd ~/proyectos/SCP
-git status
+git status --short
 git branch --show-current
-git log --oneline -10
+git log --oneline -5
+cd backend
+go test ./...
+go vet ./...
+go build ./...
+cd ../frontend
+pnpm build
 ```
 
-Then inspect:
+Before finishing a slice, inspect scope/diff, run relevant checks, update current state and module guide, and report what changed, what was tested, what remains and how to continue. The user has now requested committing the documentation and UI work after completing the favicon. No deployment or push was requested.
 
-```text
-backend/
-frontend/src/
-frontend/vite.config.ts
-docs/product.md
-docs/current-state.md
-docs/architecture.md
-```
+## File explorer handoff
 
-Do not assume that this document is more authoritative than the code. If code and documentation disagree, inspect the code and update the documentation after resolving the discrepancy.
+`feature/file-explorer` was based on `main` and is now merged into `develop`, preserving the current UI and interactive terminal. See `backend/README.md#file-explorer` for configuration, API behavior, permissions and native build steps. The feature is isolated in `files.go` / `files_test.go`, `lib/files.ts`, `views/FileExplorerView.tsx`, scoped `styles/files.css` and the Android `CoreOpsFilesPlugin.kt`.
 
-## Important implementation philosophy
+To try the integrated version on the server, check out `develop`, run the existing Go and pnpm validation commands, then start the API and frontend as usual. Default filesystem root is `/`, limited by the service user's permissions. For a smaller shared area set `COREOPS_FILES_ROOT` to an existing directory. Test mobile upload/download using disposable files before rebuilding/installing the Android app.
 
-SCP is intended to become a genuinely useful professional DevOps/sysadmin/cloud operations tool, not an imitation of Portainer with a different skin.
+Merge validation (2026-11-15): Go race tests/vet/build and web format/build; browser fixtures cover Files at eight screen sizes, updated sidebar order and persistent file directory alongside terminal tabs. Native build/device validation remains pending.
 
-Favor capabilities that compose into complete workflows:
+Files has its own Suspense boundary inside the screen: loading its lazy chunk must not suspend the mounted terminal and restart its WebSocket sessions. The navigation regression test opens Files after two terminals, enters a folder and verifies both terminal connections and the file path survive repeated screen changes.
 
-```text
-observe -> inspect -> diagnose -> act -> verify
-```
 
-For example, a container workflow should eventually let a user see status/resource impact, inspect logs/configuration, perform an action, and verify the result without jumping between unrelated applications.
+## Identity persistence — 2026-11-15
 
-Do not build a huge abstraction layer just because future Kubernetes/cloud support is possible. Build the current Linux/Docker workflow cleanly and introduce abstractions when a second implementation genuinely needs them.
+SEC-01 prerequisite: `auth_persistence.go` adds permanent flock + fresh JSON reads to every CLI/server auth operation. Login revalidates hash/role after PBKDF2; user changes revoke first; logout reports storage errors. Existing JSON/hash formats are unchanged. Run only updated binaries with the same service account/local data directory; stop older binaries before upgrade, never unlink `.identity.lock` while running. See [identity guide](modules/identity-audit.md). Historical handoff sections above describe the earlier state.
 
-## Real test environment
+## Container creation — 2026-11-15
 
-The Ubuntu Server has Docker installed directly on the host and contains many real containers. The developer has Tailscale on the server, Mac and mobile phone.
+Implemented on `develop` after the Files merge. `container_create.go` and `components/CreateContainerDialog.tsx` connect the existing Containers button to admin-only POST creation with local images, validated configuration and explicit partial start success. Contract/limits: [backend README](../backend/README.md#container-creation). The dialog refreshes real inventory and opens inspection; default is create without start. No image pulling, registry auth, mounts or arbitrary Docker configuration.
 
-This environment should be used for integration testing, but changes must be made carefully because the containers are real infrastructure.
+Go race/vet/build and web format/build passed; all 26 browser fixture tests passed. Real Chromium tested create→inspect through an isolated API and live Docker; a second disposable container tested optional start. Both containers were removed. The current development API must be rebuilt/restarted when changing Go; production/native deployment is separate.
 
-Never perform destructive operations against an arbitrary real container merely to test an API. Prefer a disposable test container when destructive behavior needs validation.
+The development API on 8082 was rebuilt/restarted with the integrated branch, preserving its environment, working directory and unchanged users/session files. Binary: `/tmp/coreops-container-create-api`; log/PID: `/tmp/coreops-container-create-run/`. The Vite frontend remains on 5173 and the create/terminal/files routes are available through LAN/Tailscale. Temporary validation identity data and the isolated API were cleaned up. Creation and identity are recorded in separate commits on `develop`.
 
-## End-of-task protocol
 
-Before declaring a task complete:
+## Delete container repair — 2026-11-15
 
-- run relevant tests/builds;
-- verify the API directly where applicable;
-- verify the browser behavior where applicable;
-- inspect `git diff` and `git status`;
-- avoid unrelated modifications;
-- update documentation if the implementation state changed materially;
-- create a focused commit if the working convention calls for it.
+The existing Delete menu was a placeholder that only displayed “Deleted”. It now calls admin-only `DELETE /api/v1/containers/{id}` through `lib/api.ts`. `container_delete.go` validates ID/no query/no body and calls Moby with force/volume/link removal disabled; active-state conflicts return 409. Deletion always requires explicit confirmation. The list tracks pending mutations per ID, removes confirmed rows/selection, refreshes inventory and persists errors even with notifications disabled. Mobile context-menu placement is bounded. [Contract](../backend/README.md#container-deletion).
 
-When handing work back to the developer, state exactly:
+Validation: full Go tests/vet/build, targeted deletion race tests and web format/build; fixture tests cover delete success/pending/cancel, required confirmation, running state, failures and roles/mobile. Real mobile Chromium deleted a disposable container through an isolated API. Running deletion was refused without stopping it; named and anonymous volumes survived, including marker data. The test resources/temporary identity were cleaned up. Creation/identity changes are preserved in their own commits; production/native deployment is separate.
 
-1. what changed;
-2. what was tested;
-3. what remains;
-4. the exact command(s) needed to continue locally.
+Development API rebuilt/restarted on 8082 with the same environment/data and unchanged user/session files. Binary `/tmp/coreops-container-delete-api`, log/PID `/tmp/coreops-container-delete-run/`. DELETE is reachable through Vite 5173 and Tailscale and rejects anonymous requests before Docker. The repair is recorded in its own commit on `develop`.
+
+Final browser run: 34/34 passed. Earlier runs saw transient Chromium `ERR_NETWORK_CHANGED` module-load failures on creation/terminal screens; the full rerun passed without needing a test retry (`--retries=1` was available for infrastructure flakes). Go full tests/vet/build and targeted DELETE race tests passed.
+
+
+## Dozzle-inspired logs — 2026-11-15
+
+Implemented on the same `develop` worktree after the identity/create/delete changes. Logs recreates the installed Dozzle reading layout using CoreOps themes: source sidebar, up to eight tabs, comparison, dense rows, search/case/exclusion/levels, JSON expansion, copy/download, wrap/time/font options and focus mode. Containers menu/inspect now open the actual source. `LogsView.tsx`, `components/LogPane.tsx`, `lib/logs.ts`, scoped CSS and backend `logs.go` own the slice. Read [Logs](modules/logs.md) before continuing.
+
+New targeted container and system-only snapshot routes retain operator permissions. Bounded, cancellable polling replaces full-host collection when selecting a container. Timestamp/whitespace/stream parsing was corrected; no fabricated event timestamps. Pause actually suspends reads; failed refresh keeps explicitly stale data and errors. Lazy Logs has its own Suspense boundary to preserve terminals.
+
+Go race/vet/build, frontend format/build and all 42 fixture tests passed, with scoped reruns after visual/escape-parser refinements. Real Chromium used an isolated operator identity/API to read actual Dozzle container logs, matching Docker CLI timestamps/messages/streams and checking polling/pause, themes and mobile. No infrastructure mutation or native build. Temporary credentials/API are cleaned up; screenshots remain temporary artifacts under `/tmp`.
+
+Development API rebuilt/restarted on 8082 with the existing environment/data, unchanged users/session files and all existing capabilities. Binary `/tmp/coreops-logs-api`; log/PID `/tmp/coreops-logs-run/`. Vite 5173 and Tailscale expose the new authenticated routes. Changes are recorded as separate local feature commits on `develop`.
+
+## Host-wide logs and retained history — 2026-11-15
+
+Requested after the Dozzle-style logs commits: expand host coverage beyond the recent journal snapshot. `logs_journal.go`, `logs_files.go`, `logs_events.go` and the existing UI now provide journal categories/time/unit/cursors, text/rotated/gzip file catalog and pages, and finite Docker event snapshots. Read [Logs](modules/logs.md) for contracts and permissions. No sudo/group changes; inaccessible sources remain explicit. `/audit` and CoreOps audit-file aliases retain their admin boundary.
+
+Live integration detected that journald `--unit=*.service` index expansion exceeds the deadline on this large host. The service category now scans bounded metadata pages with real cursors, including continuation through pages with no service matches. Do not restore the wildcard or restrict all kernel history to the current boot. Text cursors detect replaced/shrunk files; gzip replays decompression to the forward offset and may hit its deadline on deep archives. No persistent log/event index was introduced.
+
+Full Go race tests/vet/build, frontend format/build, 45 fixture tests and targeted reruns passed. Isolated operator HTTP compared retained journal pages, real host files and gzip/Docker event metadata; Chromium verified desktop/mobile without runtime errors. Production/native deployment remains separate. The implementation originated on `develop`; confirm the active branch before resuming and do not commit binaries, credentials or validation screenshots.
+
+Development API rebuilt/restarted on 8082 with the existing environment and byte-identical users/session files. Current binary `/tmp/coreops-host-logs-api`; log/PID `/tmp/coreops-host-logs-run/`. Vite remains on 5173. New routes reject anonymous reads before host access. Isolated validation API and temporary credentials were removed. This slice is recorded in its own feature commit on `develop`; the requested integration target is `feature/kubernetes-observability`.

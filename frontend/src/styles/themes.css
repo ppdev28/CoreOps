@@ -1,0 +1,34 @@
+/* Theme foundations are supplied before React renders by lib/tokens.ts. */
+html {
+  background: var(--coreops-bg, #212121);
+  --color-bg-base: var(--coreops-bg);
+  --color-bg-raised: var(--coreops-raised);
+  --color-bg-overlay: var(--coreops-overlay);
+  --color-bg-sunken: var(--coreops-bgSidebar);
+  --color-bg-hover: var(--coreops-hover);
+  --color-bg-active: var(--coreops-active);
+  --color-border: var(--coreops-border);
+  --color-border-muted: var(--coreops-borderMuted);
+  --color-border-strong: var(--coreops-borderStrong);
+  --color-text-primary: var(--coreops-text);
+  --color-text-secondary: var(--coreops-textSub);
+  --color-text-tertiary: var(--coreops-textDim);
+  --color-accent: var(--coreops-accent);
+  --color-accent-muted: var(--coreops-active);
+  --color-accent-hover: var(--coreops-accentHover);
+}
+html body { background: var(--coreops-bg); color: var(--coreops-text); }
+html * { scrollbar-color: var(--coreops-borderStrong) transparent; }
+html ::-webkit-scrollbar-thumb { background: var(--coreops-borderStrong); }
+html :focus-visible { outline: 2px solid var(--coreops-accent) !important; outline-offset: 3px; }
+html .recharts-cartesian-grid line { stroke: var(--coreops-borderMuted) !important; }
+html body aside > div:first-child:not(:has(> span)) > button:last-child {
+  background: var(--coreops-raised) !important;
+  border-color: var(--coreops-borderStrong) !important;
+  color: var(--coreops-textSub) !important;
+  box-shadow: 2px 2px 5px var(--coreops-shadow), inset 1px 1px var(--coreops-highlight) !important;
+}
+html body aside > div:first-child:not(:has(> span)) > button:last-child:hover {
+  background: var(--coreops-hover) !important;
+  border-color: var(--coreops-accent) !important;
+}

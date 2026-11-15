@@ -1,11 +1,14 @@
-module github.com/ppdev28/SCP/backend
+module github.com/ppdev28/CoreOps/backend
 
 go 1.24.0
 
 require (
 	github.com/containerd/errdefs v1.0.0
+	github.com/creack/pty v1.1.24
+	github.com/gorilla/websocket v1.5.3
 	github.com/moby/moby/api v1.52.0
 	github.com/moby/moby/client v0.1.0
+	golang.org/x/sys v0.33.0
 )
 
 require (
@@ -25,5 +28,4 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
 )

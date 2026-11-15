@@ -1,0 +1,244 @@
+Refine the existing Dashboard into the production UI for \*\*CoreOps\*\*, a professional Linux server management application.
+
+Replace all visible “Server Control Center” branding with \*\*CoreOps\*\*, including the application logo text, sidebar branding, header and prototype labels.
+
+Do not create a new design from scratch. Preserve the existing sidebar structure, typography, navigation and component identity while introducing a functional \*\*Bento layout\*\* and \*\*restrained dark neumorphism\*\* inspired by the two attached button images.
+
+Focus exclusively on the Dashboard. Do not redesign other application screens yet.
+
+## 1. Dashboard goal
+
+The Dashboard must answer this question within approximately 5 seconds:
+
+“Is my server healthy, and if not, what needs my attention?”
+
+Prioritize operational information, clear states and useful actions. Avoid generic analytics layouts and decorative charts.
+
+## 2. Visual direction from the reference images
+
+Translate these qualities into the existing interface:
+
+- Matte charcoal background, approximately #212121.
+- Graphite surfaces with subtle tonal separation.
+- Soft highlights from the upper left and shadows toward the lower right.
+- Restrained bevels and inset edges that create a tactile appearance.
+- Muted blue, approximately #4568CC, for selected and active controls.
+- Soft silver-gray for neutral icons and inactive controls.
+
+The first image demonstrates an active control: blue icon with a subtle blue edge treatment.
+
+The second image demonstrates an inactive control: gray icon and a darker inset ring.
+
+An inactive control remains available for interaction. Design a separate disabled state.
+
+Apply this material language selectively:
+
+- Cards: shallow, subtle elevation.
+- Inputs and segmented controls: lightly recessed surfaces.
+- Primary controls: more pronounced tactile depth.
+- Pressed controls: a subtle inset appearance.
+- Charts and dense information areas: mostly flat surfaces for clarity.
+
+Use the reference buttons as material and interaction references. Do not repeat their circular shape throughout the interface or add a power control solely because it appears in the images.
+
+Avoid heavy shadows around every element, glossy materials, neon, glassmorphism and exaggerated 3D effects. Ensure boundaries and interactive states remain identifiable without relying exclusively on shadows.
+
+## 3. Functional Bento layout
+
+Refine the existing grid into a compact Bento composition with aligned modular cards.
+
+Determine card sizes by content and operational importance. Use consistent padding, spacing and moderate corner radii.
+
+Organize the Dashboard into:
+
+- Header and health status.
+- Four compact resource metric cards.
+- CPU and Memory chart cards.
+- System information and Containers overview.
+- Recent activity and Quick Actions.
+
+Avoid oversized tiles, unnecessary nested containers and empty space added purely to complete a symmetrical grid.
+
+## 4. Header
+
+Replace the generic greeting with:
+
+\*\*CoreOps / homelab-server\*\*
+
+Make the server name behave like a server selector for future multi-server support.
+
+On the right, show:
+
+- Command palette shortcut: ⌘ K.
+- Notifications.
+- Server status: ● Online.
+- User/avatar menu.
+
+Keep the header compact.
+
+## 5. Server health
+
+Add a subtle health row near the top.
+
+Healthy state:
+
+\*\*● All systems operational\*\*
+Updated a few seconds ago
+
+Issue state:
+
+\*\*⚠ 2 issues require attention\*\*
+
+When issues exist, show concise, actionable summaries of the highest-priority problems, with links to relevant details.
+
+Do not use a large alert banner when the system is healthy.
+
+Use color consistently:
+
+- Blue: interaction, selection and focus.
+- Green: healthy or running.
+- Amber: warning or degraded.
+- Red: critical or failed.
+- Gray: neutral, stopped or unavailable.
+
+Always accompany state colors with explicit labels or meaningful icons.
+
+## 6. Resource metric cards
+
+Keep four compact cards:
+
+\*\*CPU\*\*
+23%
+8 cores
+Small, subtle sparkline.
+
+\*\*Memory\*\*
+48%
+7.7 / 16 GB
+Small, subtle sparkline.
+
+\*\*Storage\*\*
+61%
+612 GB / 1 TB
+Horizontal usage bar.
+
+\*\*Network\*\*
+↓ 2.4 MB/s
+↑ 840 KB/s
+Clearly distinguish download and upload.
+
+Prioritize values and units. Do not force every metric into a chart.
+
+## 7. Resource charts
+
+Create two reusable chart cards:
+
+- CPU Usage.
+- Memory Usage.
+
+Each supports:
+
+\*\*5m · 30m · 1h · 6h · 24h\*\*
+
+Use compact, subtly recessed segmented controls with a clearly selected range.
+
+Include restrained line colors, subtle grid lines, readable axes and units, and useful hover tooltips. Keep plot areas visually quiet.
+
+## 8. System information
+
+Create a compact \*\*System\*\* card showing:
+
+- Ubuntu 24.04 LTS.
+- x86\_64.
+- Kernel: 6.8.x.
+- Uptime: 14d 08h.
+- Load average: 0.42.
+- Temperature: 48°C.
+- Last boot: a timestamp consistent with the displayed uptime.
+
+Use aligned label/value rows. Keep the card information-dense and visually calm.
+
+## 9. Containers overview
+
+Create a compact \*\*Containers\*\* section:
+
+- nginx — Running — 0.4% CPU — 18 MB.
+- postgres — Running — 1.2% CPU — 142 MB.
+- redis — Running — 0.1% CPU — 12 MB.
+- nextcloud — Running — 0.8% CPU — 311 MB.
+
+Use status dots, explicit status labels and consistent column alignment.
+
+Add \*\*View all →\*\*.
+
+Clearly distinguish “Running” from “Healthy” when health-check information exists. An unhealthy running container must remain visibly identifiable.
+
+Communicate container health without exposing every Docker property.
+
+## 10. Recent activity
+
+Create a compact \*\*Recent activity\*\* timeline:
+
+- Backup completed — 2 minutes ago.
+- nginx restarted — 18 minutes ago.
+- SSH login detected — 1 hour ago.
+- System update available — 3 hours ago.
+
+Use subtle icons, short labels and readable timestamps.
+
+Add \*\*View all →\*\*.
+
+## 11. Quick Actions
+
+Include four compact interactive buttons:
+
+- Create container.
+- Open terminal.
+- View logs.
+- Check updates.
+
+Use restrained tactile styling inspired by the reference images. Include clear hover, pressed and keyboard-focus states.
+
+Keep these as practical controls rather than decorative tiles.
+
+## 12. Responsive behavior
+
+\*\*Desktop:\*\* existing sidebar with the full adaptive Dashboard grid.
+
+\*\*Tablet:\*\* collapsed sidebar and reflowed cards.
+
+\*\*Mobile:\*\* navigation drawer and single-column content, with the four metric cards arranged in a 2-column grid.
+
+Charts must fit the viewport. Reflow container rows without horizontal scrolling. Preserve readable labels, values and comfortable touch targets.
+
+## 13. Reusable components and states
+
+Establish consistent reusable components:
+
+- MetricCard.
+- StatusBadge.
+- StatusDot.
+- ResourceChart.
+- SystemInfo.
+- ContainerRow.
+- ActivityItem.
+- QuickAction.
+- HealthStatus.
+
+Use Auto Layout, shared variables and component variants for spacing, colors, elevation, borders and interaction states.
+
+Include loading, empty, error, disconnected and stale-data states. Never present stale metrics as live information.
+
+## 14. Deliverable
+
+Create:
+
+- The main healthy Dashboard.
+- An issue-state variant demonstrating how operational problems change the hierarchy.
+- Desktop and mobile layouts.
+- Reusable components and their interaction states.
+- A clickable prototype for Dashboard interactions.
+
+Keep the final result \*\*professional, technical, calm, tactile and easy to scan\*\*.
+
+Preserve the existing product identity, apply \*\*CoreOps\*\* branding consistently, and make this Dashboard the definitive visual reference for the rest of the product.

@@ -7,7 +7,7 @@ The primary development/integration environment is an Ubuntu Server host running
 Repository path on that host:
 
 ```bash
-~/proyectos/SCP
+~/proyectos/CoreOps
 ```
 
 The developer also works from a Mac and can access the server through Tailscale. The mobile client is useful for responsive and remote-access testing.
@@ -17,7 +17,7 @@ The developer also works from a Mac and can access the server through Tailscale.
 Use pnpm, not npm.
 
 ```bash
-cd ~/proyectos/SCP/frontend
+cd ~/proyectos/CoreOps/frontend
 pnpm install
 pnpm build
 pnpm dev --host 0.0.0.0
@@ -30,33 +30,48 @@ When Vite is started with `--host 0.0.0.0`, it exposes the application on the se
 ## Backend
 
 ```bash
-cd ~/proyectos/SCP/backend
-go mod tidy
+cd ~/proyectos/CoreOps/backend
+go test ./...
+go vet ./...
 go build ./...
-go run ./cmd/scp-api
+go run ./cmd/coreops-api
 ```
 
-The API normally listens on port `8080`.
+The API normally listens on `127.0.0.1:8082`. Create a user first (see `backend/README.md`), for example:
+
+```bash
+# Stop the running API first; use its service user and COREOPS_DATA_DIR.
+# The CLI reads the password from stdin; avoid literal real secrets in shell history.
+read -rsp 'Password: ' COREOPS_NEW_PASSWORD
+printf '%s' "$COREOPS_NEW_PASSWORD" | go run ./cmd/coreops-api user add admin admin
+unset COREOPS_NEW_PASSWORD
+go run ./cmd/coreops-api
+```
+
+Run `go test ./...` and `go vet ./...` before committing backend changes. Run `go mod tidy` only when dependency changes require it.
+
+**Identity persistence (2026-11-15):** updated CLI/server binaries lock `.identity.lock`, reload JSON state for every operation and persist revocations before changing users. Use the same data directory and service account. Stop older binaries before upgrading; do not run mixed versions or unlink the lock file. The format of existing users/sessions is unchanged. Use a local filesystem supporting flock, atomic rename and fsync. A password/removal write failure may still revoke sessions; retry the CLI change after resolving storage errors.
 
 ## Basic backend checks
 
 Health:
 
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8082/api/v1/health
 ```
 
 Containers:
 
 ```bash
-curl http://localhost:8080/api/v1/containers
+TOKEN=$(curl -s -d '{"username":"admin","password":"a-long-password"}' http://localhost:8082/api/v1/auth/login | jq -r .token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/api/v1/containers
 ```
 
 When validating Docker integration, the API response should be compared with the actual Docker host state. Do not rely solely on mock data or screenshots.
 
 ## Frontend/API integration
 
-The frontend uses the Vite development proxy so browser calls can use `/api/...` while the backend remains on `localhost:8080` on the server.
+The frontend uses the Vite development proxy so browser calls can use `/api/...` while the backend remains on `localhost:8082` on the server.
 
 This avoids putting Docker Engine access into the browser and avoids unnecessary CORS complexity during local development.
 
@@ -93,12 +108,14 @@ Before making changes:
 ```bash
 git status
 git branch --show-current
-git pull --ff-only origin feature/project-foundation
+git log --oneline -5
 ```
+
+The reviewed branch was `develop`; do not automatically pull or switch to historical branches. Inspect upstream and local changes before synchronizing.
 
 Do not commit generated files such as:
 
-- `backend/scp-api`
+- `backend/coreops-api`
 - build output in `frontend/dist/`
 - local environment secrets
 - editor-specific files
@@ -113,3 +130,29 @@ Use focused commits. Do not squash/rebase/force-push existing work unless explic
 - Treat Docker lifecycle operations as privileged actions.
 - Do not add broad CORS rules as a substitute for a proper deployment/authentication design.
 - When an operation can destroy data or stop production services, add explicit confirmation and clear error handling.
+
+## Continuous integration and deployment
+
+`.github/workflows/ci-cd.yml` validates (tests, build, frontend format check) and deploys `main`.
+
+`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR` and the updated CLI/server binaries. Stop older binaries before upgrading.
+
+The checked-in workflow and unit disagree on the installed binary path; see [operations](modules/operations.md). Do not assume the workflow deploys the new binary or web assets.
+
+## Documentation-only validation
+
+Check local Markdown links, referenced paths, `git diff --check` and scope. Runtime code is unchanged in documentation tasks; baseline builds may be recorded but do not prove infrastructure or browser behavior. Read [module instructions](modules/README.md) before the next code slice.
+
+## Browser UI checks
+
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (45 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+
+Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal WebSocket traffic. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.
+
+For terminal changes, read [the terminal guide](modules/terminal.md) and run `go test -race ./...`. Backend tests use real PTYs without touching the user’s shell startup/history files; browser fixtures do not execute host commands. Production proxies must support WebSocket upgrade and explicitly configure the external Origin.
+
+After changing Go source, rebuild/restart the API process; a running `go run` binary does not hot reload. Terminal first performs an authenticated capability GET before WebSocket upgrade. A 404 means the active API lacks this feature, even if health succeeds. Vite preserves Host (`changeOrigin: false`) so the browser Origin remains valid over LAN/Tailscale.
+
+For log viewer changes, read [Logs](modules/logs.md). Run Go race tests for the bounded parallel collector and parser. Targeted API reads require operator/admin; automatic updates are cancellable snapshots at 2 s intervals, with the app auto-refresh preference providing the initial state. The Playwright suite uses isolated fixtures, including source endpoints; live Docker validation should be read only.
+
+For host log history, also exercise `logs_host_test.go` and `host-logs.spec.ts`: journal cursor/time/unit filtering, file/gzip paging, rotation and permission failures. Use an isolated operator identity for live reads. Never dump log contents or validation tokens into committed artifacts; do not grant host groups/ACLs just to make a test pass. See [coverage and retained-history limits](modules/logs.md).
