@@ -99,3 +99,26 @@ Listings and downloads are audited as sensitive reads, in addition to uploads. I
 Desktop supports file drag and drop. Mobile uses the system file picker; both support batches of up to 100 files with sequential uploads, progress, cancellation and per-file results. Uploads continue while moving between CoreOps screens; leaving/reloading the app interrupts them. Android downloads use `ACTION_CREATE_DOCUMENT` and a background streaming copy, without broad storage permissions. Rebuild the Android application after `pnpm build && pnpm cap:sync`; web assets alone do not install the new native plugin. iOS native downloads have not been validated; mobile Safari uses normal attachment downloads.
 
 If using a reverse proxy, configure its maximum body size and transfer timeouts to match the API.
+
+
+## Container creation
+
+The Containers **Create container** button opens a responsive form. Only `admin` may call `POST /api/v1/containers`; viewer/operator cannot create containers. Existing list/detail/lifecycle routes keep their roles. The request uses CoreOps types, never raw Docker configuration:
+
+```json
+{
+  "name": "web-service",
+  "image": "nginx:stable-alpine",
+  "environment": ["TZ=Europe/Madrid"],
+  "command": [],
+  "ports": [{"hostIp": "127.0.0.1", "hostPort": 18080, "containerPort": 80, "protocol": "tcp"}],
+  "restartPolicy": "no",
+  "start": false
+}
+```
+
+Images must already exist on the Docker host: this slice does not pull images or store registry credentials. Omitted command uses the image's defaults/entrypoint. Restart policies: `no` (default), `unless-stopped`, `on-failure`, `always`. Default network is bridge; only explicit mappings publish ports, defaulting to loopback. Set a server interface IP or explicitly `0.0.0.0` when remote access is intended. There are no host mounts, host namespaces or privileged options in this contract. Image-defined anonymous volumes and Docker defaults still apply.
+
+Maximum body: 64 KiB; name: 1–128 characters; 100 unique `NAME=value` environment variables, 64 command arguments, 32 TCP/UDP port mappings. Each environment entry/argument is limited to 4096 bytes; ports are 1–65535. Unknown fields and trailing JSON are rejected. Operations use a 30 s deadline and never retry automatically.
+
+Success returns HTTP 201 with `{ "id": "…", "name": "…", "started": false, "warnings": [] }` and `Location`. `start=true` performs a separate start after creation. If start fails, creation still returns 201 with the ID and `startError`; inspect the existing container before starting it again. `started=true` means Docker accepted the start request, not that the workload remains running. Name conflicts return 409; missing local image returns 422. An interrupted request can have created a container: refresh the list before retrying. Audit records name/ID and start outcome, excluding environment values and command arguments.

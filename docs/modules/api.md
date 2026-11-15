@@ -20,3 +20,7 @@ La [terminal](terminal.md) añade `GET /api/v1/terminal/session`: upgrade WebSoc
 ## Primera entrega y validación
 
 Capturar health, login/logout/me y list/inspect/start/stop/restart de contenedores en OpenAPI; incluir ejemplos sin secretos. Comprobar concordancia con Go y TypeScript mediante pruebas HTTP: 400/401/403/404/502, éxito y cancelación. Probar middleware real con dependencias falsas; no llamar a Docker de producción en tests. Futuras rutas se documentan al migrarlas.
+
+## Creación de contenedores (2026-11-15)
+
+`POST /api/v1/containers` es exclusivo de admin. DTO y validación en `container_create.go`, cliente TypeScript en `lib/api.ts`; contrato, límites y respuesta parcial en [backend README](../../backend/README.md#container-creation). `container_create_test.go` usa middleware real y Moby contra un Engine HTTP falso para probar roles/revocación, traducción de configuración, límites, 400/409/422/502, 201 y fallo de arranque sin duplicar/borrar el contenedor.

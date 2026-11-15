@@ -86,3 +86,11 @@ Files has its own Suspense boundary inside the screen: loading its lazy chunk mu
 ## Identity persistence — 2026-11-15
 
 SEC-01 prerequisite: `auth_persistence.go` adds permanent flock + fresh JSON reads to every CLI/server auth operation. Login revalidates hash/role after PBKDF2; user changes revoke first; logout reports storage errors. Existing JSON/hash formats are unchanged. Run only updated binaries with the same service account/local data directory; stop older binaries before upgrade, never unlink `.identity.lock` while running. See [identity guide](modules/identity-audit.md). Historical handoff sections above describe the earlier state.
+
+## Container creation — 2026-11-15
+
+Implemented on `develop` after the Files merge. `container_create.go` and `components/CreateContainerDialog.tsx` connect the existing Containers button to admin-only POST creation with local images, validated configuration and explicit partial start success. Contract/limits: [backend README](../backend/README.md#container-creation). The dialog refreshes real inventory and opens inspection; default is create without start. No image pulling, registry auth, mounts or arbitrary Docker configuration.
+
+Go race/vet/build and web format/build passed; all 26 browser fixture tests passed. Real Chromium tested create→inspect through an isolated API and live Docker; a second disposable container tested optional start. Both containers were removed. The current development API must be rebuilt/restarted when changing Go; production/native deployment is separate.
+
+The development API on 8082 was rebuilt/restarted with the integrated branch, preserving its environment, working directory and unchanged users/session files. Binary: `/tmp/coreops-container-create-api`; log/PID: `/tmp/coreops-container-create-run/`. The Vite frontend remains on 5173 and the create/terminal/files routes are available through LAN/Tailscale. Temporary validation identity data and the isolated API were cleaned up. Creation and identity are recorded in separate commits on `develop`.

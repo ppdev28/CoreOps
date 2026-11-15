@@ -6,7 +6,7 @@ Un único módulo Go (`backend/go.mod`, Go 1.24), un paquete ejecutable en `cmd/
 
 | Capacidad | Archivos actuales en `cmd/coreops-api` | Límite previsto |
 | --- | --- | --- |
-| Contenedores | `containers.go` | Casos de uso propios + adaptador Docker |
+| Contenedores | `containers.go`, `container_create.go` | Casos de uso propios + adaptador Docker |
 | Aplicaciones | `applications.go`, `handlers.go` | Agrupaciones Compose y coordinación de contenedores |
 | Host y servicios | `host.go`, `services.go`, `handlers.go` | Lectura Linux y acciones systemd |
 | Almacenamiento/red | `storage.go`, `network.go` | Información host/Docker; errores parciales explícitos |

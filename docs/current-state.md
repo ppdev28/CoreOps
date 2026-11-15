@@ -71,6 +71,7 @@ GET  /api/v1/health                              public
 POST /api/v1/auth/login | logout, GET /auth/me
 GET  /api/v1/host | storage | network | monitoring | updates
 GET  /api/v1/containers, GET /containers/{id}
+POST /api/v1/containers                         admin (create)
 POST /api/v1/containers/{id}/start|stop|restart
 GET  /api/v1/applications, POST /applications/{id}/{action}
 GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
@@ -175,3 +176,12 @@ Originally based on `main` (including the Android shell), now integrated with th
 The API adds admin-only `/files`, `/files/upload` and `/files/download-ticket`, plus a one-use capability download route. Root access is descriptor confined, uploads never overwrite existing paths, failed uploads are removed and sensitive file operations are audited. Configuration and systemd permission requirements are in `backend/README.md`.
 
 Original feature validation: frontend production build and formatting; Go build, vet, full tests and race detector; real HTTP upload/download integration against a disposable directory. Merge validation on this Ubuntu host: Go race tests/vet/build and frontend format/build pass; Playwright checks include Files at eight viewport sizes and directory/terminal-tab persistence across navigation using isolated API fixtures. Native Android/iOS builds and physical-device file transfers remain unverified. No production service deployment.
+
+
+## Container creation and identity coherence (`develop`, 2026-11-15)
+
+The existing Containers **Create container** button now opens a responsive dialog with name, local image, environment, command arguments, TCP/UDP port bindings, restart policy and optional start. Creation is admin-only in UI and `POST /api/v1/containers`; existing route roles remain unchanged. Defaults: stopped container, no automatic restart, bridge network, loopback-only port bindings. Local image suggestions come from the real container inventory. No registry pull or arbitrary Docker options are implemented. See [API/operation contract](../backend/README.md#container-creation).
+
+The form prevents duplicate submits, preserves input on errors, refreshes inventory and offers inspection. Partial start failure retains the created ID and prevents creating it again. Missing images/name conflicts and uncertain request outcomes have actionable errors. Before adding this capability, SEC-01 was corrected with file locking, fresh reads, safe revocation ordering and logout error reporting; storage formats stay compatible. Updated CLI/server binaries must be deployed together.
+
+Validation: Go race tests/vet/build; web format/build and 26 Playwright fixture tests, including permissions, validation, pending/error/partial success and a 320px form. Real Chromium → isolated API → Docker created and inspected a disposable local-image container; Docker also confirmed optional start on a second disposable container. Both were removed. Desktop/mobile screenshots were inspected. No production service installation or native build.

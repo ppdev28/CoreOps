@@ -278,6 +278,44 @@ export async function getContainers(): Promise<Container[]> {
   return containers.map(toContainer);
 }
 
+export interface CreateContainerInput {
+  name: string;
+  image: string;
+  environment: string[];
+  command: string[];
+  ports: {
+    hostIp: string;
+    hostPort: number;
+    containerPort: number;
+    protocol: "tcp" | "udp";
+  }[];
+  restartPolicy: "no" | "always" | "unless-stopped" | "on-failure";
+  start: boolean;
+}
+
+export interface CreateContainerResult {
+  id: string;
+  name: string;
+  started: boolean;
+  warnings: string[];
+  startError?: string;
+}
+
+export async function createContainer(
+  input: CreateContainerInput,
+): Promise<CreateContainerResult> {
+  const result = await request<CreateContainerResult>("/containers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!result.id || result.name !== input.name)
+    throw new Error(
+      "Creation could not be confirmed. Refresh the container list before retrying.",
+    );
+  return result;
+}
+
 export async function getContainerDetail(
   id: string,
 ): Promise<ContainerDetailData> {

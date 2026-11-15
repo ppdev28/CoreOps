@@ -16,6 +16,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { T } from "../lib/tokens";
+import { getSession } from "../lib/auth";
+import CreateContainerDialog from "../components/CreateContainerDialog";
 import {
   getContainers,
   runContainerAction,
@@ -300,6 +302,8 @@ export default function ContainersView({
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
+  const [creating, setCreating] = useState(false);
+  const canCreate = getSession()?.user.role === "admin";
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -471,6 +475,27 @@ export default function ContainersView({
 
   return (
     <div className="containers-view" style={{ padding: "22px 24px" }}>
+      {creating && canCreate && (
+        <CreateContainerDialog
+          images={Array.from(
+            new Set(containers.map((container) => container.image)),
+          )}
+          onClose={() => setCreating(false)}
+          onCreated={async (created) => {
+            setSearch("");
+            setFilter("all");
+            await refreshAfterAction();
+            addToast(
+              `${created.name} created${created.started ? "; start requested" : ""}`,
+              created.startError ? "info" : "success",
+            );
+          }}
+          onInspect={(id) => {
+            setCreating(false);
+            onDetail(id);
+          }}
+        />
+      )}
       {ctx && (
         <CtxMenu
           x={ctx.x}
@@ -595,15 +620,15 @@ export default function ContainersView({
             Stop {selected.size}
           </Btn>
         )}
-        <Btn
-          icon={<Plus size={11} />}
-          variant="primary"
-          onClick={() =>
-            addToast('Create container — use "container-create" route', "info")
-          }
-        >
-          Create container
-        </Btn>
+        {canCreate && (
+          <Btn
+            icon={<Plus size={11} />}
+            variant="primary"
+            onClick={() => setCreating(true)}
+          >
+            Create container
+          </Btn>
+        )}
       </div>
 
       {loading ? (

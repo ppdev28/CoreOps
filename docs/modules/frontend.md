@@ -29,3 +29,7 @@ El Dashboard conserva primitives shadcn y Tremor Raw con licencias; el resto reu
 Ver [guía visual](../ui-style.md). `pnpm test:ui` ejecuta 20 pruebas Playwright con fixtures aislados, incluidos todos los destinos y detalle en ocho formatos, persistencia y contraste. Los recursos nativos sin seguimiento siguen intactos; el chrome nativo tiene paleta estática y no refleja aún todos los ajustes web.
 
 La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tiene pestañas con conexiones independientes, resize real, teclado móvil y conserva sesiones al navegar. No reconstruir readline ni limpiar ANSI en React. El ACK de salida se envía en el callback de `term.write`, para respetar el control de flujo del servidor. La suite tiene ahora 20 pruebas, incluidas cinco específicas de terminal.
+
+## Creación de contenedores (2026-11-15)
+
+`ContainersView.tsx` abre `components/CreateContainerDialog.tsx` para admin, reutilizando temas/tokens. El dialog nativo gestiona foco/Escape y bloquea cierre/submit duplicado durante la petición. El formulario conserva datos tras error, representa creación con fallo de arranque como resultado parcial, refresca inventario y permite abrir inspect. `lib/api.ts` mantiene DTOs CoreOps explícitos; no exponer opciones Docker arbitrarias. La suite tiene 26 pruebas: creación/configuración, pending, permisos, errores, arranque parcial y diseño a 320px, además de las pruebas existentes. Contrato: [backend README](../../backend/README.md#container-creation).
