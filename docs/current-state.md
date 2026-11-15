@@ -89,7 +89,7 @@ GET  /api/v1/audit                                admin
 - Users in `users.json` with PBKDF2-SHA256 hashes; roles `viewer` < `operator` < `admin` enforced per route in `routes.go`.
 - Login rate limit: 5 failures per client+user lock them for 15 minutes.
 - Mutating requests and login attempts, including rejected ones, are sent to `audit.log`; GET/HEAD/OPTIONS are excluded. Writes can fail after the operation and are not tamper-proof.
-- Identity files are cached per process: CLI changes are not reloaded by a running server. Manage users with the service stopped until coherent persistence/revocation is implemented (SEC-01).
+- Updated CLI/server binaries coordinate through `.identity.lock` and reload users/sessions per operation; external password/removal changes revoke sessions. SEC-01 correction retains existing JSON formats. Stop older binaries before upgrading; use the same local data directory/service account. See [identity guide](modules/identity-audit.md).
 - No TLS termination: use Tailscale Serve or a reverse proxy.
 
 ## Real integration environment

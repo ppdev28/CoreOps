@@ -4,11 +4,11 @@
 
 `auth.go` implementa usuarios, roles, contraseñas PBKDF2-SHA256 (600 000 iteraciones), sesiones opacas aleatorias con hash SHA-256 en servidor y TTL de 12 h por defecto. `routes.go` impone viewer/operator/admin. `users_cli.go` gestiona usuarios fuera del HTTP. `audit.go` registra mutaciones, intentos de login y rechazos; GET no se registra.
 
-Persistencia JSON en `COREOPS_DATA_DIR`, con permisos de creación 0700/0600 y escrituras mediante temporal + rename. Esto no proporciona coherencia entre procesos ni transacciones entre archivos. El servidor mantiene usuarios/sesiones en memoria. La CLI ejecutada mientras el servidor está activo no actualiza esa memoria; los cambios pueden sobrescribirse y las revocaciones pueden no aplicarse hasta reiniciar. El logout ignora errores al persistir. No presentar esas garantías como resueltas.
+Persistencia JSON en `COREOPS_DATA_DIR`, con permisos 0700/0600, temporal único, fsync y rename. Desde 2026-11-15, `auth_persistence.go` usa flock sobre `.identity.lock` y recarga ambos archivos en cada operación de CLI/servidor. Login verifica de nuevo el hash/rol después del cálculo PBKDF2. Password/borrado persisten primero la revocación; si la escritura posterior falla, pueden quedar sesiones revocadas aunque el cambio de usuario no se haya completado. No hay transacción general entre archivos. Logout devuelve 503 si no puede persistir. Los fallos de lectura rechazan autenticación en vez de usar memoria antigua. No se cambia el formato de datos ni se añade una base de datos.
 
 ## Instrucciones
 
-- Prioridad inicial: definir un único mecanismo coherente de escritura/lectura y revocación entre CLI/servidor; valorar SQLite según necesidad transaccional real. Un mutex de proceso no resuelve accesos desde la CLI.
+- Mantener el bloqueo de archivo y recarga en cada operación; un mutex de proceso no basta. No borrar/reemplazar `.identity.lock` durante la ejecución. Todos los procesos deben usar la versión actual y un filesystem local con flock/rename/fsync; no ejecutar simultáneamente binarios anteriores.
 - Preservar formatos o diseñar migración y recuperación; nunca perder usuarios o aceptar sesiones revocadas por fallo de disco.
 - Probar creación/cambio/borrado con servidor activo, reinicio, escrituras fallidas y concurrencia. Revalidar identidad al completar un login concurrente con revocación.
 - Mantener mínimos roles explícitos por ruta y denegación por defecto; ocultar botones en UI no autoriza operaciones.
@@ -18,4 +18,4 @@ Persistencia JSON en `COREOPS_DATA_DIR`, con permisos de creación 0700/0600 y e
 
 ## Validación
 
-Mantener `auth_test.go` y ampliar los escenarios anteriores antes de mover persistencia. CLI y servicio deben usar el mismo directorio y usuario de servicio. Hasta corregir coherencia, detener el servidor para gestionar usuarios y reiniciarlo después; véase [desarrollo](../development.md).
+Mantener `auth_test.go` y ampliar los escenarios anteriores antes de mover persistencia. CLI y servicio deben usar el mismo directorio y usuario de servicio. Detener binarios anteriores al actualizar; véase [desarrollo](../development.md). `auth_persistence_test.go` cubre CLI en proceso separado, password/borrado con servidor activo, login concurrente con cambio de password, sesiones simultáneas, almacenamiento fallido y JSON corrupto. La PTY comprueba revocación externa en `terminal_session_test.go`.

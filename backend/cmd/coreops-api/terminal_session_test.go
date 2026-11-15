@@ -33,6 +33,12 @@ func newTerminalHarness(t *testing.T) *terminalHarness {
 		auth.users[string(role)] = User{Name: string(role), Role: role}
 		auth.sessions[tokenKey(string(role))] = session{User: string(role), Expires: time.Now().Add(time.Hour)}
 	}
+	if err := auth.save(usersFileName, auth.users); err != nil {
+		t.Fatal(err)
+	}
+	if err := auth.save(sessionsFileName, auth.sessions); err != nil {
+		t.Fatal(err)
+	}
 	api := &API{}
 	audit := NewAuditLog(auth.dir)
 	server := httptest.NewServer(withCORS(withLogging(withAudit(audit, api.routes(auth, audit)))))
@@ -152,6 +158,9 @@ func TestTerminalAuthorizationAndOrigin(t *testing.T) {
 	}
 	h.auth.mu.Lock()
 	h.auth.sessions[tokenKey("expired")] = session{User: "admin", Expires: time.Now().Add(-time.Second)}
+	if err := h.auth.save(sessionsFileName, h.auth.sessions); err != nil {
+		t.Fatal(err)
+	}
 	h.auth.mu.Unlock()
 	c := h.connect(t, "expired")
 	readTerminalUntil(t, c, "Administrator session required")
@@ -179,6 +188,20 @@ func TestTerminalRevocationAndLimits(t *testing.T) {
 		t.Fatal("secret in audit")
 	}
 }
+
+func TestTerminalExternalRevocation(t *testing.T) {
+	h := newTerminalHarness(t)
+	c := h.connect(t, "admin")
+	readTerminalUntil(t, c, `"type":"ready"`)
+	cli, err := NewAuthStore(h.auth.dir, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.RemoveUser("admin"); err != nil {
+		t.Fatal(err)
+	}
+	expectTerminalClosed(t, c)
+}
 func TestTerminalFlowControlAndShutdown(t *testing.T) {
 	h := newTerminalHarness(t)
 	c := h.connect(t, "admin")
@@ -200,10 +223,16 @@ func TestTerminalActiveExpiryAndOversizedInput(t *testing.T) {
 	readTerminalUntil(t, c, `"type":"ready"`)
 	h.auth.mu.Lock()
 	h.auth.sessions[tokenKey("admin")] = session{User: "admin", Expires: time.Now().Add(-time.Second)}
+	if err := h.auth.save(sessionsFileName, h.auth.sessions); err != nil {
+		t.Fatal(err)
+	}
 	h.auth.mu.Unlock()
 	expectTerminalClosed(t, c)
 	h.auth.mu.Lock()
 	h.auth.sessions[tokenKey("admin")] = session{User: "admin", Expires: time.Now().Add(time.Hour)}
+	if err := h.auth.save(sessionsFileName, h.auth.sessions); err != nil {
+		t.Fatal(err)
+	}
 	h.auth.mu.Unlock()
 	c = h.connect(t, "admin")
 	readTerminalUntil(t, c, `"type":"ready"`)

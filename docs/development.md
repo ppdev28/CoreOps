@@ -50,7 +50,7 @@ go run ./cmd/coreops-api
 
 Run `go test ./...` and `go vet ./...` before committing backend changes. Run `go mod tidy` only when dependency changes require it.
 
-**Identity caveat (SEC-01):** CLI and server keep separate in-memory stores. Stop the API before adding/removing users or changing passwords, use the same data directory and service identity, then restart it. Do not rely on live CLI revocation until this is fixed. A local development run and the installed systemd service can otherwise use different stores.
+**Identity persistence (2026-11-15):** updated CLI/server binaries lock `.identity.lock`, reload JSON state for every operation and persist revocations before changing users. Use the same data directory and service account. Stop older binaries before upgrading; do not run mixed versions or unlink the lock file. The format of existing users/sessions is unchanged. Use a local filesystem supporting flock, atomic rename and fsync. A password/removal write failure may still revoke sessions; retry the CLI change after resolving storage errors.
 
 ## Basic backend checks
 
@@ -135,7 +135,7 @@ Use focused commits. Do not squash/rebase/force-push existing work unless explic
 
 `.github/workflows/ci-cd.yml` validates (tests, build, frontend format check) and deploys `main`.
 
-`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR` and keeping the service stopped during CLI changes.
+`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR` and the updated CLI/server binaries. Stop older binaries before upgrading.
 
 The checked-in workflow and unit disagree on the installed binary path; see [operations](modules/operations.md). Do not assume the workflow deploys the new binary or web assets.
 

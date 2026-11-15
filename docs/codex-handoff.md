@@ -40,11 +40,11 @@ React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8
 
 Container list/inspect/start/stop/restart already exist; the prior milestone records manual validation on Ubuntu Docker. Host, applications, services, VMs, storage, network, monitoring, logs, terminal, security and updates have implementations with uneven real integration validation. Aggregate logs and metrics already use Docker. Never repeat production mutations merely to re-prove historical milestones.
 
-Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. CLI changes are not reloaded by the running auth store; stop the API before CLI user changes and use the same service user/data directory. See SEC-01. Terminal now has an admin-only persistent PTY/WebSocket with session revalidation and bounded flow control, alongside the legacy isolated exec/complete endpoints. It uses the service account’s host privileges; see [terminal guide](modules/terminal.md). Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
+Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and file audit exist. They need hardening, not initial implementation. Updated CLI/server binaries reload locked identity files per operation; use the same service user/data directory and stop older binaries before upgrading. See SEC-01 and the 2026-11-15 follow-up below. Terminal now has an admin-only persistent PTY/WebSocket with session revalidation and bounded flow control, alongside the legacy isolated exec/complete endpoints. It uses the service account’s host privileges; see [terminal guide](modules/terminal.md). Token storage is localStorage; Android allows cleartext/backup. See the complete security register before extending privileged flows.
 
 ## Recommended next slice
 
-Fix coherent identity persistence and revocation (SEC-01) with behavior tests for CLI/server, restart and storage failures. Choose persistence deliberately; SQLite is a candidate, not a completed decision. Then capture auth/health/containers API contracts and extract the containers backend slice: consumer-owned interface, Docker adapter, HTTP mapping and composition. Preserve current URLs, JSON behavior and minimum roles. Follow with the frontend containers feature, honest unavailable values and action-flow tests. Remaining P0 risks must precede broader exposure.
+SEC-01 is corrected for updated binaries through file locking, reload and revocation ordering; see the identity follow-up below. Next capture auth/health/containers API contracts, including creation, and extract the containers backend slice: consumer-owned interface, Docker adapter, HTTP mapping and composition. Preserve current URLs, JSON behavior and minimum roles. Follow with the frontend containers feature, honest unavailable values and action-flow tests. Remaining P0 risks must precede broader exposure.
 
 Do not do a repository-wide move. Do not introduce microservices or multiple Go modules. Do not generate clients until a contract/tooling decision has been reviewed. New guide per extracted capability should live beside its code and be indexed from the module map.
 
@@ -81,3 +81,8 @@ To try the integrated version on the server, check out `develop`, run the existi
 Merge validation (2026-11-15): Go race tests/vet/build and web format/build; browser fixtures cover Files at eight screen sizes, updated sidebar order and persistent file directory alongside terminal tabs. Native build/device validation remains pending.
 
 Files has its own Suspense boundary inside the screen: loading its lazy chunk must not suspend the mounted terminal and restart its WebSocket sessions. The navigation regression test opens Files after two terminals, enters a folder and verifies both terminal connections and the file path survive repeated screen changes.
+
+
+## Identity persistence — 2026-11-15
+
+SEC-01 prerequisite: `auth_persistence.go` adds permanent flock + fresh JSON reads to every CLI/server auth operation. Login revalidates hash/role after PBKDF2; user changes revoke first; logout reports storage errors. Existing JSON/hash formats are unchanged. Run only updated binaries with the same service account/local data directory; stop older binaries before upgrade, never unlink `.identity.lock` while running. See [identity guide](modules/identity-audit.md). Historical handoff sections above describe the earlier state.

@@ -60,7 +60,11 @@ func runUserCLI(args []string) int {
 		}
 		fmt.Printf("user %s removed\n", args[1])
 	case len(args) == 1 && args[0] == "list":
-		for _, u := range store.ListUsers() {
+		users, err := store.ListUsers()
+		if err != nil {
+			return fail(err)
+		}
+		for _, u := range users {
 			fmt.Printf("%s\t%s\n", u.Name, u.Role)
 		}
 	default:
@@ -85,7 +89,12 @@ func readPassword(in io.Reader) (string, error) {
 // bootstrapAdmin creates the first admin from COREOPS_ADMIN_USER and
 // COREOPS_ADMIN_PASSWORD when no users exist yet.
 func bootstrapAdmin(store *AuthStore, logger *slog.Logger) {
-	if store.HasUsers() {
+	hasUsers, err := store.HasUsers()
+	if err != nil {
+		logger.Error("read identity store", "error", err)
+		return
+	}
+	if hasUsers {
 		return
 	}
 	name, password := os.Getenv("COREOPS_ADMIN_USER"), os.Getenv("COREOPS_ADMIN_PASSWORD")

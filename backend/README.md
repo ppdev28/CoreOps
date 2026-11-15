@@ -29,7 +29,7 @@ Set `COREOPS_PORT` to change the HTTP port, `COREOPS_HOST` to change the bind ad
 
 Every endpoint except `GET /api/v1/health` and `POST /api/v1/auth/login` requires a session token sent as `Authorization: Bearer <token>`. The interactive terminal WebSocket authenticates its first JSON frame instead, before starting any process; it never accepts a token in its URL.
 
-Create the first user before starting the server. For later CLI changes, stop the API first, use its service user and the same `COREOPS_DATA_DIR`, then restart: the running server does not reload CLI changes (SEC-01).
+Create the first user before starting the server. CLI and server must use the same service account and `COREOPS_DATA_DIR`. Updated binaries coordinate through `.identity.lock` and reload users/sessions on every operation, so password changes and removals revoke sessions without restarting. Stop all older API/CLI binaries before upgrading; mixed versions do not share this locking protocol. Existing JSON files and token hashes keep their format.
 
 ```bash
 printf '%s' "a-long-password" | go run ./cmd/coreops-api user add alice admin

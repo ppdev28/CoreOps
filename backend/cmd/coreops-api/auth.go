@@ -89,7 +89,8 @@ type loginFailures struct {
 }
 
 // AuthStore keeps users and sessions in small JSON files under the data
-// directory. Session tokens are stored only as SHA-256 hashes.
+// directory. Every operation reloads state under a cross-process file lock.
+// Session tokens are stored only as SHA-256 hashes.
 type AuthStore struct {
 	mu       sync.Mutex
 	dir      string
@@ -112,12 +113,11 @@ func NewAuthStore(dir string, ttl time.Duration) (*AuthStore, error) {
 		sessions: map[string]session{},
 		failures: map[string]*loginFailures{},
 	}
-	if err := s.load(usersFileName, &s.users); err != nil {
-		return nil, fmt.Errorf("load users: %w", err)
+	unlock, err := s.lockState()
+	if err != nil {
+		return nil, err
 	}
-	if err := s.load(sessionsFileName, &s.sessions); err != nil {
-		return nil, fmt.Errorf("load sessions: %w", err)
-	}
+	unlock()
 	return s, nil
 }
 
@@ -132,35 +132,59 @@ func (s *AuthStore) load(name string, dst any) error {
 	return json.Unmarshal(data, dst)
 }
 
-// save writes atomically with owner-only permissions. Callers hold s.mu.
+// save replaces one file durably; callers hold both the process and file locks.
 func (s *AuthStore) save(name string, value any) error {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(s.dir, name)
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	file, err := os.CreateTemp(s.dir, ".identity-*")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	defer os.Remove(file.Name())
+	defer file.Close()
+	if _, err = file.Write(data); err != nil {
+		return err
+	}
+	if err = file.Sync(); err != nil {
+		return err
+	}
+	if err = file.Close(); err != nil {
+		return err
+	}
+	if err = os.Rename(file.Name(), filepath.Join(s.dir, name)); err != nil {
+		return err
+	}
+	dir, err := os.Open(s.dir)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	return dir.Sync()
 }
 
-func (s *AuthStore) HasUsers() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.users) > 0
+func (s *AuthStore) HasUsers() (bool, error) {
+	unlock, err := s.lockState()
+	if err != nil {
+		return false, err
+	}
+	defer unlock()
+	return len(s.users) > 0, nil
 }
 
-func (s *AuthStore) ListUsers() []PublicUser {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *AuthStore) ListUsers() ([]PublicUser, error) {
+	unlock, err := s.lockState()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	users := make([]PublicUser, 0, len(s.users))
 	for _, u := range s.users {
 		users = append(users, u.public())
 	}
 	sort.Slice(users, func(i, j int) bool { return users[i].Name < users[j].Name })
-	return users
+	return users, nil
 }
 
 func validatePassword(password string) error {
@@ -184,8 +208,11 @@ func (s *AuthStore) AddUser(name string, role Role, password string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, err := s.lockState()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if _, exists := s.users[name]; exists {
 		return fmt.Errorf("user %q already exists", name)
 	}
@@ -201,8 +228,11 @@ func (s *AuthStore) SetPassword(name, password string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, err := s.lockState()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	user, ok := s.users[name]
 	if !ok {
 		return fmt.Errorf("user %q not found", name)
@@ -210,24 +240,31 @@ func (s *AuthStore) SetPassword(name, password string) error {
 	user.PasswordHash = hash
 	s.users[name] = user
 	s.dropSessionsLocked(name)
-	if err := s.save(usersFileName, s.users); err != nil {
+	// Revoke first: if the user-file write fails, extra sessions are revoked,
+	// but no changed password/deleted account can retain an old session.
+	if err := s.save(sessionsFileName, s.sessions); err != nil {
 		return err
 	}
-	return s.save(sessionsFileName, s.sessions)
+	return s.save(usersFileName, s.users)
 }
 
 func (s *AuthStore) RemoveUser(name string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, err := s.lockState()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if _, ok := s.users[name]; !ok {
 		return fmt.Errorf("user %q not found", name)
 	}
 	delete(s.users, name)
 	s.dropSessionsLocked(name)
-	if err := s.save(usersFileName, s.users); err != nil {
+	// Revoke first: if the user-file write fails, extra sessions are revoked,
+	// but no changed password/deleted account can retain an old session.
+	if err := s.save(sessionsFileName, s.sessions); err != nil {
 		return err
 	}
-	return s.save(sessionsFileName, s.sessions)
+	return s.save(usersFileName, s.users)
 }
 
 func (s *AuthStore) dropSessionsLocked(user string) {
@@ -245,13 +282,16 @@ var dummyHash, _ = hashPassword("coreops-dummy-password")
 // Login verifies credentials and returns a new session token.
 func (s *AuthStore) Login(name, password, remote string) (string, time.Time, User, error) {
 	key := remote + "|" + strings.ToLower(name)
-	s.mu.Lock()
+	unlock, err := s.lockState()
+	if err != nil {
+		return "", time.Time{}, User{}, err
+	}
 	if f := s.failures[key]; f != nil && s.now().Before(f.until) {
-		s.mu.Unlock()
+		unlock()
 		return "", time.Time{}, User{}, errTooManyAttempts
 	}
 	user, ok := s.users[name]
-	s.mu.Unlock()
+	unlock()
 
 	hash := dummyHash
 	if ok {
@@ -259,8 +299,15 @@ func (s *AuthStore) Login(name, password, remote string) (string, time.Time, Use
 	}
 	valid := verifyPassword(password, hash)
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, err = s.lockState()
+	if err != nil {
+		return "", time.Time{}, User{}, err
+	}
+	defer unlock()
+	current, exists := s.users[name]
+	if !exists || current.PasswordHash != user.PasswordHash || current.Role != user.Role {
+		valid = false
+	}
 	if !ok || !valid {
 		f := s.failures[key]
 		if f == nil {
@@ -313,8 +360,11 @@ func (s *AuthStore) Authenticate(token string) (User, bool) {
 
 // Revalidate a live connection without retaining the bearer token.
 func (s *AuthStore) authenticateKey(key string) (User, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, err := s.lockState()
+	if err != nil {
+		return User{}, false
+	}
+	defer unlock()
 	sess, ok := s.sessions[key]
 	if !ok || !s.now().Before(sess.Expires) {
 		return User{}, false
@@ -323,11 +373,14 @@ func (s *AuthStore) authenticateKey(key string) (User, bool) {
 	return user, ok
 }
 
-func (s *AuthStore) Logout(token string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *AuthStore) Logout(token string) error {
+	unlock, err := s.lockState()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	delete(s.sessions, tokenKey(token))
-	_ = s.save(sessionsFileName, s.sessions)
+	return s.save(sessionsFileName, s.sessions)
 }
 
 func tokenKey(token string) string {
@@ -475,7 +528,10 @@ func (s *AuthStore) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *AuthStore) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	s.Logout(bearerToken(r))
+	if err := s.Logout(bearerToken(r)); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, ErrorResponse{Error: "could not persist logout; retry"})
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
