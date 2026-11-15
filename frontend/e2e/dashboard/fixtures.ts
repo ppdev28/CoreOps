@@ -112,7 +112,43 @@ export async function mockDashboard(
     let body: unknown;
     if (path === "/terminal/session") body = { available: true, protocol: 1 };
     else if (path === "/host") body = host;
-    else if (path === "/containers")
+    else if (path === "/files") {
+      const directory =
+        new URL(route.request().url()).searchParams.get("path") || "/";
+      const entry = {
+        size: 42,
+        modified: "2026-11-15T12:00:00Z",
+        mode: "-rw-------",
+      };
+      body = {
+        path: directory,
+        root: "/test-fixture",
+        entries: [
+          ...(directory === "/"
+            ? [
+                {
+                  ...entry,
+                  name: "documents",
+                  path: "/documents",
+                  kind: "directory",
+                  size: 0,
+                  mode: "drwx------",
+                },
+              ]
+            : []),
+          {
+            ...entry,
+            name: "example.txt",
+            path: `${directory === "/" ? "" : directory}/example.txt`,
+            kind: "file",
+          },
+        ],
+        total: directory === "/" ? 2 : 1,
+        offset: 0,
+        limit: 100,
+        maxUploadBytes: 1024 * 1024,
+      };
+    } else if (path === "/containers")
       body =
         control.mode === "empty"
           ? []

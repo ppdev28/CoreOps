@@ -84,7 +84,8 @@ class MainActivity : BridgeActivity() {
         NavigationSection(
             "Tools",
             listOf(
-                NativeDestination("terminal", "Terminal", R.drawable.ic_terminal)
+                NativeDestination("terminal", "Terminal", R.drawable.ic_terminal),
+                NativeDestination("files", "Files", R.drawable.ic_files)
             )
         ),
         NavigationSection(
@@ -98,6 +99,7 @@ class MainActivity : BridgeActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        registerPlugin(CoreOpsFilesPlugin::class.java)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setupNativeShell()
@@ -177,6 +179,13 @@ class MainActivity : BridgeActivity() {
                 when {
                     drawerLayout.isDrawerOpen(GravityCompat.START) ->
                         drawerLayout.closeDrawer(GravityCompat.START)
+
+                    activeView == "files" ->
+                        webView.evaluateJavascript(
+                            """(function(){const files=document.querySelector('[data-file-explorer-active="true"]');if(files?.dataset.canGoBack==='true'){window.dispatchEvent(new Event('coreops-files-back'));return true;}return false;})()"""
+                        ) { handled ->
+                            if (handled != "true") destinations["dashboard"]?.let { selectDestination(it) }
+                        }
 
                     webView.canGoBack() ->
                         webView.goBack()

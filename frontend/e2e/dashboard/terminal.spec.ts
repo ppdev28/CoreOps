@@ -35,6 +35,19 @@ test("terminal streams keys, keeps independent tabs and survives navigation", as
   await page.getByRole("tab", { name: "Shell 1", exact: true }).click();
   await page
     .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Files", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Open folder: documents", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Download: example.txt", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Directory path relative to server root"),
+  ).toHaveValue("/documents");
+  await page
+    .locator(".sidebar-desktop")
     .getByRole("button", { name: "Dashboard", exact: true })
     .click();
   await page
@@ -42,6 +55,20 @@ test("terminal streams keys, keeps independent tabs and survives navigation", as
     .getByRole("button", { name: "Terminal", exact: true })
     .click();
   await expect(page.getByRole("tab")).toHaveCount(2);
+  await expect(
+    page.getByRole("region", { name: "Server file explorer" }),
+  ).toBeHidden();
+  await page
+    .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Files", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Directory path relative to server root"),
+  ).toHaveValue("/documents");
+  await page
+    .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Terminal", exact: true })
+    .click();
   expect(
     control.terminalMessages.filter((m) => m.type === "auth"),
   ).toHaveLength(2);

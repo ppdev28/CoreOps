@@ -26,6 +26,7 @@ const HostView = lazyView(() => import("./views/HostView"));
 const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
 const ServicesView = lazyView(() => import("./views/ServicesView"));
 const StorageView = lazyView(() => import("./views/StorageView"));
+const FileExplorerView = lazyView(() => import("./views/FileExplorerView"));
 const NetworkView = lazyView(() => import("./views/NetworkView"));
 const VirtualMachinesView = lazyView(
   () => import("./views/VirtualMachinesView"),
@@ -43,6 +44,7 @@ function AppShell({ user }: { user: AuthUser }) {
   // Keep the existing React shell for the browser/PWA so the web app is unchanged.
   const isNative = Capacitor.isNativePlatform();
   const [view, setView] = useState<View>("dashboard"),
+    [filesVisited, setFilesVisited] = useState(false),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [showCmd, setShowCmd] = useState(false),
@@ -93,6 +95,7 @@ function AppShell({ user }: { user: AuthUser }) {
     [],
   );
   const navigate = useCallback((v: View) => {
+    if (v === "files") setFilesVisited(true);
     setView(v);
     setMobileOpen(false);
   }, []);
@@ -282,6 +285,20 @@ function AppShell({ user }: { user: AuthUser }) {
                 )}{" "}
                 {view === "services" && <ServicesView {...shell} />}{" "}
                 {view === "storage" && <StorageView {...shell} />}{" "}
+                {filesVisited && (
+                  <Suspense
+                    fallback={
+                      <div
+                        data-screen-loading
+                        style={{ padding: 24, fontSize: 12, color: T.textDim }}
+                      >
+                        Loading…
+                      </div>
+                    }
+                  >
+                    <FileExplorerView active={view === "files"} />
+                  </Suspense>
+                )}{" "}
                 {view === "network" && <NetworkView />}{" "}
                 {view === "virtual-machines" && (
                   <VirtualMachinesView addToast={addToast} />

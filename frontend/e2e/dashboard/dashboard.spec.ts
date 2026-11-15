@@ -256,6 +256,7 @@ test("tablet sidebar collapses without changing navigation order", async ({
     "Monitoring",
     "Logs",
     "Terminal",
+    "Files",
     "Security",
     "Updates",
     "Settings",

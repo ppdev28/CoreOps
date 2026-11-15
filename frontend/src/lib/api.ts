@@ -72,7 +72,7 @@ const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
 // Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
 // proxy, so native builds (and anyone pointing the UI at another server) use the
 // server address saved on the login screen. VITE_API_BASE_URL overrides both.
-function getApiBase(): string {
+export function getApiBase(): string {
   if (configuredApiBase) return configuredApiBase;
   const server = getServerUrl();
   return server ? `${server}/api/v1` : "/api/v1";
