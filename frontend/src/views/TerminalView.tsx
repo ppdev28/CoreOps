@@ -4,6 +4,11 @@ import {
   ArrowUp,
   Copy,
   Eraser,
+  Keyboard,
+  KeyboardOff,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
   Plus,
   Search,
   TerminalSquare,
@@ -15,6 +20,11 @@ import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { checkTerminalAvailability, openTerminalSession } from "../lib/api";
 import { getSession } from "../lib/auth";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
 
@@ -25,7 +35,14 @@ type Handle = {
   copy: () => void;
   search: () => void;
   zoom: (delta: number) => void;
+  keyboard: () => void;
 };
+function touchInput() {
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
 function terminalTheme(): ITheme {
   const css = getComputedStyle(document.documentElement);
   const color = (name: string) =>
@@ -60,16 +77,18 @@ function TerminalPane({
   visible,
   handles,
   onTitle,
+  onInputFocus,
 }: {
   pane: Pane;
   active: boolean;
   visible: boolean;
   handles: React.RefObject<Map<number, Handle>>;
   onTitle: (id: number, title: string) => void;
+  onInputFocus: (id: number, focused: boolean) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
-  const fit = useRef<FitAddon | null>(null);
+  const fit = useRef<(() => void) | null>(null);
   const search = useRef<SearchAddon | null>(null);
   const live = useRef(false);
   const [state, setState] = useState("connecting");
@@ -77,6 +96,7 @@ function TerminalPane({
   const [findOpen, setFindOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
+  const [dimensions, setDimensions] = useState("");
   useEffect(() => {
     if (!container.current) return;
     let disposed = false;
@@ -85,7 +105,12 @@ function TerminalPane({
     const term = new Terminal({
       cursorBlink: true,
       fontFamily: '"JetBrains Mono", monospace',
-      fontSize: 14,
+      fontSize:
+        container.current.clientWidth < 480
+          ? 12
+          : container.current.clientWidth < 900
+            ? 13
+            : 14,
       lineHeight: 1.2,
       scrollback: 5000,
       theme: terminalTheme(),
@@ -108,9 +133,48 @@ function TerminalPane({
     // Remote escape sequences must not read or overwrite the browser clipboard.
     const clipboard = term.parser.registerOscHandler(52, () => true);
     terminal.current = term;
-    fit.current = fitAddon;
+    let fitFrame = 0;
+    const fitNow = () => {
+      if (
+        disposed ||
+        !container.current?.offsetParent ||
+        container.current.clientHeight <= 0 ||
+        container.current.clientWidth <= 0
+      )
+        return;
+      const size = fitAddon.proposeDimensions();
+      if (!size || !Number.isFinite(size.cols) || !Number.isFinite(size.rows))
+        return;
+      const cols = Math.max(2, Math.min(500, size.cols));
+      const rows = Math.max(1, Math.min(250, size.rows));
+      if (term.cols !== cols || term.rows !== rows) term.resize(cols, rows);
+      setDimensions(`${cols} × ${rows}`);
+    };
+    const scheduleFit = () => {
+      if (fitFrame) return;
+      fitFrame = requestAnimationFrame(() => {
+        fitFrame = 0;
+        fitNow();
+      });
+    };
+    fit.current = scheduleFit;
     search.current = searchAddon;
-    fitAddon.fit();
+    fitNow();
+    void document.fonts.ready.then(() => {
+      if (!disposed) scheduleFit();
+    });
+    const focusInput = () => onInputFocus(pane.id, true);
+    const blurInput = () => onInputFocus(pane.id, false);
+    const textarea = term.textarea;
+    if (textarea) {
+      textarea.setAttribute("autocapitalize", "off");
+      textarea.setAttribute("autocorrect", "off");
+      textarea.setAttribute("inputmode", "text");
+      textarea.setAttribute("enterkeyhint", "enter");
+      textarea.spellcheck = false;
+      textarea.addEventListener("focus", focusInput);
+      textarea.addEventListener("blur", blurInput);
+    }
     const socket = openTerminalSession(term.cols, term.rows);
     const control = (data: object) => {
       if (socket.readyState === WebSocket.OPEN)
@@ -147,9 +211,10 @@ function TerminalPane({
       );
     };
     handles.current.set(pane.id, {
-      input: (data) => {
-        input(data);
-        term.focus();
+      input,
+      keyboard: () => {
+        if (document.activeElement === term.textarea) term.blur();
+        else term.focus();
       },
       clear: () => term.clear(),
       copy,
@@ -159,7 +224,7 @@ function TerminalPane({
           10,
           Math.min(24, (term.options.fontSize ?? 14) + delta),
         );
-        fitAddon.fit();
+        scheduleFit();
       },
     });
     term.attachCustomKeyEventHandler((event) => {
@@ -225,7 +290,7 @@ function TerminalPane({
           setState("connected");
           setDetail(`${message.user}@${message.host} · ${message.shell}`);
           control({ type: "resize", cols: term.cols, rows: term.rows });
-          if (container.current?.offsetParent) term.focus();
+          if (container.current?.offsetParent && !touchInput()) term.focus();
         } else if (message.type === "exit") {
           ended = true;
           live.current = false;
@@ -261,14 +326,7 @@ function TerminalPane({
         );
       }
     };
-    const observer = new ResizeObserver(() => {
-      if (
-        container.current &&
-        container.current.clientWidth > 0 &&
-        container.current.clientHeight > 0
-      )
-        fitAddon.fit();
-    });
+    const observer = new ResizeObserver(scheduleFit);
     observer.observe(container.current);
     const applyTheme = () => {
       term.options.theme = terminalTheme();
@@ -279,6 +337,10 @@ function TerminalPane({
       live.current = false;
       clearTimeout(timeout);
       observer.disconnect();
+      cancelAnimationFrame(fitFrame);
+      fit.current = null;
+      textarea?.removeEventListener("focus", focusInput);
+      textarea?.removeEventListener("blur", blurInput);
       window.removeEventListener("coreops-theme-applied", applyTheme);
       handles.current.delete(pane.id);
       socket.close();
@@ -289,12 +351,12 @@ function TerminalPane({
       clipboard.dispose();
       term.dispose();
     };
-  }, [pane.id, handles, onTitle]);
+  }, [pane.id, handles, onTitle, onInputFocus]);
   useEffect(() => {
     if (active && visible) {
       const frame = requestAnimationFrame(() => {
-        fit.current?.fit();
-        terminal.current?.focus();
+        fit.current?.();
+        if (!touchInput()) terminal.current?.focus();
       });
       return () => cancelAnimationFrame(frame);
     }
@@ -320,6 +382,9 @@ function TerminalPane({
             aria-label="Find in terminal"
             placeholder="Find in terminal…"
             value={query}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
             onChange={(e) => {
               setQuery(e.target.value);
               search.current?.findNext(e.target.value);
@@ -356,12 +421,18 @@ function TerminalPane({
       )}
       <div
         className="pty-emulator"
-        ref={container}
         data-terminal-input
         data-state={state}
         aria-label="Server terminal"
-      />
-      <div className="pty-status" role="status">
+      >
+        <div className="pty-surface" ref={container} />
+      </div>
+      <div
+        className="pty-status"
+        role="status"
+        data-state={state}
+        data-notice={!!notice}
+      >
         <span data-state={state}>
           {state === "connected"
             ? "Connected"
@@ -373,7 +444,12 @@ function TerminalPane({
                   ? "Error"
                   : "Disconnected"}
         </span>
-        <span>{notice || detail}</span>
+        <span className="pty-status-detail" title={notice || detail}>
+          {notice || detail}
+        </span>
+        <span className="pty-dimensions" aria-label="Terminal size">
+          {dimensions}
+        </span>
       </div>
     </div>
   );
@@ -392,6 +468,43 @@ export default function TerminalView({
   const [availability, setAvailability] = useState("checking");
   const [connectionError, setConnectionError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [inputFocused, setInputFocused] = useState<number | null>(null);
+  const tabs = useRef<HTMLDivElement>(null);
+  const onInputFocus = useRef((id: number, focused: boolean) => {
+    setInputFocused((current) =>
+      focused ? id : current === id ? null : current,
+    );
+  }).current;
+  useEffect(() => {
+    if (!visible) {
+      setFocusMode(false);
+      setToolsOpen(false);
+      return;
+    }
+    tabs.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.closest(".pty-tab")
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active, panes, visible]);
+  useEffect(() => {
+    if (!visible || !focusMode) return;
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !(event.target as HTMLElement).closest(
+          "[data-terminal-input], .pty-find",
+        )
+      ) {
+        event.preventDefault();
+        setFocusMode(false);
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [visible, focusMode]);
   const onTitle = useRef((id: number, title: string) =>
     setPanes((all) =>
       all.map((pane) => (pane.id === id ? { ...pane, title } : pane)),
@@ -401,7 +514,12 @@ export default function TerminalView({
     if (getSession()?.user.role !== "admin") return;
     const controller = new AbortController();
     setAvailability("checking");
-    void checkTerminalAvailability(controller.signal).then(
+    void Promise.all([
+      checkTerminalAvailability(controller.signal),
+      // Measure xterm only after the local monospace face is ready. Otherwise
+      // the first PTY dimensions can use fallback font metrics.
+      document.fonts.load('14px "JetBrains Mono"').catch(() => []),
+    ]).then(
       () => {
         if (!controller.signal.aborted) setAvailability("ready");
       },
@@ -419,25 +537,43 @@ export default function TerminalView({
     return () => controller.abort();
   }, [attempt]);
   useEffect(() => {
+    if (!visible) return;
     const viewport = window.visualViewport;
-    if (!visible || !viewport) return;
-    const resize = () => {
-      if (root.current && viewport.scale === 1) {
-        const top = Math.max(
-          0,
-          root.current.getBoundingClientRect().top - viewport.offsetTop,
-        );
-        root.current.style.maxHeight = `${Math.max(96, viewport.height - top)}px`;
-      }
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      if (!root.current || (viewport && viewport.scale !== 1)) return;
+      const top = viewport?.offsetTop ?? 0;
+      const bottom = top + (viewport?.height ?? window.innerHeight);
+      const parentTop =
+        root.current.parentElement?.getBoundingClientRect().top ?? 0;
+      const offset = focusMode ? 0 : Math.max(0, top - parentTop);
+      const start = focusMode ? top : parentTop + offset;
+      root.current.style.setProperty("--pty-content-offset", `${offset}px`);
+      root.current.style.setProperty(
+        "--pty-viewport-height",
+        `${Math.max(96, bottom - start)}px`,
+      );
+      root.current.style.setProperty("--pty-viewport-top", `${top}px`);
     };
-    resize();
-    viewport.addEventListener("resize", resize);
-    viewport.addEventListener("scroll", resize);
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    measure();
+    const observer = new ResizeObserver(schedule);
+    if (root.current) observer.observe(root.current);
+    window.addEventListener("resize", schedule);
+    viewport?.addEventListener("resize", schedule);
+    viewport?.addEventListener("scroll", schedule);
     return () => {
-      viewport.removeEventListener("resize", resize);
-      viewport.removeEventListener("scroll", resize);
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("scroll", schedule);
     };
-  }, [visible]);
+  }, [visible, focusMode]);
   useEffect(() => {
     if (
       !panes.length ||
@@ -479,10 +615,65 @@ export default function TerminalView({
     else if (action === "zoom") handle?.zoom(Number(value));
     else handle?.[action]();
   };
+  const tools = (withLabels = false) => {
+    const actions = [
+      {
+        label: "Copy selection",
+        icon: <Copy size={16} />,
+        action: () => run("copy"),
+      },
+      {
+        label: "Find in terminal",
+        icon: <Search size={16} />,
+        action: () => run("search"),
+      },
+      {
+        label: "Clear scrollback",
+        icon: <Eraser size={16} />,
+        action: () => run("clear"),
+      },
+      {
+        label: "Decrease terminal font",
+        icon: <span>A−</span>,
+        action: () => run("zoom", "-1"),
+      },
+      {
+        label: "Increase terminal font",
+        icon: <span>A+</span>,
+        action: () => run("zoom", "1"),
+      },
+      {
+        label: focusMode ? "Exit terminal focus mode" : "Focus terminal",
+        icon: focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />,
+        action: () => setFocusMode((value) => !value),
+      },
+    ];
+    return actions.map(({ label, icon, action }) => (
+      <button
+        key={label}
+        type="button"
+        aria-label={label}
+        title={label}
+        disabled={
+          !panes.length &&
+          label !== "Focus terminal" &&
+          label !== "Exit terminal focus mode"
+        }
+        onPointerDown={(event) => event.preventDefault()}
+        onClick={() => {
+          setToolsOpen(false);
+          action();
+        }}
+      >
+        {icon}
+        {withLabels && <span>{label}</span>}
+      </button>
+    ));
+  };
   return (
     <div
       ref={root}
-      className="pty-terminal"
+      className={`pty-terminal ${focusMode ? "pty-focus-mode" : ""}`}
       style={{ display: visible ? undefined : "none" }}
       onKeyDownCapture={(event) => {
         if (
@@ -522,7 +713,12 @@ export default function TerminalView({
       }}
     >
       <div className="pty-toolbar">
-        <div className="pty-tabs" role="tablist" aria-label="Terminal sessions">
+        <div
+          className="pty-tabs"
+          ref={tabs}
+          role="tablist"
+          aria-label="Terminal sessions"
+        >
           {panes.map((pane) => (
             <div
               className="pty-tab"
@@ -534,6 +730,7 @@ export default function TerminalView({
                 type="button"
                 role="tab"
                 aria-selected={active === pane.id}
+                tabIndex={active === pane.id ? 0 : -1}
                 aria-controls={`terminal-panel-${pane.id}`}
                 onClick={() => setActive(pane.id)}
               >
@@ -553,6 +750,7 @@ export default function TerminalView({
         </div>
         <button
           type="button"
+          className="pty-new-terminal"
           aria-label="New terminal"
           title="New terminal (maximum four)"
           disabled={panes.length >= 4 || availability !== "ready"}
@@ -560,51 +758,31 @@ export default function TerminalView({
         >
           <Plus size={17} />
         </button>
-        <div className="pty-tools">
-          <button
-            type="button"
-            title="Copy selection"
-            aria-label="Copy selection"
-            disabled={!panes.length}
-            onClick={() => run("copy")}
+        <div className="pty-tools">{tools()}</div>
+        <Popover open={toolsOpen && visible} onOpenChange={setToolsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="pty-more"
+              aria-label="Terminal actions"
+              title="Terminal actions"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="pty-action-menu"
+            align="end"
+            collisionPadding={8}
+            aria-label="Terminal actions"
+            onCloseAutoFocus={(event) => {
+              if (document.activeElement?.closest(".pty-find"))
+                event.preventDefault();
+            }}
           >
-            <Copy size={15} />
-          </button>
-          <button
-            type="button"
-            title="Find in terminal"
-            aria-label="Find in terminal"
-            disabled={!panes.length}
-            onClick={() => run("search")}
-          >
-            <Search size={15} />
-          </button>
-          <button
-            type="button"
-            title="Clear scrollback"
-            aria-label="Clear scrollback"
-            disabled={!panes.length}
-            onClick={() => run("clear")}
-          >
-            <Eraser size={15} />
-          </button>
-          <button
-            type="button"
-            aria-label="Decrease terminal font"
-            disabled={!panes.length}
-            onClick={() => run("zoom", "-1")}
-          >
-            A−
-          </button>
-          <button
-            type="button"
-            aria-label="Increase terminal font"
-            disabled={!panes.length}
-            onClick={() => run("zoom", "1")}
-          >
-            A+
-          </button>
-        </div>
+            {tools(true)}
+          </PopoverContent>
+        </Popover>
       </div>
       {pendingClose !== null && (
         <div className="pty-close-prompt" role="alert">
@@ -652,6 +830,7 @@ export default function TerminalView({
             visible={visible}
             handles={handles}
             onTitle={onTitle}
+            onInputFocus={onInputFocus}
           />
         ))}
       {availability === "ready" && !panes.length && (
@@ -665,29 +844,73 @@ export default function TerminalView({
         </div>
       )}
       {availability === "ready" && !!panes.length && (
-        <div className="pty-keys" aria-label="Terminal keyboard shortcuts">
-          {[
-            ["Esc", "\x1b"],
-            ["Tab", "\t"],
-            ["Ctrl C", "\x03"],
-            ["Ctrl D", "\x04"],
-            ["Ctrl Z", "\x1a"],
-            ["Ctrl L", "\x0c"],
-            ["↑", "\x1b[A"],
-            ["↓", "\x1b[B"],
-            ["←", "\x1b[D"],
-            ["→", "\x1b[C"],
-            ["Enter", "\r"],
-          ].map(([label, value]) => (
-            <button
-              type="button"
-              key={label}
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={() => run("input", value)}
-            >
-              {label}
-            </button>
-          ))}
+        <div
+          className="pty-keys"
+          role="group"
+          aria-label="Terminal keyboard shortcuts"
+        >
+          <button
+            type="button"
+            className="pty-keyboard-toggle"
+            aria-label={
+              inputFocused === active
+                ? "Dismiss terminal keyboard"
+                : "Show terminal keyboard"
+            }
+            title={
+              inputFocused === active ? "Dismiss keyboard" : "Show keyboard"
+            }
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => run("keyboard")}
+          >
+            {inputFocused === active ? (
+              <KeyboardOff size={18} />
+            ) : (
+              <Keyboard size={18} />
+            )}
+          </button>
+          <div className="pty-key-scroll">
+            {[
+              ["Esc", "\x1b"],
+              ["Tab", "\t"],
+              ["Ctrl C", "\x03"],
+              ["↑", "\x1b[A"],
+              ["↓", "\x1b[B"],
+              ["←", "\x1b[D"],
+              ["→", "\x1b[C"],
+              ["Ctrl D", "\x04"],
+              ["Ctrl Z", "\x1a"],
+              ["Ctrl L", "\x0c"],
+            ].map(([label, value]) => (
+              <button
+                type="button"
+                key={label}
+                aria-label={
+                  (
+                    {
+                      "↑": "Arrow up",
+                      "↓": "Arrow down",
+                      "←": "Arrow left",
+                      "→": "Arrow right",
+                    } as Record<string, string>
+                  )[label] || label
+                }
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => run("input", value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="pty-enter-key"
+            aria-label="Enter"
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => run("input", "\r")}
+          >
+            ↵
+          </button>
         </div>
       )}
     </div>

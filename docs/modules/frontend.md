@@ -41,3 +41,7 @@ Delete deja de emitir un éxito simulado: llama a la API con admin, exige confir
 ## Explorador de logs (2026-11-15)
 
 Vista inspirada en Dozzle, con panel de contenedores, pestañas/comparación, filtros, JSON, exportación y modo foco. Mantener el estilo aislado, roles operator/admin y snapshots de datos reales. Contrato, límites y validación en [Logs](logs.md). La suite tiene 42 pruebas; la carga diferida de Logs no debe interrumpir PTY.
+
+## Terminal responsive (2026-11-15)
+
+Terminal tiene herramientas compactas para móvil, controles táctiles, teclado explícito, modo foco y ajuste de PTY por viewport real sin reconexión. `App.tsx` sólo elimina el gutter reservado del main cuando Terminal está visible. Los estilos y popover usan tokens CoreOps y el componente accesible existente. Ver [comportamiento y pruebas](terminal.md#ajuste-responsive--2026-11-15); suite de interfaz: 57 pruebas. No usar autofocus táctil ni capturar Escape del input de la shell para salir del modo foco.
