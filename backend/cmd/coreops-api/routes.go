@@ -9,6 +9,7 @@ import "net/http"
 //	operator container/service/VM actions and sensitive reads (logs, env vars)
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
+	a.auditLogPath = audit.path
 	mux := http.NewServeMux()
 	a.terminals = newTerminalServer(auth, audit)
 	handle := func(pattern string, min Role, h http.HandlerFunc) {
@@ -46,6 +47,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/network", RoleViewer, a.network)
 	handle("GET /api/v1/monitoring", RoleViewer, a.monitoring)
 	handle("GET /api/v1/logs", RoleOperator, a.logs)
+	handle("GET /api/v1/logs/sources", RoleOperator, a.logSources)
 	handle("POST /api/v1/terminal/exec", RoleAdmin, a.terminalExec)
 	handle("POST /api/v1/terminal/complete", RoleAdmin, a.terminalComplete)
 	// WebSockets authenticate in their first frame, never in the URL.

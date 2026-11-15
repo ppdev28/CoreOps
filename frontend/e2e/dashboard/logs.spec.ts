@@ -22,6 +22,8 @@ async function mockLogs(page: Page, role = "admin") {
     warnings: [] as string[],
   };
   const reply = async (route: import("@playwright/test").Route) => {
+    if (new URL(route.request().url()).pathname.endsWith("/logs/sources"))
+      return route.fulfill({ json: { files: [], warnings: [] } });
     state.requests.push(route.request().url());
     if (state.status !== 200)
       return route.fulfill({
@@ -47,7 +49,7 @@ async function mockLogs(page: Page, role = "admin") {
       },
     });
   };
-  await page.route("**/api/v1/logs*", reply);
+  await page.route("**/api/v1/logs**", reply);
   await page.route("**/api/v1/containers/*/logs?*", reply);
   return { control, state };
 }
@@ -258,7 +260,7 @@ test("mobile source picker, focus and comparison fit 320px", async ({
     .getByRole("button", { name: "Select log source", exact: true })
     .click();
   await page
-    .getByRole("textbox", { name: "Find containers", exact: true })
+    .getByRole("textbox", { name: "Find log sources", exact: true })
     .fill("nginx");
   await page
     .getByRole("button", { name: "Open logs for nginx", exact: true })

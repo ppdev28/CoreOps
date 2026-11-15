@@ -7,6 +7,7 @@ import {
 import type {
   Container,
   LogsOverview,
+  HostLogCatalog,
   ContainerStatus,
   ContainerDetailData,
   HealthStatus,
@@ -389,20 +390,54 @@ export async function getNetwork(): Promise<NetworkOverview> {
 export async function getMonitoring(): Promise<MonitoringOverview> {
   return request("/monitoring");
 }
+export async function getHostLogSources(
+  signal?: AbortSignal,
+): Promise<HostLogCatalog> {
+  const result = await request<HostLogCatalog>("/logs/sources", { signal });
+  if (!Array.isArray(result.files) || !Array.isArray(result.warnings))
+    throw new Error("Update and restart the API to discover host log files.");
+  return result;
+}
 export async function getLogs(
   options: {
     containerId?: string;
     system?: boolean;
+    events?: boolean;
+    filePath?: string;
+    category?: string;
+    cursor?: string;
+    since?: string;
+    until?: string;
+    unit?: string;
     tail?: number;
     signal?: AbortSignal;
   } = {},
 ): Promise<LogsOverview> {
-  const path = options.containerId
-    ? `/containers/${encodeURIComponent(options.containerId)}/logs?tail=${options.tail ?? 500}`
-    : options.system
-      ? "/logs?source=system"
-      : "/logs";
-  return request(path, { signal: options.signal });
+  const params = new URLSearchParams();
+  let path = "/logs";
+  if (options.containerId) {
+    path = `/containers/${encodeURIComponent(options.containerId)}/logs`;
+    params.set("tail", String(options.tail ?? 500));
+  } else if (options.system || options.events || options.filePath) {
+    params.set(
+      "source",
+      options.system ? "system" : options.events ? "events" : "file",
+    );
+    if (options.filePath) params.set("file", options.filePath);
+    if (options.tail) params.set("limit", String(options.tail));
+    for (const key of [
+      "category",
+      "cursor",
+      "since",
+      "until",
+      "unit",
+    ] as const) {
+      if (options[key]) params.set(key, options[key]);
+    }
+  }
+  return request(`${path}${params.size ? `?${params}` : ""}`, {
+    signal: options.signal,
+  });
 }
 export async function getSecurity(): Promise<SecurityOverview> {
   return request("/security");

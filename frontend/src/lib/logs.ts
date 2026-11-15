@@ -2,8 +2,10 @@ import type { LogEntry } from "./types";
 export type LogSource = {
   id: string;
   name: string;
-  kind: "all" | "system" | "container";
+  kind: "all" | "system" | "container" | "file" | "events";
   containerId?: string;
+  filePath?: string;
+  category?: "all" | "kernel" | "services" | "security";
 };
 export const ALL_LOGS: LogSource = { id: "all", name: "All logs", kind: "all" };
 export const SYSTEM_LOGS: LogSource = {
@@ -11,6 +13,23 @@ export const SYSTEM_LOGS: LogSource = {
   name: "System journal",
   kind: "system",
 };
+export const HOST_LOG_SOURCES: LogSource[] = [
+  SYSTEM_LOGS,
+  { id: "kernel", name: "Kernel events", kind: "system", category: "kernel" },
+  {
+    id: "services",
+    name: "Service events",
+    kind: "system",
+    category: "services",
+  },
+  {
+    id: "security",
+    name: "Authentication & audit",
+    kind: "system",
+    category: "security",
+  },
+  { id: "events", name: "Docker events", kind: "events" },
+];
 export const LOG_LEVELS = ["ERROR", "WARN", "INFO", "NOTICE", "DEBUG"] as const;
 // Log data is untrusted text. Strip terminal controls in one pass rather than
 // interpreting escape sequences or using HTML (including OSC links/clipboard).

@@ -23,10 +23,15 @@ import {
   WrapText,
   X,
 } from "lucide-react";
-import { getContainers } from "../lib/api";
+import { getContainers, getHostLogSources } from "../lib/api";
 import { getSession } from "../lib/auth";
-import { ALL_LOGS, LOG_LEVELS, SYSTEM_LOGS, type LogSource } from "../lib/logs";
-import type { Container } from "../lib/types";
+import {
+  ALL_LOGS,
+  LOG_LEVELS,
+  HOST_LOG_SOURCES,
+  type LogSource,
+} from "../lib/logs";
+import type { Container, HostLogCatalog } from "../lib/types";
 import { loadWebSettings } from "../lib/webSettings";
 import LogPane, { type LogCache, type LogFilters } from "../components/LogPane";
 import "../styles/logs.css";
@@ -41,6 +46,9 @@ const defaultFilters: LogFilters = {
   lineNumbers: false,
   fontSize: 12,
   tail: 500,
+  since: "",
+  until: "",
+  unit: "",
 };
 
 export default function LogsView({
@@ -50,6 +58,14 @@ export default function LogsView({
 }) {
   const canRead = ["admin", "operator"].includes(getSession()?.user.role || "");
   const [containers, setContainers] = useState<Container[] | null>(null);
+  const [hostCatalog, setHostCatalog] = useState<HostLogCatalog | null>(null);
+  const [hostError, setHostError] = useState("");
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [rangeDraft, setRangeDraft] = useState({
+    since: "",
+    until: "",
+    unit: "",
+  });
   const [catalogError, setCatalogError] = useState("");
   const [tabs, setTabs] = useState<LogSource[]>(() =>
     initialContainerId
@@ -83,6 +99,12 @@ export default function LogsView({
   const [notice, setNotice] = useState("");
   const cache = useRef<LogCache>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeId, tabs]);
   useEffect(() => {
     const find = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
@@ -123,6 +145,26 @@ export default function LogsView({
       window.clearTimeout(timer);
     };
   }, [following, canRead, refresh]);
+  useEffect(() => {
+    if (!canRead) return;
+    const controller = new AbortController();
+    getHostLogSources(controller.signal)
+      .then((catalog) => {
+        if (!controller.signal.aborted) {
+          setHostCatalog(catalog);
+          setHostError("");
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setHostError(
+            cause instanceof Error
+              ? cause.message
+              : "Host log discovery unavailable",
+          );
+      });
+    return () => controller.abort();
+  }, [canRead, refresh]);
   useEffect(() => {
     if (!focus) return;
     const escape = (event: KeyboardEvent) => {
@@ -193,7 +235,9 @@ export default function LogsView({
       remaining.push(ALL_LOGS);
     }
     setTabs(remaining);
-    cache.current.delete(id);
+    for (const key of cache.current.keys()) {
+      if (key.startsWith(`${id}:`)) cache.current.delete(key);
+    }
     if (activeId === id) setActiveId(remaining[0].id);
     if (remaining.length < 2) setSplit(false);
   };
@@ -312,10 +356,10 @@ export default function LogsView({
           <div className="logs-source-search">
             <Search size={14} />
             <input
-              aria-label="Find containers"
+              aria-label="Find log sources"
               value={findSource}
               onChange={(event) => setFindSource(event.target.value)}
-              placeholder="Find containers…"
+              placeholder="Find log sources…"
             />
             <button
               aria-label="Show running containers only"
@@ -332,7 +376,55 @@ export default function LogsView({
               <Server size={12} />
             </div>
             {sourceButton(ALL_LOGS, <FileText size={15} />)}
-            {sourceButton(SYSTEM_LOGS, <Server size={15} />)}
+            {HOST_LOG_SOURCES.map((source) =>
+              sourceButton(source, <Server size={15} />),
+            )}
+            <details className="logs-file-catalog">
+              <summary>
+                HOST LOG FILES · {hostCatalog?.files.length ?? "—"}
+              </summary>
+              {hostError && (
+                <p className="logs-catalog-error" role="alert">
+                  {hostError}
+                </p>
+              )}
+              {hostCatalog?.warnings.map((warning, index) => (
+                <p className="logs-catalog-error" key={index}>
+                  {warning}
+                </p>
+              ))}
+              {hostCatalog?.files
+                .filter((file) =>
+                  file.name.toLowerCase().includes(findSource.toLowerCase()),
+                )
+                .map((file) => (
+                  <button
+                    key={file.path}
+                    className="logs-source-button"
+                    title={`${file.name}${file.readable ? "" : " · permission required"}`}
+                    aria-label={`Open host log ${file.path}`}
+                    onClick={() =>
+                      openSource({
+                        id: `file:${file.path}`,
+                        name: file.name,
+                        kind: "file",
+                        filePath: file.path,
+                      })
+                    }
+                  >
+                    <FileText size={15} />
+                    <span>{file.path}</span>
+                    <small>
+                      {!file.readable ? "Locked" : file.archive ? "GZ" : ""}
+                    </small>
+                  </button>
+                ))}
+              {hostCatalog?.files.length === 0 && (
+                <p className="logs-source-placeholder">
+                  No supported text log files discovered.
+                </p>
+              )}
+            </details>
             <div className="logs-source-section">
               <span>CONTAINERS</span>
               <span>{containers ? visibleContainers.length : "—"}</span>
@@ -412,6 +504,7 @@ export default function LogsView({
         <div className="logs-reader">
           <div
             className="logs-tabs"
+            ref={tabsRef}
             role="tablist"
             aria-label="Open log sources"
           >
@@ -595,7 +688,7 @@ export default function LogsView({
                 </select>
               </label>
               <label>
-                Container tail
+                Page size
                 <select
                   aria-label="Container log tail"
                   value={filters.tail}
@@ -624,6 +717,113 @@ export default function LogsView({
               </button>
             </div>
           )}
+          <div className="logs-history-controls">
+            <button
+              aria-expanded={rangeOpen}
+              onClick={() => setRangeOpen(!rangeOpen)}
+            >
+              <Filter size={13} /> Host history filters
+            </button>
+            <span>
+              {filters.since || filters.until || filters.unit
+                ? "Journal / event range active"
+                : "Journal history · host files · Docker events"}
+            </span>
+            <span>
+              {active.kind === "all"
+                ? "Recent journal + containers. Select a source to browse history."
+                : "Search and level filters apply to the displayed page."}
+            </span>
+          </div>
+          {rangeOpen && (
+            <form
+              className="logs-history-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const since = rangeDraft.since
+                  ? new Date(rangeDraft.since).toISOString()
+                  : "";
+                const until = rangeDraft.until
+                  ? new Date(rangeDraft.until).toISOString()
+                  : "";
+                if (since && until && since >= until) {
+                  setNotice("Start must precede end.");
+                  return;
+                }
+                setFilters((current) => ({
+                  ...current,
+                  since,
+                  until,
+                  unit: rangeDraft.unit.trim(),
+                }));
+                setRangeOpen(false);
+              }}
+            >
+              <label>
+                From (local time)
+                <input
+                  aria-label="Host logs from"
+                  type="datetime-local"
+                  value={rangeDraft.since}
+                  onChange={(event) =>
+                    setRangeDraft((value) => ({
+                      ...value,
+                      since: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Until (local time)
+                <input
+                  aria-label="Host logs until"
+                  type="datetime-local"
+                  value={rangeDraft.until}
+                  onChange={(event) =>
+                    setRangeDraft((value) => ({
+                      ...value,
+                      until: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Systemd unit
+                <input
+                  aria-label="Journal unit"
+                  placeholder="e.g. ssh.service"
+                  maxLength={256}
+                  value={rangeDraft.unit}
+                  onChange={(event) =>
+                    setRangeDraft((value) => ({
+                      ...value,
+                      unit: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <button type="submit">Apply history filters</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRangeDraft({ since: "", until: "", unit: "" });
+                  setFilters((value) => ({
+                    ...value,
+                    since: "",
+                    until: "",
+                    unit: "",
+                  }));
+                }}
+              >
+                Clear
+              </button>
+              <p>
+                Time bounds apply to journal and Docker events; unit applies to
+                journal. Files retain their original ordering. Previous entries
+                depend on host retention and read permissions.
+              </p>
+            </form>
+          )}
           {notice && (
             <div className="logs-notice" role="status">
               {notice}
@@ -637,7 +837,7 @@ export default function LogsView({
           )}
           <div className={`logs-panes ${split && compare ? "is-split" : ""}`}>
             <LogPane
-              key={active.id}
+              key={`${active.id}:${filters.since}:${filters.until}:${filters.unit}`}
               source={active}
               following={following}
               filters={filters}
@@ -647,7 +847,7 @@ export default function LogsView({
             />
             {split && compare && (
               <LogPane
-                key={`compare:${compare.id}`}
+                key={`compare:${compare.id}:${filters.since}:${filters.until}:${filters.unit}`}
                 source={compare}
                 following={following}
                 filters={filters}

@@ -77,7 +77,8 @@ POST /api/v1/containers/{id}/start|stop|restart
 GET  /api/v1/applications, POST /applications/{id}/{action}
 GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
 GET  /api/v1/services, POST /services/{name}/start|stop|restart
-GET  /api/v1/logs[?source=system], GET /containers/{id}/logs?tail=500  operator
+GET  /api/v1/logs[?source=system|file|events], GET /logs/sources       operator
+GET  /api/v1/containers/{id}/logs?tail=500                           operator
 GET  /api/v1/security
 POST /api/v1/terminal/exec | complete             admin (legacy)
 GET  /api/v1/terminal/session                     WebSocket, admin first frame
@@ -205,3 +206,9 @@ Logs now uses a full-height source sidebar, tabs, two-source comparison, dense t
 New operator-only targeted container snapshots and system-only journal reads avoid collecting every container when opening one. Reads preserve Docker timestamps, whitespace and stdout/stderr/TTY framing; journal uses actual timestamps/priorities. Unknown timestamps remain unavailable, partial/unavailable sources show warnings and byte/line/time limits bound reads. Automatic refresh uses 2 s polling with pause/cancellation; this is a bounded buffer, not a persistent history store or SSE stream. [Contract and module guide](modules/logs.md).
 
 Validation: Go race/vet/build; web format/build and all 42 browser fixtures, including eight viewport sizes. Additional scoped logs/terminal/responsive checks after visual refinements. Real Chromium → isolated API → Docker logs matched Docker CLI data, including stream/timestamp; polling/pause, menu/inspect and dark/light/mobile were checked. Infrastructure was read only; no production/native deployment.
+
+## Host log history and events (`develop`, 2026-11-15)
+
+Logs now includes all retained/readable journal boots, kernel/service/authentication/audit categories, optional unit/time range, discovered host text logs and rotations (including gzip), and retained Docker events. Journal and files are paginated beyond the former 300-record snapshot; pages stay frozen during history navigation. The aggregate remains a recent journal/container snapshot. Coverage, inaccessible sources, retention and archive/decompression limits are explicit; no new host privileges or durable event storage. CoreOps audit stays admin-only. See [Logs](modules/logs.md).
+
+Validation: full Go race tests/vet/build, 45 browser fixture tests and scoped regressions passed; real operator HTTP and Chromium checked journal cursors, five host files, gzip and Docker events on this Ubuntu host, including 320px layout. Host sources remain read only. No native build or production deployment.

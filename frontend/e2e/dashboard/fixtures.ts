@@ -256,6 +256,7 @@ export async function mockDashboard(
           containers: [{ name: "nginx", ip: "172.17.0.2" }],
         },
       };
+    else if (path === "/logs/sources") body = { files: [], warnings: [] };
     else if (path === "/logs")
       body = {
         entries:

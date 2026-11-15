@@ -146,13 +146,25 @@ export interface NetworkOverview {
   topology: NetworkTopology;
 }
 export interface LogEntry {
-  stream?: "stdout" | "stderr" | "tty" | "journal";
+  stream?: "stdout" | "stderr" | "tty" | "journal" | "file" | "event";
   timestamp: string;
   level: string;
   source: string;
   message: string;
 }
+export interface HostLogFile {
+  path: string;
+  name: string;
+  readable: boolean;
+  archive: boolean;
+}
+export interface HostLogCatalog {
+  files: HostLogFile[];
+  warnings: string[];
+}
 export interface LogsOverview {
+  nextCursor?: string;
+  historyOrder?: "older" | "newer";
   warnings?: string[];
   truncated?: boolean;
   entries: LogEntry[];

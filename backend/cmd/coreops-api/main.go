@@ -16,9 +16,11 @@ import (
 )
 
 type API struct {
-	docker    *client.Client
-	terminals *terminalServer
-	files     *FileExplorer
+	logRoot      string
+	auditLogPath string
+	docker       *client.Client
+	terminals    *terminalServer
+	files        *FileExplorer
 }
 
 func main() {
@@ -55,7 +57,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer files.close()
-	api := &API{docker: docker, files: files}
+	api := &API{docker: docker, files: files, logRoot: envString("COREOPS_LOG_ROOT", "/var/log")}
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")

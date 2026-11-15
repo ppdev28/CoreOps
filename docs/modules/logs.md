@@ -1,37 +1,55 @@
-# Logs
+# Logs y eventos del host
 
-## Estado y diseño
+## Estado y responsabilidades
 
-La vista de Logs en `develop` (2026-11-15) recrea el espacio de lectura de Dozzle con la identidad visual de CoreOps: lista lateral de contenedores reales, pestañas, comparación de dos fuentes, búsqueda literal con case/exclusión, niveles, filas monoespaciadas alternas, timestamps UTC, JSON expandible, copia, descarga, salto al final y modo foco. Referencia: instalación local de Dozzle v10.6.5 y [Dozzle](https://dozzle.dev/). No se importa código/branding de Dozzle ni se conecta el navegador al Docker socket.
+La vista mantiene el lector inspirado en Dozzle con temas CoreOps, pestañas (máximo ocho), comparación, búsqueda literal/case/exclusión, niveles, JSON expandible, copia/descarga y modo foco. Ahora permite consultar el historial **conservado y accesible** del journal y de archivos de logs; no se limita a las últimas 300 entradas del sistema.
 
-- `frontend/src/views/LogsView.tsx`: catálogo, hasta ocho pestañas, selección/comparación y controles. Desde Containers → Logs o el botón Logs de inspect se abre el contenedor seleccionado.
-- `frontend/src/components/LogPane.tsx`: snapshot, pausa, cancelación, caché en memoria por fuente, filtros y filas. Sólo los dos paneles visibles pueden refrescarse. La carga diferida tiene su propio Suspense para no reiniciar las PTY abiertas.
-- `frontend/src/lib/logs.ts`: tipos de selección, limpieza lineal de escapes de terminal y exportación. Logs/HTML/OSC se muestran como texto; nunca usar `dangerouslySetInnerHTML` o ejecutar enlaces/comandos del contenido.
-- `frontend/src/styles/logs.css`: estilos aislados y temas CoreOps. Selector de fuentes en drawer móvil; comparación vertical en tablet/móvil, horizontal en escritorio; modo foco sale con Escape.
-- `backend/cmd/coreops-api/logs.go`: lecturas Docker/journal, DTOs propios, parser y límites. Sigue dentro del ejecutable actual; no es una extracción a `internal/` ni un servidor nuevo.
+- `frontend/src/views/LogsView.tsx`: fuentes, catálogo de archivos, pestañas y filtros de fecha/unidad.
+- `frontend/src/components/LogPane.tsx`: lecturas cancelables, paginación, seguimiento, filtros de página y exportación. Las páginas anteriores quedan congeladas aunque el seguimiento general esté activo. Las pestañas activas se desplazan a la vista en móvil.
+- `frontend/src/lib/logs.ts`, `lib/api.ts`, `lib/types.ts`: selección de fuente, DTOs propios, transporte y limpieza lineal ANSI/OSC. Nunca interpretar HTML ni comandos del contenido.
+- `backend/cmd/coreops-api/logs.go`: snapshots Docker y agregado compatible. `logs_journal.go`: journal histórico. `logs_files.go`: catálogo y archivos. `logs_events.go`: eventos Docker. Permanecen en el paquete ejecutable actual; no se ha extraído un módulo `internal/`.
 
-## Contrato y permisos
+## Fuentes y contrato
 
-Todas las rutas exigen **operator o admin**. Viewer no inicia lecturas de logs desde la UI; el backend sigue siendo la autoridad.
+Todas las rutas de logs exigen **operator o admin**, con sesión vigente antes de acceder al host. `/api/v1/audit` sigue siendo exclusivo de admin; el archivo de auditoría de CoreOps y sus alias por inode quedan excluidos del lector de archivos.
 
-- `GET /api/v1/logs`: agregado compatible, hasta 500 registros y catálogo de nombres de fuentes. Incluye warnings cuando una fuente no se puede leer.
-- `GET /api/v1/logs?source=system`: sólo journal de la cuenta del servicio, últimos 300 registros. Si no se puede leer, devuelve 502 con error visible. No eleva privilegios.
-- `GET /api/v1/containers/{id}/logs?tail=500`: ID hexadecimal validado, tail 1–1000, inspección real para identificar el contenedor y snapshot de stdout/stderr/TTY. 400 entrada inválida, 401/403 permisos, 404 inexistente, 502 lectura/driver no disponible.
+| Consulta | Comportamiento |
+| --- | --- |
+| `GET /api/v1/logs` | Snapshot reciente de journal + contenedores, hasta 500 entradas. No mezcla archivos/eventos independientes ni ofrece historial agregado. Los fallos de Docker no ocultan un journal legible. |
+| `GET /api/v1/logs?source=system` | Journal de todos los boots retenidos y visibles para el servicio. `category=all\|kernel\|services\|security`; `unit=ssh.service` opcional, sin comodines. |
+| `GET /api/v1/logs/sources` | Catálogo de archivos de texto y rotaciones `.gz` bajo el directorio de logs. Indica legibilidad y directorios inaccesibles; no eleva privilegios. |
+| `GET /api/v1/logs?source=file&file=auth.log` | Archivo confinado a la raíz. Texto normal desde el final hacia atrás; `.gz` desde el principio hacia delante. |
+| `GET /api/v1/logs?source=events` | Eventos reales Docker de todos los tipos (contenedor, imagen, red, volumen, etc.) que conserve el motor. Rango inicial: últimas 24 h. |
+| `GET /api/v1/containers/{id}/logs?tail=500` | Snapshot stdout/stderr/TTY; tail 1–1000. Conserva el contrato anterior. |
 
-Se conserva `{entries,sources,updatedAt}`; se añaden `warnings?`, `truncated?` y `entry.stream?`. `updatedAt` indica la lectura del snapshot. El timestamp del registro procede de Docker/journal; si falta se devuelve vacío y se muestra `—`. Mensajes conservan espacios/indentación. Niveles del journal usan PRIORITY; niveles Docker se extraen de JSON (`level`, `severity`, `log.level`) o se infieren del mensaje. No confundir inferencia con un nivel declarado por la aplicación.
+Journal y archivos aceptan `limit=1..1000` y `cursor` devuelto por la página. Se mantiene `{entries,sources,updatedAt,warnings?,truncated?}` y se añade `nextCursor?`, `historyOrder?` (`older`/`newer`). Cada página reemplaza el buffer; no se acumula todo el historial en memoria. `Older entries` / `Next archive page` recorren las páginas; `Return to latest` / `Archive start` reinician la consulta.
 
-## Actualización y límites
+Journal y eventos aceptan `since`/`until` RFC3339. El formulario usa hora local y envía el instante UTC. Unidad aplica sólo al journal. Búsqueda y niveles filtran la **página mostrada**; copia/descarga exportan sólo sus líneas filtradas. No hay búsqueda global persistente ni exportación completa automática.
 
-Es **polling de snapshots**, sin SSE/WebSocket ni búsqueda persistente de historial. Resume activa lecturas con una espera de 2 s tras cada respuesta. Pause aborta lecturas pendientes y conserva la vista; Refresh solicita una lectura manual. Al ocultar la pestaña del navegador se suspenden las lecturas de paneles. El estado inicial respeta `autoRefresh` de CoreOps; el botón permite reanudar explícitamente. El catálogo se actualiza cada 15 s mientras el seguimiento está activo.
+El journal incluye kernel de boots anteriores mediante `_TRANSPORT=kernel` (sin `-k`, que restringiría al boot actual), unidades `.service` y mensajes de su gestor systemd, autenticación (facilities auth/authpriv, sshd/sudo/fail2ban) y transporte audit. El journal completo conserva también otros tipos de evento. Servicios sin unidad explícita se filtran por metadata de unidad/gestor en scans de hasta 1000 registros; una página puede no tener coincidencias y aun así ofrecer cursor. Evita expandir un comodín sobre el índice histórico completo, que resultó demasiado lento en este host.
 
-Cada contenedor: máximo 2 MiB de lectura, 64 KiB por línea y buffer de 1000 registros; el tail solicitado reduce ese resultado. El parser soporta frames Docker fragmentados y TTY sin inventar timestamps. Se señalan truncamientos. El agregado conserva sólo los 500 más recientes y limita concurrencia Docker a cuatro lecturas; deadline de 12 s. La lectura dirigida usa deadline de 10 s. El driver de logs debe soportar lectura. Journal limita stdout a 2 MiB y falla explícitamente si supera ese tamaño.
+## Acceso, retención y formatos
 
-Descarga/copia exportan sólo las líneas visibles tras filtrar el buffer, no todo el historial del contenedor. Pause, filtros y seguimiento no cambian ni borran logs del host. La caché se limita a las pestañas abiertas y vive en memoria de la vista; logout/desmontaje la descarta. No añadir persistencia de contenido de logs en localStorage.
+El backend utiliza los permisos existentes de su cuenta. No se añade sudo, root, permisos ni grupos automáticamente. Para ampliar cobertura, el administrador del host debe conceder sólo lectura al journal (por ejemplo grupo `systemd-journal`) y a los archivos deseados (ACL/grupo apropiado; `adm` en Ubuntu puede dar acceso amplio), y reiniciar el servicio tras cambiar grupos. Un journal parcial, un archivo bloqueado o un directorio inaccesible se señalan en la UI. No equivalen a ausencia de eventos.
+
+`COREOPS_LOG_ROOT` permite mapear el directorio de logs del host (por defecto `/var/log`; ese es el namespace mostrado). Se admiten nombres de logs estándar y extensiones `.log`, `.err`, `.out`, con rotaciones numéricas/fecha y `.gz`. No se exponen rutas arbitrarias, enlaces simbólicos, dispositivos/FIFO ni formatos binarios (`journal`, wtmp/btmp/lastlog, sysstat). El journal binario se consulta exclusivamente mediante `journalctl`.
+
+No es posible recuperar registros borrados, rotados fuera de retención, nunca registrados o inaccesibles. Docker sólo conserva normalmente sus últimos 256 eventos, incluso si se solicita un rango mayor; se muestra una advertencia. No existe un archivador duradero nuevo de eventos. Journald proporciona los eventos de Linux registrados; no es una captura de cada syscall o acción del kernel.
+
+Timestamps proceden del registro original; los que no se pueden interpretar se muestran como `—`, conservando el mensaje. Las prioridades del journal son reales; niveles de archivos/Docker se infieren cuando no están declarados. El journal muestra fecha además de hora para distinguir días/boots.
+
+## Límites y actualización
+
+Polling de snapshots a los 2 s de cada respuesta; catálogo Docker a 15 s y catálogo de archivos al abrir/actualizar la vista. Se respeta `autoRefresh` inicial y se suspenden lecturas de paneles ocultos. Pause cancela la lectura; los errores conservan el último snapshot marcado como antiguo. Archivos comprimidos, páginas anteriores y rangos con fecha final no hacen polling.
+
+Lecturas de logs: hasta cuatro solicitudes concurrentes, deadline general 12 s; archivos/eventos hasta 10 s dentro de ese plazo. Journal/texto: ventanas de 2 MiB; mensajes de hasta 64 KiB. Páginas journal demasiado grandes fallan explícitamente: reducir tamaño/rango. Archivos normales tienen cursor de offset + identidad de dispositivo/inode; reemplazo o reducción detectados devuelven 409. El lector gzip mantiene memoria acotada, verifica el stream y repite descompresión hasta el offset de la página, con deadline; archivos grandes/profundos pueden superar ese plazo. No se genera un índice persistente.
+
+Descubrimiento: hasta 5000 entradas recorridas, 2000 archivos y profundidad ocho, con advertencia si se alcanza el límite. El acceso HTTP a un nombre válido confinado sigue disponible aunque no se haya enumerado. Cada pestaña guarda sólo un snapshot en memoria; caché máxima 16, eliminada al cerrar su fuente/logout/desmontaje. Logs tiene su propio Suspense para conservar PTY abiertas.
 
 ## Validación
 
-`go test -race ./...`, `go vet ./...`, `go build ./...`; `pnpm format:check`, `pnpm build`, `pnpm test:ui` desde frontend.
+Desde backend: `go test -race ./...`, `go vet ./...`, `go build ./...`. Desde frontend: `pnpm format:check`, `pnpm build`, `pnpm test:ui` (45 pruebas).
 
-`logs_test.go` prueba frames stdout/stderr fragmentados, TTY, timestamps/espacios reales, límites, niveles estructurados, journal simulado, roles/revocación, consulta Docker y errores. `logs.spec.ts` cubre selección/pestañas/comparación, pausa, filtros/JSON, XSS/ANSI/OSC como texto, copia/descarga filtrada, fallos con caché, roles, modo foco y 320px. La prueba de terminal incluye navegación a Logs sin recrear conexiones.
+`logs_host_test.go` cubre cursores y filtros journal, acceso parcial, mensajes binarios JSON, scans de servicios, recorrido completo de 1200/10000 líneas, rotación, confinamiento/symlinks/FIFO, gzip/cancelación, eventos Docker finitos, roles/revocación y protección de auditoría. `host-logs.spec.ts` cubre paginación congelada, filtros de fecha/unidad, archivos/archivos comprimidos, permisos y 320px. Se conservan pruebas de lectura Docker, XSS/ANSI/OSC y persistencia de terminal.
 
-Se comparó un snapshot real con `docker logs --timestamps`, incluyendo mensajes/streams y timestamp; Chromium verificó acceso desde Containers, polling/pausa y temas oscuro/claro/móvil mediante una API aislada de sólo lectura. No se crearon/modificaron contenedores para estas pruebas. La suite completa contiene 42 pruebas y pasó, además de regresiones posteriores acotadas para ajustes visuales. No se compiló Android/iOS.
+Validación real en este Ubuntu mediante una API aislada y usuario operator temporal: páginas recientes/anteriores de journal/kernel/servicios/auth sin duplicados, 165 archivos descubiertos (155 legibles, cuatro avisos de directorios), syslog/auth/kernel/UFW/dpkg, gzip contrastado con el archivo original y 256 eventos Docker. Chromium verificó catálogo, historial journal, archivo UFW y eventos a 320px sin errores de ejecución. Estos recuentos son evidencia de esta prueba, no datos fijos del producto. No se modificó infraestructura ni se compiló Android/iOS.

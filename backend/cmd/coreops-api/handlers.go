@@ -138,19 +138,46 @@ func (a *API) monitoring(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, overview)
 }
+
+var logReadSlots = make(chan struct{}, 4)
+
 func (a *API) logs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()
 	w.Header().Set("Cache-Control", "no-store")
-	if r.URL.Query().Get("source") == "system" {
-		entries, err := collectJournalLogs(ctx)
-		if err != nil {
-			writeJSON(w, http.StatusBadGateway, ErrorResponse{Error: "System journal is unavailable to the API service account"})
-			return
-		}
-		writeJSON(w, http.StatusOK, LogsOverview{Entries: entries, Sources: []string{"System"}, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano)})
+	select {
+	case logReadSlots <- struct{}{}:
+		defer func() { <-logReadSlots }()
+	case <-ctx.Done():
+		writeJSON(w, 503, ErrorResponse{Error: "Log readers are busy; retry shortly"})
 		return
 	}
+	switch r.URL.Query().Get("source") {
+	case "system":
+		query, err := parseJournalQuery(r.URL.Query())
+		if err != nil {
+			writeJSON(w, 400, ErrorResponse{Error: err.Error()})
+			return
+		}
+		page, err := collectJournalPage(ctx, query)
+		if err != nil {
+			writeJSON(w, 502, ErrorResponse{Error: "System journal could not be read. Check permissions, the selected cursor/range, or use a smaller page."})
+			return
+		}
+		writeJSON(w, 200, page)
+		return
+	case "file":
+		a.fileLogs(w, r.WithContext(ctx))
+		return
+	case "events":
+		a.dockerEvents(w, r.WithContext(ctx))
+		return
+	case "":
+	default:
+		writeJSON(w, 400, ErrorResponse{Error: "unknown log source"})
+		return
+	}
+
 	overview, err := collectLogs(ctx, a.docker)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)

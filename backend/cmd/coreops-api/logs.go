@@ -1,15 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -32,25 +29,30 @@ type LogEntry struct {
 	Stream    string `json:"stream,omitempty"`
 }
 type LogsOverview struct {
-	Entries   []LogEntry `json:"entries"`
-	Sources   []string   `json:"sources"`
-	UpdatedAt string     `json:"updatedAt"`
-	Warnings  []string   `json:"warnings,omitempty"`
-	Truncated bool       `json:"truncated,omitempty"`
+	Entries      []LogEntry `json:"entries"`
+	Sources      []string   `json:"sources"`
+	UpdatedAt    string     `json:"updatedAt"`
+	Warnings     []string   `json:"warnings,omitempty"`
+	Truncated    bool       `json:"truncated,omitempty"`
+	NextCursor   string     `json:"nextCursor,omitempty"`
+	HistoryOrder string     `json:"historyOrder,omitempty"`
 }
 
 // collectLogs retains the aggregate route, but bounds reads and concurrent
 // Docker work. Failed sources remain visible as warnings instead of fake gaps.
 func collectLogs(ctx context.Context, docker *client.Client) (LogsOverview, error) {
 	overview := LogsOverview{Entries: []LogEntry{}, Sources: []string{"All", "System"}}
-	if entries, err := collectJournalLogs(ctx); err == nil {
-		overview.Entries = append(overview.Entries, entries...)
+	if page, err := collectJournalPage(ctx, journalQuery{limit: 300}); err == nil {
+		overview.Entries = append(overview.Entries, page.Entries...)
+		overview.Warnings = append(overview.Warnings, page.Warnings...)
 	} else {
 		overview.Warnings = append(overview.Warnings, "System journal is unavailable to the API service account.")
 	}
 	containers, err := docker.ContainerList(ctx, client.ContainerListOptions{All: true})
 	if err != nil {
-		return LogsOverview{}, err
+		overview.Warnings = append(overview.Warnings, "Docker logs are unavailable; showing readable system journal records only.")
+		overview.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		return overview, nil
 	}
 	var mu sync.Mutex
 	var group sync.WaitGroup
@@ -97,65 +99,6 @@ func collectLogs(ctx context.Context, docker *client.Client) (LogsOverview, erro
 	sort.Strings(overview.Sources[2:])
 	overview.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	return overview, nil
-}
-
-func collectJournalLogs(ctx context.Context) ([]LogEntry, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "journalctl", "--no-pager", "-n", "300", "-o", "json", "--output-fields=__REALTIME_TIMESTAMP,PRIORITY,SYSLOG_IDENTIFIER,MESSAGE")
-	output, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	if err = cmd.Start(); err != nil {
-		return nil, err
-	}
-	data, readErr := io.ReadAll(io.LimitReader(output, maxLogBytes+1))
-	if len(data) > maxLogBytes {
-		cancel()
-	}
-	waitErr := cmd.Wait()
-	if readErr != nil {
-		return nil, readErr
-	}
-	if waitErr != nil {
-		return nil, waitErr
-	}
-	entries := []LogEntry{}
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	scanner.Buffer(make([]byte, 4096), maxLogBytes)
-	for scanner.Scan() {
-		var row struct {
-			Timestamp  string `json:"__REALTIME_TIMESTAMP"`
-			Priority   string `json:"PRIORITY"`
-			Identifier string `json:"SYSLOG_IDENTIFIER"`
-			Message    string `json:"MESSAGE"`
-		}
-		if json.Unmarshal(scanner.Bytes(), &row) != nil {
-			continue
-		}
-		timestamp := ""
-		if micros, err := strconv.ParseInt(row.Timestamp, 10, 64); err == nil {
-			timestamp = time.UnixMicro(micros).UTC().Format(time.RFC3339Nano)
-		}
-		level := "INFO"
-		switch row.Priority {
-		case "0", "1", "2", "3":
-			level = "ERROR"
-		case "4":
-			level = "WARN"
-		case "5":
-			level = "NOTICE"
-		case "7":
-			level = "DEBUG"
-		}
-		message := row.Message
-		if row.Identifier != "" {
-			message = row.Identifier + ": " + message
-		}
-		entries = append(entries, LogEntry{Timestamp: timestamp, Level: level, Source: "System", Message: message, Stream: "journal"})
-	}
-	return entries, scanner.Err()
 }
 
 func readDockerLogs(ctx context.Context, docker *client.Client, id, name string, tail int) ([]LogEntry, bool, error) {

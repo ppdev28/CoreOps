@@ -31,6 +31,9 @@ export type LogFilters = {
   lineNumbers: boolean;
   fontSize: number;
   tail: number;
+  since: string;
+  until: string;
+  unit: string;
 };
 export type LogCache = Map<string, LogsOverview>;
 
@@ -61,11 +64,13 @@ function LogRow({
   index,
   filters,
   showSource,
+  showDate,
 }: {
   entry: LogEntry;
   index: number;
   filters: LogFilters;
   showSource: boolean;
+  showDate: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -108,6 +113,9 @@ function LogRow({
           title={entry.timestamp || "Timestamp unavailable"}
           dateTime={entry.timestamp || undefined}
         >
+          {showDate && entry.timestamp ? (
+            <small>{entry.timestamp.slice(0, 10)}</small>
+          ) : null}
           {logTime(entry.timestamp)}
         </time>
       )}
@@ -175,10 +183,16 @@ export default function LogPane({
   refresh: number;
   canRead: boolean;
 }) {
+  const journal = source.kind === "system";
+  const timed = journal || source.kind === "events";
+  const cacheKey = `${source.id}:${timed ? filters.since + ":" + filters.until : ""}:${journal ? filters.unit : ""}`;
+  const [cursor, setCursor] = useState<string | undefined>();
+  const archive = source.filePath?.endsWith(".gz") ?? false;
+  const live = following && !cursor && !archive && !(timed && filters.until);
   const [data, setData] = useState<LogsOverview | null>(
-    () => cache.get(source.id) || null,
+    () => cache.get(cacheKey) || null,
   );
-  const [loading, setLoading] = useState(!cache.has(source.id));
+  const [loading, setLoading] = useState(!cache.has(cacheKey));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
@@ -197,8 +211,8 @@ export default function LogPane({
       setRefreshing(false);
       return;
     }
-    const requestKey = `${source.id}:${filters.tail}:${refresh}:${manualRefresh}`;
-    if (!following && completedRequest.current === requestKey) {
+    const requestKey = `${cacheKey}:${filters.tail}:${refresh}:${manualRefresh}:${cursor || ""}`;
+    if (!live && completedRequest.current === requestKey) {
       setRefreshing(false);
       return;
     }
@@ -209,12 +223,23 @@ export default function LogPane({
       try {
         const next = await getLogs({
           containerId: source.containerId,
-          system: source.kind === "system",
+          system: journal,
+          filePath: source.filePath,
+          category: source.category,
+          events: source.kind === "events",
+          cursor,
+          since: timed ? filters.since : undefined,
+          until: timed ? filters.until : undefined,
+          unit: journal ? filters.unit : undefined,
           tail: filters.tail,
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        cache.set(source.id, next);
+        if (!cursor) {
+          if (cache.size >= 16 && !cache.has(cacheKey))
+            cache.delete(cache.keys().next().value!);
+          cache.set(cacheKey, next);
+        }
         setData(next);
         setError("");
       } catch (cause) {
@@ -227,7 +252,7 @@ export default function LogPane({
           completedRequest.current = requestKey;
           setLoading(false);
           setRefreshing(false);
-          if (following && visible)
+          if (live && visible)
             timer = window.setTimeout(() => void load(), 2000);
         }
       }
@@ -241,7 +266,16 @@ export default function LogPane({
     source.id,
     source.containerId,
     source.kind,
-    following,
+    live,
+    journal,
+    timed,
+    cacheKey,
+    cursor,
+    source.filePath,
+    source.category,
+    filters.since,
+    filters.until,
+    filters.unit,
     visible,
     filters.tail,
     refresh,
@@ -299,9 +333,11 @@ export default function LogPane({
       ? "Unavailable"
       : loading
         ? "Loading"
-        : following && visible
-          ? "Auto-refresh · 2s"
-          : "Paused";
+        : cursor || archive || (timed && filters.until)
+          ? "History"
+          : live && visible
+            ? "Auto-refresh · 2s"
+            : "Paused";
   return (
     <section className="logs-pane" aria-label={`${source.name} logs`}>
       <header className="logs-pane-header">
@@ -309,7 +345,7 @@ export default function LogPane({
           <FileText size={15} />
           <strong title={source.name}>{source.name}</strong>
           <span
-            className={`logs-connection ${error ? "is-error" : following && visible ? "is-live" : ""}`}
+            className={`logs-connection ${error ? "is-error" : live && visible ? "is-live" : ""}`}
           >
             <i />
             {status}
@@ -405,7 +441,8 @@ export default function LogPane({
                 entry={entry}
                 index={index}
                 filters={filters}
-                showSource={source.kind === "all"}
+                showDate={journal || !!cursor || archive}
+                showSource={source.kind === "all" || journal}
               />
             ))}
           </div>
@@ -425,6 +462,40 @@ export default function LogPane({
           <ArrowDown size={14} /> Jump to latest
         </button>
       )}
+      {(journal || source.kind === "file") && (
+        <div className="logs-history-pagination">
+          <button
+            disabled={!data?.nextCursor || refreshing || !canRead}
+            onClick={() => {
+              setCursor(data!.nextCursor);
+              setAutoScroll(false);
+            }}
+          >
+            {data?.historyOrder === "newer"
+              ? "Next archive page"
+              : "Older entries"}
+          </button>
+          {(cursor || archive) && (
+            <button
+              disabled={refreshing}
+              onClick={() => {
+                setCursor(undefined);
+                setManualRefresh((value) => value + 1);
+                setAutoScroll(true);
+              }}
+            >
+              {archive ? "Archive start" : "Return to latest"}
+            </button>
+          )}
+          <span>
+            {refreshing
+              ? "Reading page…"
+              : data?.nextCursor
+                ? "More retained entries available"
+                : "End of available records"}
+          </span>
+        </div>
+      )}
       <footer className="logs-pane-footer">
         <span>
           {filtered.length.toLocaleString()} / {entries.length.toLocaleString()}{" "}
@@ -436,7 +507,7 @@ export default function LogPane({
             : source.kind === "all"
               ? "Aggregate · up to 500"
               : source.kind === "system"
-                ? "Journal · up to 300"
+                ? `Journal · ${filters.tail} per page`
                 : `Latest ${filters.tail} requested`}
         </span>
         <span className="logs-updated">
