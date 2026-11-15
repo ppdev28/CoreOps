@@ -72,6 +72,7 @@ POST /api/v1/auth/login | logout, GET /auth/me
 GET  /api/v1/host | storage | network | monitoring | updates
 GET  /api/v1/containers, GET /containers/{id}
 POST /api/v1/containers                         admin (create)
+DELETE /api/v1/containers/{id}                  admin (delete stopped container)
 POST /api/v1/containers/{id}/start|stop|restart
 GET  /api/v1/applications, POST /applications/{id}/{action}
 GET  /api/v1/virtual-machines, POST /virtual-machines/{name}/{action}
@@ -185,3 +186,12 @@ The existing Containers **Create container** button now opens a responsive dialo
 The form prevents duplicate submits, preserves input on errors, refreshes inventory and offers inspection. Partial start failure retains the created ID and prevents creating it again. Missing images/name conflicts and uncertain request outcomes have actionable errors. Before adding this capability, SEC-01 was corrected with file locking, fresh reads, safe revocation ordering and logout error reporting; storage formats stay compatible. Updated CLI/server binaries must be deployed together.
 
 Validation: Go race tests/vet/build; web format/build and 26 Playwright fixture tests, including permissions, validation, pending/error/partial success and a 320px form. Real Chromium → isolated API → Docker created and inspected a disposable local-image container; Docker also confirmed optional start on a second disposable container. Both were removed. Desktop/mobile screenshots were inspected. No production service installation or native build.
+
+
+## Container deletion repair (`develop`, 2026-11-15)
+
+The previous Delete action only showed a toast; it never called Docker. `container_delete.go` and `lib/api.ts` now implement admin-only `DELETE /api/v1/containers/{id}`. The existing action menu requires confirmation, refuses active containers and preserves volumes/images. Docker independently rejects running-container deletion with force disabled, including races after listing. CORS now permits authenticated DELETE with the existing origin allowlist.
+
+The UI removes rows/selection only after validated API success, refreshes inventory, guards duplicate/concurrent actions and retains a persistent error on failure. Delete is hidden for viewer/operator. Mobile context menus are clamped to the viewport. [Contract](../backend/README.md#container-deletion).
+
+Validation: Go tests/vet/build plus race tests for deletion; frontend format/build and all 34 browser fixture tests, including cancellation, required confirmation, pending/success/error, roles and mobile. Live mobile Chromium → isolated API → Docker deleted only a disposable stopped container. A running deletion returned 409 and left it running; both named/anonymous volumes survived deletion, and a stored marker was read back unchanged. Test containers/volumes and temporary identity were cleaned up. Native builds remain untested.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
   Box,
@@ -20,6 +20,7 @@ import { getSession } from "../lib/auth";
 import CreateContainerDialog from "../components/CreateContainerDialog";
 import {
   getContainers,
+  deleteContainer,
   runContainerAction,
   type ContainerAction,
 } from "../lib/api";
@@ -36,18 +37,30 @@ import {
   Input,
 } from "../components/ui";
 
+type PendingContainerAction = ContainerAction | "delete";
+const actionProgress: Record<PendingContainerAction, string> = {
+  start: "Starting…",
+  stop: "Stopping…",
+  restart: "Restarting…",
+  delete: "Deleting…",
+};
+
 function CtxMenu({
   x,
   y,
   c,
   onClose,
   onAction,
+  canDelete,
+  busy,
 }: {
   x: number;
   y: number;
   c: Container;
   onClose: () => void;
   onAction: (a: string, c: Container) => void;
+  canDelete: boolean;
+  busy: boolean;
 }) {
   const items = [
     {
@@ -105,12 +118,13 @@ function CtxMenu({
       label: "Delete",
       icon: <Trash2 size={12} />,
       action: "delete",
-      show: true,
+      show: canDelete,
       danger: true,
     },
   ];
-  const top = y + 300 > window.innerHeight ? y - 300 : y;
-  const left = x + 172 > window.innerWidth ? x - 172 : x;
+  const menuHeight = Math.min(380, window.innerHeight - 16);
+  const top = Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8));
+  const left = Math.max(8, Math.min(x, window.innerWidth - 180));
   return (
     <>
       <div
@@ -126,6 +140,8 @@ function CtxMenu({
           left,
           zIndex: 999,
           width: 172,
+          maxHeight: menuHeight,
+          overflowY: "auto",
           background: T.overlay,
           border: `1px solid ${T.borderStrong}`,
           borderRadius: 9,
@@ -155,6 +171,7 @@ function CtxMenu({
             item.show && (
               <button
                 key={item.label}
+                disabled={busy}
                 onClick={() => {
                   onAction(item.action, c);
                   onClose();
@@ -203,7 +220,7 @@ function MobileContainerCard({
 }: {
   c: Container;
   selected: boolean;
-  pendingAction?: ContainerAction;
+  pendingAction?: PendingContainerAction;
   onSelect: () => void;
   onOpen: () => void;
   onMenu: (e: MouseEvent<HTMLButtonElement>) => void;
@@ -211,7 +228,9 @@ function MobileContainerCard({
   return (
     <div
       className="containers-mobile-card"
-      onClick={onOpen}
+      onClick={() => {
+        if (!pendingAction) onOpen();
+      }}
       style={{
         opacity: pendingAction ? 0.6 : 1,
         cursor: pendingAction ? "wait" : "pointer",
@@ -251,6 +270,7 @@ function MobileContainerCard({
               borderRadius: 6,
               display: "inline-flex",
             }}
+            disabled={!!pendingAction}
             aria-label={`Actions for ${c.name}`}
           >
             <MoreHorizontal size={18} strokeWidth={2.2} />
@@ -262,8 +282,7 @@ function MobileContainerCard({
         <HealthBadge health={c.health} />
         {pendingAction && (
           <span className="containers-mobile-card-pending">
-            {pendingAction[0].toUpperCase()}
-            {pendingAction.slice(1)}ing…
+            {actionProgress[pendingAction]}
           </span>
         )}
       </div>
@@ -304,6 +323,9 @@ export default function ContainersView({
 }) {
   const [creating, setCreating] = useState(false);
   const canCreate = getSession()?.user.role === "admin";
+  const canDelete = canCreate;
+  const actionLocks = useRef(new Set<string>());
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -314,7 +336,7 @@ export default function ContainersView({
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingActions, setPendingActions] = useState<
-    Map<string, ContainerAction>
+    Map<string, PendingContainerAction>
   >(new Map());
 
   const loadContainers = useCallback(async () => {
@@ -361,7 +383,8 @@ export default function ContainersView({
     action: ContainerAction,
     c: Container,
   ) => {
-    if (pendingActions.has(c.id)) return;
+    if (actionLocks.current.has(c.id)) return;
+    actionLocks.current.add(c.id);
     setPendingActions((previous) => new Map(previous).set(c.id, action));
     try {
       await runContainerAction(c.id, action);
@@ -378,6 +401,7 @@ export default function ContainersView({
         "error",
       );
     } finally {
+      actionLocks.current.delete(c.id);
       setPendingActions((previous) => {
         const next = new Map(previous);
         next.delete(c.id);
@@ -388,9 +412,13 @@ export default function ContainersView({
 
   const executeSelectedStops = async () => {
     const targets = containers.filter(
-      (c) => selected.has(c.id) && c.status === "running",
+      (c) =>
+        selected.has(c.id) &&
+        c.status === "running" &&
+        !actionLocks.current.has(c.id),
     );
     if (targets.length === 0) return;
+    targets.forEach((c) => actionLocks.current.add(c.id));
     setPendingActions((previous) => {
       const next = new Map(previous);
       targets.forEach((c) => next.set(c.id, "stop"));
@@ -411,6 +439,7 @@ export default function ContainersView({
         failed === 0 ? "success" : "error",
       );
     } finally {
+      targets.forEach((c) => actionLocks.current.delete(c.id));
       setPendingActions((previous) => {
         const next = new Map(previous);
         targets.forEach((c) => next.delete(c.id));
@@ -420,7 +449,37 @@ export default function ContainersView({
     }
   };
 
+  const executeDelete = async (c: Container) => {
+    if (!canDelete || actionLocks.current.has(c.id)) return;
+    actionLocks.current.add(c.id);
+    setPendingActions((previous) => new Map(previous).set(c.id, "delete"));
+    setDeleteError(null);
+    try {
+      await deleteContainer(c.id);
+      setContainers((previous) => previous.filter((item) => item.id !== c.id));
+      setSelected((previous) => {
+        const next = new Set(previous);
+        next.delete(c.id);
+        return next;
+      });
+      await refreshAfterAction();
+      addToast(`Deleted ${c.name}`, "success");
+    } catch (cause) {
+      setDeleteError(
+        `Unable to delete ${c.name}: ${cause instanceof Error ? cause.message : "unknown error"}`,
+      );
+    } finally {
+      actionLocks.current.delete(c.id);
+      setPendingActions((previous) => {
+        const next = new Map(previous);
+        next.delete(c.id);
+        return next;
+      });
+    }
+  };
+
   const handleAction = (action: string, c: Container) => {
+    if (actionLocks.current.has(c.id)) return;
     if (action === "start") {
       void executeContainerAction("start", c);
       return;
@@ -446,16 +505,24 @@ export default function ContainersView({
       });
       return;
     }
-    if (action === "delete")
+    if (action === "delete") {
+      if (!canDelete) return;
+      if (c.status !== "stopped") {
+        setDeleteError(
+          `Stop ${c.name} and refresh its state before deleting it.`,
+        );
+        return;
+      }
       onConfirm({
         title: `Delete container "${c.name}"?`,
         message:
-          "This will permanently remove the container and its writable layer. Volumes will not be deleted.",
+          "This will permanently remove the stopped container and its writable layer. Volumes and images will not be deleted.",
         action: "Delete container",
         danger: true,
-        onConfirm: () => addToast(`Deleted ${c.name}`, "error"),
+        requireConfirmation: true,
+        onConfirm: () => void executeDelete(c),
       });
-    else {
+    } else {
       const msgs: Record<string, string> = {
         start: `Starting ${c.name}…`,
         restart: `Restarting ${c.name}…`,
@@ -503,6 +570,8 @@ export default function ContainersView({
           c={ctx.c}
           onClose={() => setCtx(null)}
           onAction={handleAction}
+          canDelete={canDelete}
+          busy={actionLocks.current.has(ctx.c.id)}
         />
       )}
       <div className="containers-header" style={{ marginBottom: 18 }}>
@@ -520,6 +589,30 @@ export default function ContainersView({
           Manage and monitor Docker containers running on this server.
         </p>
       </div>
+
+      {deleteError && (
+        <div
+          role="alert"
+          style={{
+            padding: 12,
+            marginBottom: 14,
+            border: `1px solid ${T.red}`,
+            borderRadius: 12,
+            color: T.red,
+            fontSize: 12,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {deleteError}
+          <Btn
+            variant="ghost"
+            onClick={() => setDeleteError(null)}
+            style={{ marginLeft: 10 }}
+          >
+            Dismiss
+          </Btn>
+        </div>
+      )}
 
       <div
         className="containers-stats"
@@ -754,7 +847,9 @@ export default function ContainersView({
                             e.preventDefault();
                             setCtx({ x: e.clientX, y: e.clientY, c });
                           }}
-                          onClick={() => onDetail(c.id)}
+                          onClick={() => {
+                            if (!actionLocks.current.has(c.id)) onDetail(c.id);
+                          }}
                           style={{
                             cursor: pendingAction ? "wait" : "pointer",
                             opacity: pendingAction ? 0.6 : 1,
@@ -834,11 +929,11 @@ export default function ContainersView({
                           <Td style={{ textAlign: "right" }}>
                             {pendingAction ? (
                               <span style={{ fontSize: 11, color: T.accent }}>
-                                {pendingAction[0].toUpperCase()}
-                                {pendingAction.slice(1)}ing…
+                                {actionProgress[pendingAction]}
                               </span>
                             ) : (
                               <button
+                                aria-label={`Actions for ${c.name}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCtx({ x: e.clientX, y: e.clientY, c });

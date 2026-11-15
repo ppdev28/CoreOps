@@ -33,3 +33,7 @@ La [terminal interactiva](terminal.md) usa xterm.js 6 + Fit/Search/WebLinks. Tie
 ## Creación de contenedores (2026-11-15)
 
 `ContainersView.tsx` abre `components/CreateContainerDialog.tsx` para admin, reutilizando temas/tokens. El dialog nativo gestiona foco/Escape y bloquea cierre/submit duplicado durante la petición. El formulario conserva datos tras error, representa creación con fallo de arranque como resultado parcial, refresca inventario y permite abrir inspect. `lib/api.ts` mantiene DTOs CoreOps explícitos; no exponer opciones Docker arbitrarias. La suite tiene 26 pruebas: creación/configuración, pending, permisos, errores, arranque parcial y diseño a 320px, además de las pruebas existentes. Contrato: [backend README](../../backend/README.md#container-creation).
+
+## Eliminación de contenedores (2026-11-15)
+
+Delete deja de emitir un éxito simulado: llama a la API con admin, exige confirmación mediante `ConfirmDialog.requireConfirmation` y sólo retira la fila al confirmar `{ok,id}`. Mantener el bloqueo por ID durante todas las mutaciones, selección reconciliada, mensajes persistentes y rechazo de estados activos. La suite tiene 34 pruebas, ocho nuevas para cancelación/confirmación obligatoria, pending, fallos, roles y móvil. No añadir force ni eliminación de volúmenes sin una decisión de producto explícita.

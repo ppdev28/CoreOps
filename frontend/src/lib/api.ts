@@ -321,6 +321,17 @@ export async function getContainerDetail(
 ): Promise<ContainerDetailData> {
   return request(`/containers/${encodeURIComponent(id)}`);
 }
+export async function deleteContainer(id: string): Promise<void> {
+  const response = await request<ApiContainerActionResponse>(
+    `/containers/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok || response.id !== id)
+    throw new Error(
+      "Deletion could not be confirmed. Refresh the container list before retrying.",
+    );
+}
+
 export async function runContainerAction(
   id: string,
   action: ContainerAction,

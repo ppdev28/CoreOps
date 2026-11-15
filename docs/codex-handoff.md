@@ -94,3 +94,14 @@ Implemented on `develop` after the Files merge. `container_create.go` and `compo
 Go race/vet/build and web format/build passed; all 26 browser fixture tests passed. Real Chromium tested create→inspect through an isolated API and live Docker; a second disposable container tested optional start. Both containers were removed. The current development API must be rebuilt/restarted when changing Go; production/native deployment is separate.
 
 The development API on 8082 was rebuilt/restarted with the integrated branch, preserving its environment, working directory and unchanged users/session files. Binary: `/tmp/coreops-container-create-api`; log/PID: `/tmp/coreops-container-create-run/`. The Vite frontend remains on 5173 and the create/terminal/files routes are available through LAN/Tailscale. Temporary validation identity data and the isolated API were cleaned up. Creation and identity are recorded in separate commits on `develop`.
+
+
+## Delete container repair — 2026-11-15
+
+The existing Delete menu was a placeholder that only displayed “Deleted”. It now calls admin-only `DELETE /api/v1/containers/{id}` through `lib/api.ts`. `container_delete.go` validates ID/no query/no body and calls Moby with force/volume/link removal disabled; active-state conflicts return 409. Deletion always requires explicit confirmation. The list tracks pending mutations per ID, removes confirmed rows/selection, refreshes inventory and persists errors even with notifications disabled. Mobile context-menu placement is bounded. [Contract](../backend/README.md#container-deletion).
+
+Validation: full Go tests/vet/build, targeted deletion race tests and web format/build; fixture tests cover delete success/pending/cancel, required confirmation, running state, failures and roles/mobile. Real mobile Chromium deleted a disposable container through an isolated API. Running deletion was refused without stopping it; named and anonymous volumes survived, including marker data. The test resources/temporary identity were cleaned up. Creation/identity changes are preserved in their own commits; production/native deployment is separate.
+
+Development API rebuilt/restarted on 8082 with the same environment/data and unchanged user/session files. Binary `/tmp/coreops-container-delete-api`, log/PID `/tmp/coreops-container-delete-run/`. DELETE is reachable through Vite 5173 and Tailscale and rejects anonymous requests before Docker. The repair is recorded in its own commit on `develop`.
+
+Final browser run: 34/34 passed. Earlier runs saw transient Chromium `ERR_NETWORK_CHANGED` module-load failures on creation/terminal screens; the full rerun passed without needing a test retry (`--retries=1` was available for infrastructure flakes). Go full tests/vet/build and targeted DELETE race tests passed.

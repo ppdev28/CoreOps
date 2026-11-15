@@ -140,7 +140,8 @@ function AppShell({ user }: { user: AuthUser }) {
   }, [settings.shortcuts]);
   const requestConfirm = useCallback(
     (dialog: ConfirmDialog) => {
-      if (settings.confirmDestructive) setConfirm(dialog);
+      if (settings.confirmDestructive || dialog.requireConfirmation)
+        setConfirm(dialog);
       else dialog.onConfirm();
     },
     [settings.confirmDestructive],

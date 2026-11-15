@@ -49,3 +49,7 @@ La nueva [terminal](modules/terminal.md) tiene Origin exacto, auth admin antes d
 `POST /api/v1/containers` exige admin antes de invocar Docker, con DTO explícito y cuerpo de 64 KiB. Sólo imagen local, nombre, entorno, comando como argumentos, puertos y restart policy. No admite opciones arbitrarias de Docker, mounts del host, privileged ni namespaces del host. Puertos sin IP usan loopback y el arranque es opt-in. Auditoría excluye valores de entorno/comando y conserva ID/resultado del arranque. No hay retries ni rollback destructivo tras crear; un fallo de arranque devuelve el ID y estado parcial.
 
 Se corrigió primero SEC-01 con bloqueo/recarga entre CLI y servidor, manteniendo el formato. SEC-02 legacy, SEC-03/04 y demás hallazgos abiertos conservan su prioridad; esta entrega no cambia exposición, autoridad de la cuenta del servicio ni almacenamiento del Bearer. El administrador puede ejecutar imágenes locales con los permisos y defaults normales de Docker; no es un aislamiento adicional del daemon.
+
+## Eliminación de contenedores — 2026-11-15
+
+Endpoint DELETE exclusivo de admin con ID validado, sin body/query, deadline y auditoría. Sin force, eliminación de volúmenes ni links; Docker rechaza contenedores activos incluso si arrancan después de listar. UI exige confirmación siempre, oculta Delete a viewer/operator y conserva errores ante fallos. Se verificó conservación de volúmenes nombrados/anónimos y datos con un contenedor desechable; no cambia los hallazgos abiertos de sesión/autoridad del servicio.

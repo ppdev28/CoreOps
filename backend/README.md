@@ -122,3 +122,12 @@ Images must already exist on the Docker host: this slice does not pull images or
 Maximum body: 64 KiB; name: 1–128 characters; 100 unique `NAME=value` environment variables, 64 command arguments, 32 TCP/UDP port mappings. Each environment entry/argument is limited to 4096 bytes; ports are 1–65535. Unknown fields and trailing JSON are rejected. Operations use a 30 s deadline and never retry automatically.
 
 Success returns HTTP 201 with `{ "id": "…", "name": "…", "started": false, "warnings": [] }` and `Location`. `start=true` performs a separate start after creation. If start fails, creation still returns 201 with the ID and `startError`; inspect the existing container before starting it again. `started=true` means Docker accepted the start request, not that the workload remains running. Name conflicts return 409; missing local image returns 422. An interrupted request can have created a container: refresh the list before retrying. Audit records name/ID and start outcome, excluding environment values and command arguments.
+
+
+## Container deletion
+
+The Containers action menu **Delete** now calls `DELETE /api/v1/containers/{id}` instead of displaying a simulated success. Only `admin` may delete. The UI always asks for confirmation, including when optional destructive confirmations are disabled. Stop the container before deleting; the backend calls Docker without force, so a concurrent start is also rejected rather than killed.
+
+No query options or request body are accepted. `Force`, `RemoveVolumes` and `RemoveLinks` are always false. Container writable-layer data is removed; named/anonymous volumes, bind-mount data and images are preserved. The operation has a 30 s deadline, is audited and never retries automatically.
+
+Success: HTTP 200 `{ "ok": true, "id": "…" }`. Invalid ID/options/body return 400, insufficient role 403, missing container 404, running/current-state conflict 409, other Docker failures 502. If the request fails or is interrupted, refresh the list before retrying. UI pending state blocks duplicate/concurrent mutations and navigation into a disappearing container; only a validated success removes its row/selection and refreshes inventory. Errors remain visible even with notifications disabled.

@@ -24,3 +24,7 @@ Capturar health, login/logout/me y list/inspect/start/stop/restart de contenedor
 ## Creación de contenedores (2026-11-15)
 
 `POST /api/v1/containers` es exclusivo de admin. DTO y validación en `container_create.go`, cliente TypeScript en `lib/api.ts`; contrato, límites y respuesta parcial en [backend README](../../backend/README.md#container-creation). `container_create_test.go` usa middleware real y Moby contra un Engine HTTP falso para probar roles/revocación, traducción de configuración, límites, 400/409/422/502, 201 y fallo de arranque sin duplicar/borrar el contenedor.
+
+## Eliminación de contenedores (2026-11-15)
+
+`DELETE /api/v1/containers/{id}` exige admin y no admite query/body ni opciones de force/volúmenes. Handler: `container_delete.go`; DTO de éxito compatible con acciones `{ok,id}`. `container_delete_test.go` verifica políticas/revocación, CORS, opciones SDK seguras, 400/403/404/409/502, éxito y auditoría con middleware/Moby reales contra un Engine HTTP de prueba. [Contrato y límites](../../backend/README.md#container-deletion).

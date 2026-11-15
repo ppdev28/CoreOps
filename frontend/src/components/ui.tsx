@@ -738,6 +738,9 @@ export function ConfirmDialogModal({
     >
       <div
         className="anim-slide-down"
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={dialog.title}
         style={{
           background: T.overlay,
           border: `1px solid ${T.borderStrong}`,

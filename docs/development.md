@@ -145,7 +145,7 @@ Check local Markdown links, referenced paths, `git diff --check` and scope. Runt
 
 ## Browser UI checks
 
-`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (26 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (34 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
 
 Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal WebSocket traffic. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.
 

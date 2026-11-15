@@ -218,6 +218,7 @@ export interface ConfirmDialog {
   message: string;
   action: string;
   danger?: boolean;
+  requireConfirmation?: boolean;
   onConfirm: () => void;
 }
 
