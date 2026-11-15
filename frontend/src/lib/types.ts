@@ -8,6 +8,7 @@ export type View =
   | "app-detail"
   | "services"
   | "storage"
+  | "files"
   | "network"
   | "virtual-machines"
   | "monitoring"

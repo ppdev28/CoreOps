@@ -151,3 +151,9 @@ When handing work back to the developer, state exactly:
 2. what was tested;
 3. what remains;
 4. the exact command(s) needed to continue locally.
+
+## File explorer handoff
+
+`feature/file-explorer` adds the Files workflow on top of `main`. See `backend/README.md#file-explorer` for configuration, API behavior, permissions and native build steps. The feature is isolated in `files.go` / `files_test.go`, `lib/files.ts`, `views/FileExplorerView.tsx`, scoped `styles/files.css` and the Android `CoreOpsFilesPlugin.kt`.
+
+To try it on the server, fetch and check out `feature/file-explorer`, run the existing Go and pnpm validation commands, then start the API and frontend as usual. Default filesystem root is `/`, limited by the service user's permissions. For a smaller shared area set `COREOPS_FILES_ROOT` to an existing directory. Test mobile upload/download using disposable files before rebuilding/installing the Android app.

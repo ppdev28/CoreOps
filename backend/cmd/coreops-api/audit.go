@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -135,6 +136,8 @@ type statusRecorder struct {
 	status int
 }
 
+func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
 func (s *statusRecorder) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
@@ -144,7 +147,7 @@ func (s *statusRecorder) WriteHeader(code int) {
 // including rejected ones, with the authenticated user when known.
 func withAudit(log *AuditLog, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+		if (r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions) && !strings.HasPrefix(r.URL.Path, "/api/v1/files") {
 			next.ServeHTTP(w, r)
 			return
 		}

@@ -34,6 +34,11 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/services/{name}/stop", RoleOperator, a.stopService)
 	handle("POST /api/v1/services/{name}/restart", RoleOperator, a.restartService)
 	handle("GET /api/v1/storage", RoleViewer, a.storage)
+	handle("GET /api/v1/files", RoleAdmin, a.files.list)
+	handle("POST /api/v1/files/upload", RoleAdmin, a.files.upload)
+	handle("POST /api/v1/files/download-ticket", RoleAdmin, a.files.downloadTicket)
+	// This endpoint consumes a one-use capability minted by an authenticated admin.
+	mux.HandleFunc("GET /api/v1/files/download", a.files.download(auth))
 	handle("GET /api/v1/network", RoleViewer, a.network)
 	handle("GET /api/v1/monitoring", RoleViewer, a.monitoring)
 	handle("GET /api/v1/logs", RoleOperator, a.logs)

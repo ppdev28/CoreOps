@@ -145,3 +145,11 @@ CPU, memory, restart count and other richer operational data may still require a
 The project originally had a Docker SDK compatibility problem. The backend was migrated to the Moby client dependency set and `go mod tidy` produced the required dependency graph. The resulting backend builds/runs successfully.
 
 Do not revert to the old incompatible Docker client dependency merely to simplify imports.
+
+## File explorer (`feature/file-explorer`)
+
+Based on `main` (including the Android shell). The lazy-loaded Files screen implements authenticated host-directory browsing, current-directory search, hidden files, sorting, paginated metadata, direct attachment downloads and streamed uploads with progress/cancellation. Its mobile list has 44px touch controls and wrapped filenames; tablet/desktop retain metadata columns. Transfers and the current directory survive navigation between CoreOps screens. Android includes a document-picker download plugin and folder-aware system back navigation.
+
+The API adds admin-only `/files`, `/files/upload` and `/files/download-ticket`, plus a one-use capability download route. Root access is descriptor confined, uploads never overwrite existing paths, failed uploads are removed and sensitive file operations are audited. Configuration and systemd permission requirements are in `backend/README.md`.
+
+Validation: frontend production build and formatting; Go build, vet, full tests and race detector; real HTTP upload/download integration against a disposable directory. Visual browser checks and the Android APK build remain unverified: the browser cannot reach the local development services, and this environment cannot download the Gradle distribution and has no Android SDK. This branch does not deploy to the Ubuntu host.

@@ -15,7 +15,10 @@ import (
 	"github.com/moby/moby/client"
 )
 
-type API struct{ docker *client.Client }
+type API struct {
+	docker *client.Client
+	files  *FileExplorer
+}
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "user" {
@@ -40,7 +43,18 @@ func main() {
 		os.Exit(1)
 	}
 	bootstrapAdmin(auth, logger)
-	api := &API{docker: docker}
+	uploadLimit, err := filesUploadLimit()
+	if err != nil {
+		logger.Error("configure file explorer", "error", err)
+		os.Exit(1)
+	}
+	files, err := newFileExplorer(envString("COREOPS_FILES_ROOT", "/"), uploadLimit, envDuration("COREOPS_FILES_TRANSFER_TIMEOUT", 30*time.Minute))
+	if err != nil {
+		logger.Error("open file explorer root", "error", err)
+		os.Exit(1)
+	}
+	defer files.close()
+	api := &API{docker: docker, files: files}
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")

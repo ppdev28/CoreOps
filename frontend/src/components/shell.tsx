@@ -25,6 +25,7 @@ import {
   Play,
   Square,
   MonitorCog,
+  FolderOpen,
 } from "lucide-react";
 import { T } from "../lib/tokens";
 import { getHost, logout } from "../lib/api";
@@ -77,6 +78,7 @@ const NAV = [
     group: "Tools",
     items: [
       { id: "terminal", label: "Terminal", icon: <Terminal size={14} /> },
+      { id: "files", label: "Files", icon: <FolderOpen size={14} /> },
     ],
   },
   {
@@ -626,6 +628,12 @@ export function Header({
 }
 
 const CMD_NAV = [
+  {
+    label: "Files",
+    sub: "Browse, upload and download server files",
+    view: "files" as View,
+    icon: <FolderOpen size={13} />,
+  },
   {
     label: "Dashboard",
     sub: "System overview",
