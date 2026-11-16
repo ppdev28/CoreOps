@@ -164,7 +164,10 @@ export default function SecurityView({
       <header className="security-header">
         <div>
           <h1>Security</h1>
-          <p>Host policy, verified OpenSSH sessions and security journal.</p>
+          <p>
+            Host policy, OpenSSH and Tailscale SSH sessions, and security
+            journal.
+          </p>
         </div>
         <div className="security-controls">
           <label>
@@ -233,7 +236,7 @@ export default function SecurityView({
                     : "Incomplete"}{" "}
                   SSH sessions
                 </strong>
-                <span>OpenSSH processes, not CoreOps terminals</span>
+                <span>OpenSSH and Tailscale SSH terminals</span>
               </div>
             </Card>
           </div>
@@ -319,7 +322,7 @@ export default function SecurityView({
                 {data.sessions.length === 0 && (
                   <p>
                     {data.sources.sessions?.state === "ok"
-                      ? "No authenticated OpenSSH sessions detected."
+                      ? "No supported active SSH sessions detected."
                       : "A complete SSH inventory is unavailable."}
                   </p>
                 )}
@@ -331,7 +334,11 @@ export default function SecurityView({
                           `${session.user} · ${session.terminal || "no PTY"}`}
                       </strong>
                       <span>
-                        {session.verified ? "Verified SSH" : "Unverified"}
+                        {session.method === "Tailscale SSH"
+                          ? "Tailscale SSH · view only"
+                          : session.verified
+                            ? "Verified OpenSSH"
+                            : "Unverified"}
                       </span>
                     </div>
                     <dl>
@@ -397,9 +404,10 @@ export default function SecurityView({
                     </p>
                   ))}
                 <p className="security-notice">
-                  Closing a session affects its remote user. Other SSH
-                  implementations and stale logind records are not counted as
-                  active OpenSSH sessions.
+                  OpenSSH connections and active Tailscale SSH terminal logins
+                  are shown. Closing a session affects its remote user.
+                  Tailscale sessions are view only; forwarding-only Tailscale
+                  connections and stale logind records are not included.
                 </p>
               </div>
             </Card>

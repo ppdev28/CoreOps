@@ -293,3 +293,8 @@ Revisión en develop, conservando los cambios pendientes de Files/Updates/sideba
 Sesiones con usuario/UID, terminal o notty, PID/padre, ID estable, logind/origen/fecha si existen. Se corrige el año de utmp interpretado como PID y se excluyen registros locales/closing de la enumeración. UFW/fail2ban/sshd/journal no inventan estados saludables al fallar permisos; se corrigen root prohibit-password, autenticación interactiva, jails vacías y programación APT. UI responsive, refresco cancelable cada 15 s/pausa, datos antiguos visibles, errores persistentes y eliminación del CSS global que interfería con sidebar.
 
 Helper opcional de consultas con sudoers exacto y permiso de temporizador separado, preparado **sin instalar**. El usuario actual no tiene sudo no interactivo; UFW, sshd y fail2ban quedan correctamente desconocidos. APT, sockets y journal se consultan realmente. No se alteró ningún servicio del host ni se cerraron sesiones de usuario; la prueba SSH creó su propio listener y conexión loopback. Guía: [Security](modules/host-security.md); evidencia: [validación](security-validation-2026-11-16.md).
+
+
+## Sesiones SSH del Mac mediante Tailscale — 2026-11-16
+
+Se localizó una terminal real que el inventario anterior omitía al buscar sólo sshd. El adaptador ahora reconcilia Tailscale SSH con utmp/logind activo y la ascendencia del monitor root, muestra proveedor/usuario/TTY/origen/ID y deja sus acciones deshabilitadas. Se corrigen loginctl con propiedades repetidas y who bajo LC_ALL=C (fecha con mes textual, sin año). No se modificó ni cerró la sesión del usuario; OpenSSH conserva sus protecciones de terminación. Alcance y validación en [Security](modules/host-security.md).

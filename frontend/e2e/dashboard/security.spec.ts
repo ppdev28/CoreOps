@@ -192,3 +192,46 @@ test("unverified SSH session cannot be closed", async ({ page }) => {
     page.getByRole("button", { name: "Terminate session", exact: true }),
   ).toBeDisabled();
 });
+
+test("Tailscale SSH terminal shows provider and real context with actions disabled", async ({
+  page,
+}) => {
+  await mockDashboard(page);
+  const base = evidence();
+  const data = {
+    ...base,
+    sessions: [
+      {
+        ...base.sessions[0],
+        user: "pepe",
+        name: "pepe · pts/5",
+        terminal: "pts/5",
+        from: "100.105.4.60",
+        method: "Tailscale SSH",
+        loginId: "19067",
+        process: "bash",
+        verified: false,
+        canTerminate: false,
+        terminationReason: "Tailscale SSH sessions are view only.",
+      },
+    ],
+  };
+  await page.route("**/api/v1/security", (r) => r.fulfill({ json: data }));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await nav(page);
+  await expect(page.getByText("pepe · pts/5", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Tailscale SSH · view only", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("100.105.4.60", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 SSH sessions", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Terminate session", exact: true }),
+  ).toBeDisabled();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});

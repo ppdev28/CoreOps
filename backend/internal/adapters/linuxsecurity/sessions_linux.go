@@ -189,27 +189,61 @@ func (s *Source) Sessions(ctx context.Context) ([]core.Session, core.SourceStatu
 	if e == nil {
 		enrichWho(result, who)
 	}
-	// logind adds reliable remote origins even when modern OpenSSH does not write utmp.
-	for i := range result {
-		v := &result[i]
-		if v.LoginID == "" {
-			continue
-		}
-		text, err := run(ctx, "/usr/bin/loginctl", "show-session", v.LoginID, "--property=Remote,RemoteHost,Name,TTY,State,Timestamp")
-		if err != nil {
-			continue
-		}
-		p := core.Properties(text)
-		if p["Remote"] == "yes" && p["Name"] == v.User && p["State"] != "closing" {
-			if v.From == "" {
-				v.From = p["RemoteHost"]
-			}
-			if v.Since == "" {
-				v.Since = p["Timestamp"]
-				v.SinceSource = "logind"
-			}
+
+	// Reconcile OpenSSH and Tailscale SSH against active logind + utmp records.
+	ids := []string{}
+	seenIDs := map[string]bool{}
+	addID := func(id string) {
+		if id != "" && !seenIDs[id] {
+			seenIDs[id] = true
+			ids = append(ids, id)
 		}
 	}
+	for _, v := range result {
+		addID(v.LoginID)
+	}
+	for _, record := range parseWho(who) {
+		if process, err := readProcessEvidence(record.PID); err == nil {
+			addID(loginIDFromScope(process.Cgroup))
+		}
+	}
+	logins, loginErr := readLogind(ctx, ids)
+	hasTailscale := false
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 2 && f[1] == "tailscaled" {
+			hasTailscale = true
+			break
+		}
+	}
+	if loginErr == nil {
+		enrichLogind(result, logins)
+		if e == nil {
+			for _, record := range parseWho(who) {
+				duplicate := false
+				for _, v := range result {
+					if v.PID == record.PID || (v.User == record.User && v.Terminal == record.Terminal) {
+						duplicate = true
+						break
+					}
+				}
+				if duplicate {
+					continue
+				}
+				for _, info := range logins {
+					if v, ok := tailscaleSession(string(boot), record, info, readProcessEvidence); ok {
+						result = append(result, v)
+						break
+					}
+				}
+			}
+		} else if hasTailscale {
+			state = core.SourceStatus{State: "partial", Detail: "Tailscale SSH terminal inventory requires readable utmp records"}
+		}
+	} else if hasTailscale {
+		state = core.SourceStatus{State: "partial", Detail: "Tailscale SSH terminal inventory unavailable: " + loginErr.Error()}
+	}
+
 	if len(result) > 0 {
 		if sockets, err := run(ctx, "/usr/bin/ss", "-H", "-ntp", "state", "established"); err == nil {
 			enrichPeers(result, sockets)
@@ -222,29 +256,25 @@ func (s *Source) Sessions(ctx context.Context) ([]core.Session, core.SourceStatu
 	return result, state, nil
 }
 func enrichWho(sessions []core.Session, text string) {
-	for _, line := range strings.Split(text, "\n") {
-		f := strings.Fields(line)
-		if len(f) < 6 {
-			continue
-		}
-		pid, e := strconv.Atoi(f[5])
-		if e != nil {
-			continue
-		}
+	for _, record := range parseWho(text) {
 		for i := range sessions {
 			v := &sessions[i]
-			if v.User != f[0] || v.Terminal != f[1] || v.PID != pid {
+			if v.User != record.User || v.Terminal != record.Terminal || v.PID != record.PID {
 				continue
 			}
-			v.Since = f[2] + " " + f[3]
-			v.SinceSource = "utmp"
-			if n := strings.LastIndex(line, "("); n >= 0 && strings.HasSuffix(strings.TrimSpace(line), ")") {
-				v.From = strings.TrimSuffix(strings.TrimSpace(line[n+1:]), ")")
+			if record.Since != "" {
+				v.Since = record.Since
+				v.SinceSource = "utmp"
 			}
+			v.From = record.From
 		}
 	}
 }
+
 func (s *Source) Signal(ctx context.Context, session core.Session) error {
+	if session.Method != "SSH" {
+		return core.ErrUnsupported
+	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}

@@ -33,3 +33,10 @@ El servicio pepe no dispone de sudo no interactivo. Para leer evidencias privile
 El ensayo SSH usa una sesión sin PTY porque un sshd no root no puede escribir los registros utmp de una nueva PTY. El parser y la UI cubren `pts/N`; falta comprobar una sesión PTY de usuario real con los permisos definitivos del despliegue. Un namespace/hidepid restrictivo puede limitar la visibilidad; CoreOps no certifica todas las conexiones ni implementaciones SSH.
 
 No se cambiaron SSH, firewall, fail2ban, política APT ni temporizadores del host. Las limitaciones generales de terminal legacy, Bearer/localStorage, autoridad Docker y durabilidad/retención de auditoría siguen en [seguridad](security.md).
+
+
+## Regresión de Tailscale SSH y locale — misma fecha
+
+La terminal abierta desde el Mac usaba Tailscale SSH: no existían procesos OpenSSH para esa conexión. El adaptador detectó su usuario/TTY/origen/logind/PID mediante fuentes reales cruzadas. También se corrigieron dos errores de interoperabilidad: loginctl no aceptaba la lista de propiedades con comas, y who con el entorno C del API imprimía mes/día sin año en vez de ISO, desplazando la columna del PID.
+
+Verificado sin modificar/cerrar esa terminal: ensayo read-only `COREOPS_EXPECT_SSH_TTY=pts/5`, endpoint autenticado de una API con identidad aislada y Chromium real a 1440 y 375 px. La vista mostró una sesión, proveedor Tailscale, terminal/origen y acción deshabilitada. Los tests rechazan sesiones locales/closing, UID/TTY/scope incorrectos, proceso zombi y ascendencia falsa; prueban ambos formatos de who sin inventar el año. Ocho escenarios UI Security correctos, race de core/adaptador/permisos HTTP y vet/build/formato/fronteras correctos. El ensayo OpenSSH controlado propio siguió identificando y cerrando sólo su conexión. Se limpiaron API/identidad de prueba y se conservó la sesión del usuario. El alcance Tailscale es de terminales activas de consulta, no cierre ni conexiones sin PTY.

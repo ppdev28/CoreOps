@@ -120,3 +120,8 @@ Se corrigió la terminación arbitraria de PID: antes bastaba un número y se en
 Se corrigió el parser de `who -u` que podía usar el año como PID, así como políticas SSH/root, jails vacías y scheduling APT. Los fallos de permisos permanecen desconocidos, separados por fuente. Se eliminó una inyección global de CSS de sidebar desde Security. Comandos fijos, entorno mínimo, buffers/deadlines/concurrencia limitados; helper opcional de consultas con reglas sudo exactas y permiso de temporizador separado. No instalado en el host automáticamente; no amplía autoridad de la cuenta por defecto.
 
 Guía y límites en [Security](modules/host-security.md). Esto no cierra SEC-02/03/04/06 ni sustituye la revisión de permisos de terminal, Docker, almacenamiento del Bearer y auditoría.
+
+
+## Detección de Tailscale SSH — 2026-11-16
+
+El inventario admite terminales Tailscale SSH con evidencia conjunta de utmp/logind remoto y activo, UID/TTY/scope y ascendencia hasta un monitor SSH/daemon root de Tailscale. No clasifica shells locales ni sesiones closing como SSH. Se corrigen propiedades loginctl separadas por comas y formato de fecha C de who. Las filas Tailscale son de consulta, sin señales a shell/monitor/daemon, sudo ni modificación de permisos; el cierre OpenSSH mantiene la validación y pidfd existentes. No se afirma cobertura Tailscale sin PTY ni de otras implementaciones. Ver [guía](modules/host-security.md).
