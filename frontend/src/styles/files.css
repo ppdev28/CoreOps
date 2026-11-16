@@ -43,7 +43,7 @@
 .files-view .files-primary {
   background: var(--fe-accent);
   border-color: var(--fe-accent);
-  color: white;
+  color: #000000;
   font-weight: 600;
 }
 .files-heading {
