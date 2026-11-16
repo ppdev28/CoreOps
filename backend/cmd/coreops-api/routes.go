@@ -3,6 +3,7 @@ package main
 import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 	"net/http"
 	"path/filepath"
@@ -16,6 +17,16 @@ import (
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	a.auditLogPath = audit.path
+	if a.telemetry == nil {
+		a.telemetry = telemetry.New("")
+	}
+	if a.observability == nil {
+		service, _, err := newObservability()
+		if err != nil {
+			panic(err)
+		} // main validates production configuration before constructing routes.
+		a.observability = service
+	}
 	if a.kube == nil {
 		a.kube = newKubeManager(filepath.Join(auth.dir, "kubernetes"))
 	}
@@ -33,6 +44,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	}
 
 	mux.HandleFunc("GET /api/v1/health", a.health)
+	mux.HandleFunc("GET /metrics", a.telemetry.Metrics)
 	mux.HandleFunc("POST /api/v1/auth/login", auth.loginHandler)
 	handle("POST /api/v1/auth/logout", RoleViewer, auth.logoutHandler)
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
@@ -73,6 +85,13 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("GET /api/v1/files/download", a.files.download(auth))
 	handle("GET /api/v1/network", RoleViewer, a.network)
 	handle("GET /api/v1/monitoring", RoleViewer, a.monitoring)
+	handle("GET /api/v1/observability/integrations", RoleViewer, obsBounded(a.obsIntegrations))
+	handle("GET /api/v1/observability/summary", RoleViewer, obsBounded(a.obsSummary))
+	handle("GET /api/v1/observability/targets", RoleViewer, obsBounded(a.obsTargets))
+	handle("GET /api/v1/observability/rules", RoleViewer, obsBounded(a.obsRules))
+	handle("GET /api/v1/observability/series", RoleViewer, obsBounded(a.obsSeries))
+	handle("GET /api/v1/observability/resources/{id}", RoleViewer, obsBounded(a.obsResource))
+	handle("GET /api/v1/observability/grafana-link", RoleViewer, obsBounded(a.obsGrafana))
 	handle("GET /api/v1/monitoring/history", RoleViewer, a.monitoringHistory)
 	handle("GET /api/v1/logs", RoleOperator, a.logs)
 	handle("GET /api/v1/logs/sources", RoleOperator, a.logSources)
@@ -87,5 +106,5 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/updates/refresh", RoleAdmin, a.refreshUpdates)
 	handle("POST /api/v1/updates/apply", RoleAdmin, a.applyUpdates)
 	handle("GET /api/v1/audit", RoleAdmin, audit.handler)
-	return mux
+	return a.telemetry.Wrap(mux)
 }

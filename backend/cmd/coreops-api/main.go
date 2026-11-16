@@ -17,18 +17,22 @@ import (
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/sysstat"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
 	"github.com/ppdev28/CoreOps/backend/internal/monitoring"
+	"github.com/ppdev28/CoreOps/backend/internal/observability"
+	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 )
 
 type API struct {
-	history      *monitoring.History
-	containers   *containers.Service
-	kube         *kubeManager
-	compose      *composeManager
-	logRoot      string
-	auditLogPath string
-	docker       *client.Client
-	terminals    *terminalServer
-	files        *FileExplorer
+	observability *observability.Service
+	telemetry     *telemetry.HTTP
+	history       *monitoring.History
+	containers    *containers.Service
+	kube          *kubeManager
+	compose       *composeManager
+	logRoot       string
+	auditLogPath  string
+	docker        *client.Client
+	terminals     *terminalServer
+	files         *FileExplorer
 }
 
 func main() {
@@ -65,8 +69,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer files.close()
+	observabilityService, metricsToken, err := newObservability()
+	if err != nil {
+		logger.Error("configure observability", "error", err)
+		os.Exit(1)
+	}
 	api := &API{containers: containers.New(dockeradapter.NewContainers(docker)), docker: docker, files: files, logRoot: envString("COREOPS_LOG_ROOT", "/var/log")}
 	api.history = monitoring.NewHistory(sysstat.NewReader(envString("COREOPS_SYSSTAT_DIR", "/var/log/sysstat")))
+	api.observability = observabilityService
+	api.telemetry = telemetry.New(metricsToken)
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")
