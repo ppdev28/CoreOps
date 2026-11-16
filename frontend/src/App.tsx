@@ -21,6 +21,7 @@ const lazyView = <C extends ComponentType<any>>(
 ) => lazy(load);
 const RealDashboardView = lazyView(() => import("./views/DashboardView"));
 const ContainersView = lazyView(() => import("./views/ContainersView"));
+const KubernetesView = lazyView(() => import("./views/KubernetesView"));
 const ContainerDetail = lazyView(() => import("./views/ContainerDetail"));
 const HostView = lazyView(() => import("./views/HostView"));
 const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
@@ -279,6 +280,15 @@ function AppShell({ user }: { user: AuthUser }) {
                   />
                 )}{" "}
                 {view === "host" && <HostView />}{" "}
+                {view === "kubernetes" && (
+                  <Suspense
+                    fallback={
+                      <div data-screen-loading>Loading Kubernetes…</div>
+                    }
+                  >
+                    <KubernetesView />
+                  </Suspense>
+                )}{" "}
                 {view === "containers" && (
                   <ContainersView
                     onDetail={openContainerDetail}

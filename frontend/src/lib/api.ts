@@ -201,7 +201,7 @@ function toApplication(app: ApiApplication): AppService {
     containerIds: app.containerIds,
   };
 }
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const apiBase = getApiBase();
   const url = `${apiBase}${path}`;
   let response: Response;

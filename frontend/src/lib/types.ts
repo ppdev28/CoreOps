@@ -2,6 +2,7 @@ export type View =
   | "dashboard"
   | "host"
   | "containers"
+  | "kubernetes"
   | "container-detail"
   | "container-create"
   | "applications"
