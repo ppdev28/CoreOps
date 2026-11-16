@@ -2,10 +2,12 @@ package telemetry
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHTTPNormalizedAndScrapesExcluded(t *testing.T) {
@@ -88,5 +90,45 @@ func TestHTTPWebSocketPreservesHijackerAndStatus(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("successful upgrade not recorded as 101")
+	}
+}
+
+// The limit belongs to one long-lived exposition handler, not a fresh handler
+// constructed for each request. This bounds simultaneous collector work.
+func TestMetricsExpositionHasSharedScrapeLimit(t *testing.T) {
+	h := New("private-test-token")
+	entered := make(chan struct{}, 2)
+	release := make(chan struct{})
+	done := make(chan int, 2)
+	h.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "test_blocking_collector"}, func() float64 { entered <- struct{}{}; <-release; return 1 }))
+	scrape := func() int {
+		r := httptest.NewRequest("GET", "/metrics", nil)
+		r.Header.Set("Authorization", "Bearer private-test-token")
+		w := httptest.NewRecorder()
+		h.Metrics(w, r)
+		return w.Code
+	}
+	defer close(release)
+	for range 2 {
+		go func() { done <- scrape() }()
+	}
+	for range 2 {
+		select {
+		case <-entered:
+		case <-time.After(time.Second):
+			t.Fatal("scrapes did not reach collector")
+		}
+	}
+	started := time.Now()
+	if code := scrape(); code != 503 || time.Since(started) > time.Second {
+		t.Fatalf("concurrent scrape must be rejected immediately, status %d", code)
+	}
+	// Let the first two calls finish before the test returns.
+	release <- struct{}{}
+	release <- struct{}{}
+	for range 2 {
+		if code := <-done; code != 200 {
+			t.Fatal(code)
+		}
 	}
 }

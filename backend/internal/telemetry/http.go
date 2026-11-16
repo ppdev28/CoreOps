@@ -18,11 +18,12 @@ import (
 )
 
 type HTTP struct {
-	registry *prometheus.Registry
-	requests *prometheus.CounterVec
-	duration *prometheus.HistogramVec
-	inflight *prometheus.GaugeVec
-	token    string
+	registry   *prometheus.Registry
+	requests   *prometheus.CounterVec
+	duration   *prometheus.HistogramVec
+	inflight   *prometheus.GaugeVec
+	token      string
+	exposition http.Handler
 }
 
 func New(token string) *HTTP {
@@ -32,6 +33,7 @@ func New(token string) *HTTP {
 	h.duration = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "coreops_http_request_duration_seconds", Help: "HTTP handler duration; websocket lifetime is differentiated by transport.", Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30}}, labels)
 	h.inflight = prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "coreops_http_requests_in_flight", Help: "Current requests separated into HTTP and websocket transports; scrapes excluded."}, []string{"transport"})
 	h.registry.MustRegister(h.requests, h.duration, h.inflight, collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	h.exposition = promhttp.HandlerFor(h.registry, promhttp.HandlerOpts{MaxRequestsInFlight: 2, Timeout: 5 * time.Second})
 	return h
 }
 func method(raw string) string {
@@ -98,5 +100,5 @@ func (h *HTTP) Metrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "metrics authentication required", http.StatusUnauthorized)
 		return
 	}
-	promhttp.HandlerFor(h.registry, promhttp.HandlerOpts{MaxRequestsInFlight: 2, Timeout: 5 * time.Second}).ServeHTTP(w, r)
+	h.exposition.ServeHTTP(w, r)
 }
