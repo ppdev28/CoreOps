@@ -16,6 +16,7 @@ import (
 )
 
 type API struct {
+	kube         *kubeManager
 	compose      *composeManager
 	logRoot      string
 	auditLogPath string

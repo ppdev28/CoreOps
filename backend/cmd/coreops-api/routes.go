@@ -13,6 +13,9 @@ import (
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	a.auditLogPath = audit.path
+	if a.kube == nil {
+		a.kube = newKubeManager(filepath.Join(auth.dir, "kubernetes"))
+	}
 	if a.compose == nil {
 		a.compose = newComposeManager(filepath.Join(auth.dir, "compose"), a.docker)
 	}
@@ -28,6 +31,14 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
 
 	handle("GET /api/v1/host", RoleViewer, a.host)
+	handle("GET /api/v1/kubernetes/clusters", RoleViewer, kubeBounded(a.kubeClusters))
+	handle("POST /api/v1/kubernetes/clusters", RoleAdmin, kubeBounded(a.kubeConnect))
+	handle("DELETE /api/v1/kubernetes/clusters/{cluster}", RoleAdmin, kubeBounded(a.kubeDisconnect))
+	handle("GET /api/v1/kubernetes/{cluster}/snapshot", RoleViewer, kubeBounded(a.kubeSnapshot))
+	handle("GET /api/v1/kubernetes/{cluster}/resources/{kind}/{namespace}/{name}", RoleViewer, kubeBounded(a.kubeDetail))
+	handle("GET /api/v1/kubernetes/{cluster}/resources/{kind}/{namespace}/{name}/yaml", RoleOperator, kubeBounded(a.kubeYAML))
+	handle("GET /api/v1/kubernetes/{cluster}/resources/pods/{namespace}/{name}/logs", RoleOperator, kubeBounded(a.kubeLogs))
+	handle("POST /api/v1/kubernetes/{cluster}/deployments/{namespace}/{name}/{action}", RoleOperator, kubeBounded(a.kubeAction))
 	handle("GET /api/v1/containers", RoleViewer, a.listContainers)
 	handle("POST /api/v1/containers", RoleAdmin, a.createContainer)
 	handle("GET /api/v1/compose", RoleAdmin, a.composeCapabilities)

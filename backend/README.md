@@ -150,3 +150,9 @@ Logs now exposes the retained journal across boots (`category=all|kernel|service
 Admin-only `GET /api/v1/compose`, `POST /api/v1/compose/validate`, `POST /api/v1/compose/projects` support the Compose tab in Create container. Submit `{project,compose,start}` for preview, then include its `validationHash` when creating. Only new projects are supported, using local images, project bridge networks and named/anonymous volumes. No pulls/builds/host mounts/external files/resources or privileged configuration. Ports without an explicit IP bind to loopback; start defaults to false.
 
 The server needs the installed Docker Compose CLI plugin (tested v5.7.0) and its existing Unix Docker endpoint. CLI and SDK use the same daemon. Manifests/reservations live privately under `COREOPS_DATA_DIR/compose`; relative data paths are normalized. 201 confirms creation/start request; 202 explicitly reports partial/uncertain results and keeps the project reserved. No destructive rollback or automatic retry. See [Compose guide](../docs/modules/compose.md) for supported fields, limits, persisted secrets, permissions, CLI isolation and recovery.
+
+## Kubernetes
+
+La pantalla Kubernetes conecta desde el backend con API servers HTTPS existentes. Configuración admin mediante `/api/v1/kubernetes/clusters`, perfiles privados bajo `COREOPS_DATA_DIR/kubernetes`, namespace scope y RBAC upstream. Viewer consulta inventario/eventos; operator accede a logs/YAML y escala/reinicia Deployments; admin configura conexiones. No requiere kubectl. El soporte inicial no incluye pods/exec, rollback, historial de métricas ni gestión de red/configuración/storage.
+
+Consultar [guía Kubernetes](../docs/modules/kubernetes.md) para configuración, permisos, rutas, límites, semántica de aceptación/recuperación y pruebas. No guardar tokens/kubeconfigs en el repositorio ni dar cluster-admin para ocultar fallos de permisos.
