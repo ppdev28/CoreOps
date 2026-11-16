@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: CoreOps
+    orgId: 1
+    folder: CoreOps
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

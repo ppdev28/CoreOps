@@ -19,3 +19,14 @@ CI ejecuta gofmt, vet, tests, build y frontend format/build para PRs a `main` y 
 ## Validación
 
 No desplegar como parte de un cambio documental. En una entrega de deployment, comprobar usuario, permisos, rutas reales, binario instalado y versión, HTTPS, login/403, frontend y rollback en un entorno seguro. Ejecutar CI de validación también en la rama de integración que se acuerde; actualmente `develop` no figura en triggers.
+
+## Perfil opcional de observabilidad (2026-11-16)
+
+Existe `deploy/observability/compose.yaml` para Prometheus/node_exporter/Grafana
+con versiones/digests fijados, volúmenes y healthchecks, puertos exclusivos de
+loopback y configuración privada generada con Python stdlib. CoreOps sigue nativo
+en el host; los servicios existentes pueden conectarse sin este perfil.
+[Instalación, secretos/usuarios, URL interna/pública Grafana, Ubuntu/macOS,
+retención y diagnóstico](../observability.md). CI valida config y reglas con promtool.
+El ensayo real sólo interrumpe su target temporal, nunca servicios del usuario.
+No corrige ni despliega la unit/workflow legacy descrita arriba.

@@ -164,3 +164,14 @@ For Compose creation, read [Compose](modules/compose.md). Run `COREOPS_TEST_COMP
 ## Módulos y contrato
 
 La build sigue siendo `go build ./...` desde backend y `pnpm build` desde frontend; conservar `api/` en el checkout porque frontend importa sus DTOs como tipos. `go test ./...` valida `api/openapi.json` y respuestas HTTP/políticas de la primera feature con runtimes falsos. `pnpm check:boundaries` verifica la dirección de imports y se ejecuta en CI, junto a tests Go de fronteras. No se añade un servicio API ni otro proceso a levantar. Guías: [contrato](../api/README.md), [contenedores backend](../backend/internal/containers/README.md), [frontend](../frontend/src/features/containers/README.md).
+
+## Observability
+
+See [installation/formulas/rules](observability.md) and [validation evidence](observability-validation-2026-11-16.md).
+The full browser suite now has 88 tests. The optional Linux Compose profile uses
+private ports 19090/19100/13000 and immutable image digests; keep CoreOps native.
+Python generator tests and promtool config/rule validation also run in CI.
+`deploy/observability/smoke.py --token-file /private/viewer-token` checks real series
+and a disposable target's pending/firing/recovery; never stop production services
+to demonstrate alerting. Browser fixtures still intercept infrastructure calls;
+run the smoke separately against the real backend.

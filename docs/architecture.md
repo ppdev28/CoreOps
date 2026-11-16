@@ -79,3 +79,19 @@ Preserve cancellation and define per-operation deadlines. Long apt operations ne
 ## Migration
 
 See [modularization-plan.md](modularization-plan.md). The explicit modularization request advances a compatible containers extraction and initial contract while retaining identity behavior and existing privileges. SEC-01 remains the next security priority before new privileged functionality. Preserve the Figma design and current URLs. Migrate one capability at a time and keep the app runnable after every step.
+
+## Observability vertical slice (2026-11-16)
+
+Implemented as one additional capability in the existing Go process: telemetry owns
+a process-local Prometheus registry; internal/observability owns the read-only
+service/catalog/models; adapters/prometheus owns bounded upstream HTTP and source
+status; cmd wires authenticated viewer routes. The browser feature uses the shared
+API/session and Recharts, with URL context and a lazy navigation destination.
+Prometheus remains the only alert evaluator. Grafana dashboards are provisioned
+and linked, never embedded as the sole CoreOps UI. No extra CoreOps API service,
+microservices or generic PromQL/URL proxy. See [module](modules/observability.md).
+
+The optional Docker Compose project runs Prometheus, node_exporter and Grafana on
+private loopback ports beside the native Linux CoreOps host process. Docker Desktop
+exporter data must not be called Ubuntu host metrics. Existing services can be used
+through server environment config instead. [Operation](observability.md).

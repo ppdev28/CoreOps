@@ -46,6 +46,16 @@ jobs:
         working-directory: backend
         run: go build -o scp-api ./cmd/coreops-api
 
+      - name: Validate observability provisioning and Prometheus rules
+        working-directory: deploy/observability
+        run: |
+          python3 -m unittest discover -p 'test_*.py'
+          python3 configure.py
+          python3 render_rule_tests.py
+          docker compose config --quiet
+          docker compose run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.json
+          docker compose run --rm --no-deps --entrypoint promtool prometheus test rules /etc/prometheus/rules.test.json
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:

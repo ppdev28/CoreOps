@@ -1,5 +1,23 @@
 # Current State
 
+## Observabilidad Prometheus / Grafana — 2026-11-16
+
+Slice implementado en `feature/observability-prometheus-grafana`, creado después
+de `b38f993` (históricos sysstat) sobre develop. Instrumentación HTTP/Go real,
+catálogo y adapter Prometheus con permisos viewer, pantalla Observability con
+contexto URL, alertas activas y Grafana provisionado. Compose opcional Linux
+privado con node_exporter del host, retención y credenciales fuera de Git.
+No cambia los históricos/vistas existentes ni añade un evaluador de alertas.
+
+[Instalación y contrato](observability.md), [guía del módulo](modules/observability.md),
+[evidencia de validación](observability-validation-2026-11-16.md). Validado con
+race/vet/build Go, controles frontend y 88 pruebas UI, promtool y scraping/alerta
+con fallo y recuperación de un target desechable. Se comprobó el host Ubuntu real,
+consulta autenticada y dashboard Grafana; la identidad del usuario se conservó.
+No se hizo merge/push ni despliegue de producción. Grafana sigue en loopback: usar
+un túnel o configurar una URL pública HTTPS alcanzable desde los dispositivos.
+
+
 Latest integrated validation: **2026-11-16**, modular foundation plus all accumulated features, validated for `develop`. See [integration report](integration-validation-2026-11-16.md) and the final section for scope, test results and remaining limitations. The dated baseline below is historical.
 
 Reviewed on **2026-11-12**, checkout **`develop`**, commit **`ece1b7a`**. Architecture and module layout proposals are documented in [architecture.md](architecture.md), [modules/README.md](modules/README.md) and [modularization-plan.md](modularization-plan.md). The first containers/API/shared frontend extraction is now implemented; the broader target remains partial. Security findings: [security.md](security.md).

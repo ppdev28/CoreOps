@@ -319,3 +319,10 @@ CoreOps is functional enough to operate against a real Docker host, but it is no
 **Server Control Center — one place to understand, operate and troubleshoot your infrastructure.**
 
 </div>
+
+## Observability
+
+Native Prometheus/Grafana observability includes host/backend metrics, resource
+context, active alerts and provisioned dashboards. Follow the
+[Linux deployment and integration guide](docs/observability.md) and
+[validation report](docs/observability-validation-2026-11-16.md).

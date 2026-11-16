@@ -1,0 +1,11 @@
+apiVersion: 1
+datasources:
+  - name: CoreOps Prometheus
+    uid: coreops-prometheus
+    type: prometheus
+    access: proxy
+    url: http://127.0.0.1:19090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s

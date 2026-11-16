@@ -1,0 +1,85 @@
+name: coreops-observability
+services:
+  prometheus:
+    # Prometheus 3.16.0
+    image: prom/prometheus@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    network_mode: host
+    group_add: ["${COREOPS_SECRET_GID:?run configure.py}"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.json
+      - --web.listen-address=127.0.0.1:19090
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-2GB}
+    volumes:
+      - ./generated/config:/etc/prometheus:ro
+      - ./generated/metrics-token:/run/secrets/metrics-token:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:19090/-/ready']
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+  node-exporter:
+    # node_exporter 1.12.1: Linux host, not the container or a Docker Desktop VM.
+    image: prom/node-exporter@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    network_mode: host
+    pid: host
+    uts: host
+    command:
+      - --web.listen-address=127.0.0.1:19100
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker|var/lib/containers)($|/)
+    volumes:
+      - /:/host:ro,rslave
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:19100/metrics']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    restart: unless-stopped
+  grafana:
+    # Grafana 13.3.1
+    image: grafana/grafana@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+    network_mode: host
+    group_add: ["${COREOPS_SECRET_GID:?run configure.py}"]
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: '13000'
+      GF_SERVER_ROOT_URL: '${GRAFANA_PUBLIC_URL:-http://localhost:13000}'
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-password
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_PLUGINS_PREINSTALL_DISABLED: 'true'
+      GF_PLUGINS_AUTO_UPDATE_ENABLED: 'false'
+      GF_LOG_MODE: console
+    volumes:
+      - ./generated/grafana-password:/run/secrets/grafana-password:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:13000/api/health']
+      interval: 15s
+      timeout: 3s
+      retries: 10
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+volumes:
+  prometheus-data:
+  grafana-data:

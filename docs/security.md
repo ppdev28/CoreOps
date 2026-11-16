@@ -76,3 +76,26 @@ Límites pendientes: credenciales de servicio compartidas, sin impersonación o 
 ## Modularización inicial
 
 El módulo de contenedores y el transporte ya no importan tipos Moby entre capas; los objetos complejos de inspect se convierten en valores JSON propios para conservar compatibilidad. Se prueban roles, validación previa a mutación y auditoría. No se añaden permisos ni operaciones. La extracción conserva la corrección posterior de SEC-01. No corrige SEC-03/04 ni la redacción/durabilidad de SEC-06/07; el contrato declara explícitamente ese alcance.
+
+## Observabilidad — 2026-11-16
+
+Consultas `/api/v1/observability/*` con sesión viewer (también operator/admin).
+Catálogo de métricas cerrado, selectores escapados, límites de tiempo/puntos/series,
+respuesta y concurrencia; no URL/PromQL arbitrario desde el navegador. Fuentes y
+Bearer/CA en servidor, sin redirects, sin proxy del entorno ni TLS inseguro.
+Un 401/403 upstream es error de integración, no revocación de la sesión CoreOps.
+`/metrics` requiere otro Bearer de scraping y está desactivado sin configuración.
+Labels de ruta normalizados, scrapes excluidos y WebSockets diferenciados.
+
+Perfil Compose opcional: puertos loopback, sin socket Docker, secretos privados,
+volúmenes persistentes, imágenes inmutables, procesos sin capabilities y sin
+privilege escalation. node_exporter necesita lectura del host y namespaces host;
+no es una frontera de aislamiento. Grafana exige login, sin acceso anónimo.
+
+La fuente publica los mismos recursos a todos los viewers autorizados: no hay
+tenancy ni políticas por host/job; usar una fuente dedicada si se necesita aislar
+visibilidad. No mutaciones de infraestructura desde Observability, no se crea un
+historial/auditoría de incidentes inexistente. Configuración y recarga de reglas
+son tareas operativas del servidor, fuera del frontend; no se añade un endpoint
+de edición sin audit. Se conservan los riesgos abiertos de sesión/localStorage,
+permisos del servicio, logs/audit y despliegue. [Guía](observability.md).

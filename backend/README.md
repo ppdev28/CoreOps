@@ -167,3 +167,10 @@ Integration with the later slices preserves admin-only creation/deletion/Compose
 ## Recorded host metrics
 
 `GET /api/v1/monitoring/history?range=24h` (viewer) returns retained host CPU/memory samples from existing sysstat archives. `sadf` and readable archives are required; `COREOPS_SYSSTAT_DIR` defaults to `/var/log/sysstat`. No collector is installed or enabled. Dashboard/Monitoring merge this history with live snapshots and show unavailable coverage explicitly. [Contract, definitions and limits](../docs/modules/monitoring-history.md).
+
+## Prometheus / Grafana observability
+
+The read-only `/api/v1/observability/*` capability uses the existing viewer sessions.
+`GET /metrics` uses a separate configured scrape token and is disabled when it is absent.
+See [installation, environment variables, metrics/rules and diagnostics](../docs/observability.md)
+and [validation evidence](../docs/observability-validation-2026-11-16.md).
