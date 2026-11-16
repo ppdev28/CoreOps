@@ -1,4 +1,4 @@
-import { request } from "./api";
+import { request } from "../shared/api/client";
 
 export type KubeKind =
   | "deployments"

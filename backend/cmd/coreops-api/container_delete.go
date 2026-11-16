@@ -8,12 +8,13 @@ import (
 
 	"github.com/containerd/errdefs"
 	"github.com/moby/moby/client"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
 )
 
 func (a *API) deleteContainer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	id := r.PathValue("id")
-	if !containerIDPattern.MatchString(id) {
+	if !containers.ValidID(id) {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid container ID"})
 		return
 	}

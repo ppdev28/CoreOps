@@ -8,15 +8,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"../api/typescript/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"../api/typescript/**/*.ts\"",
     "cap:sync": "cap sync",
     "cap:add:android": "cap add android",
     "cap:add:ios": "cap add ios --packagemanager SPM",
     "cap:open:android": "cap open android",
     "cap:open:ios": "cap open ios",
     "test:dashboard": "playwright test --config playwright.dashboard.config.ts",
-    "test:ui": "playwright test --config playwright.dashboard.config.ts"
+    "test:ui": "playwright test --config playwright.dashboard.config.ts",
+    "check:boundaries": "node scripts/check-boundaries.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

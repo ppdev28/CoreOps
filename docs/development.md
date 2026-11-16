@@ -146,6 +146,7 @@ Check local Markdown links, referenced paths, `git diff --check` and scope. Runt
 ## Browser UI checks
 
 `cd frontend && pnpm test:ui` runs the application Playwright fixture suite (64 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (23 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
 
 Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal WebSocket traffic. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.
 
@@ -160,3 +161,6 @@ For host log history, also exercise `logs_host_test.go` and `host-logs.spec.ts`:
 Terminal responsive regression tests live in `e2e/dashboard/terminal-responsive.spec.ts`: eight sizes, four tabs, virtual viewport/keyboard, focus mode and literal key delivery. Browser keyboard geometry is simulated; verify physical mobile keyboards and Capacitor separately. Keep real PTY smoke tests isolated from personal dotfiles/history.
 
 For Compose creation, read [Compose](modules/compose.md). Run `COREOPS_TEST_COMPOSE_CLI=1 go test -race ./... -run TestCompose -count=1` for an explicit local CLI-only configuration check. Browser fixtures cover both creation methods; live mutation checks must use unique disposable project names and isolated identity, then remove only their own containers/networks/volumes. Never deploy a user-supplied project as a test.
+## Módulos y contrato
+
+La build sigue siendo `go build ./...` desde backend y `pnpm build` desde frontend; conservar `api/` en el checkout porque frontend importa sus DTOs como tipos. `go test ./...` valida `api/openapi.json` y respuestas HTTP/políticas de la primera feature con runtimes falsos. `pnpm check:boundaries` verifica la dirección de imports y se ejecuta en CI, junto a tests Go de fronteras. No se añade un servicio API ni otro proceso a levantar. Guías: [contrato](../api/README.md), [contenedores backend](../backend/internal/containers/README.md), [frontend](../frontend/src/features/containers/README.md).

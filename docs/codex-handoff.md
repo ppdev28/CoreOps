@@ -1,10 +1,25 @@
 # Codex Handoff
 
-Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current terminal work is on `feature/terminal-redesign`; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
+Baseline reviewed 2026-11-12 on `develop`, commit `ece1b7a`. The current modularization work is on `refactor/modular-foundation`, created from clean develop at b4d64db; check the branch before continuing. Do not switch to historical `capacitor-native` or `feature/project-foundation` branches based on older instructions.
 
 ## Read and resume
 
 Read the five documents in `AGENTS.md` order, then [module instructions](modules/README.md), [security findings](security.md) and [modularization plan](modularization-plan.md). The user requested documentation first, followed by gradual code implementation and preservation of the Figma UI.
+
+## First modularization slice
+
+The explicit request to separate backend/frontend/API is implemented as a first compatible containers slice, not a third runtime service or wholesale move. `api/` has OpenAPI 3.0.3 health/auth/containers + manual TypeScript wire DTOs. Backend: internal/containers owns Service/Runtime/models; adapters/docker owns Moby and snapshots complex inspect JSON without vendor objects; transport/httpapi owns handlers/DTOs/JSON helpers. Main composes and routes preserves auth/roles/audit. Frontend: features/containers owns API/mapping/model/screens; shared/api and shared/platform own HTTP and the single existing session store; lib facades preserve legacy imports. Screens stay lazy. Restart counts are now unavailable, and valid null inspect collections no longer crash UI.
+
+This advances structural steps 2–4 without adding permissions or operations. SEC-01 is still unresolved and remains the next security priority before new privileged capability work. Other capabilities, fine-grained inspect models, identity/audit persistence and broader feature migration remain pending. See module-local READMEs and the module map. No native changes or generated client.
+
+Validation covers OpenAPI + real middleware/roles/audit/error handling with fake runtimes, real Moby HTTP against a local fake engine, capability invariants, AST import checks and browser actions/null data/session behavior. `pnpm check:boundaries` is added to CI; Go checks run with normal tests. No production Docker mutation is needed for these tests. The OpenAPI dependency is pinned to the most recent release compatible with Go 1.24 and is test-only in production dependency analysis.
+
+## Modularization validation completed
+
+- `go test -race ./...`, `go vet ./...`, `go build ./...`: passed across the executable and extracted packages, including contract/roles/audit/cancellation and import-boundary tests.
+- `pnpm check:boundaries`, `pnpm format:check`, `pnpm build`: passed. No new frontend runtime dependencies or state library.
+- Playwright: 23 tests passed, including all screens and inspect in eight formats, terminal, shared-session 401/403, restart reconciliation and null inspect collections.
+- Read-only real Docker smoke: a temporary API process with a separate identity store matched the live inventory and inspect identity/state/ports/networks/mounts. No Docker lifecycle mutation, host modification or existing identity-file change. The temporary process/data were cleaned up; the running development API was not replaced for this structural refactor.
 
 ## Authorized Android cleanup
 
@@ -36,7 +51,7 @@ Validation commands: `pnpm --dir frontend build`, `pnpm --dir frontend format:ch
 
 ## Actual implementation
 
-React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8082` by default and owns Docker/Linux/libvirt access. Backend remains one `package main`; frontend API transport, types and mapping remain concentrated in `lib/api.ts`. Proposed modules are not extracted yet.
+React/Vite web UI and Capacitor shells call `/api/v1`; Go API binds `127.0.0.1:8082` by default and owns Docker/Linux/libvirt access. Containers now has separate internal capability, Docker adapter and HTTP transport packages; remaining capabilities/identity are still in package main. Frontend containers is a feature; shared HTTP/session are extracted; lib files remain compatibility facades for legacy consumers. See architecture/current state for the actual partial layout.
 
 Container list/inspect/start/stop/restart already exist; the prior milestone records manual validation on Ubuntu Docker. Host, applications, services, VMs, storage, network, monitoring, logs, terminal, security and updates have implementations with uneven real integration validation. Aggregate logs and metrics already use Docker. Never repeat production mutations merely to re-prove historical milestones.
 
@@ -44,7 +59,7 @@ Sessions, PBKDF2 passwords, viewer/operator/admin roles, login pair lockout and 
 
 ## Recommended next slice
 
-SEC-01 is corrected for updated binaries through file locking, reload and revocation ordering; see the identity follow-up below. Next capture auth/health/containers API contracts, including creation, and extract the containers backend slice: consumer-owned interface, Docker adapter, HTTP mapping and composition. Preserve current URLs, JSON behavior and minimum roles. Follow with the frontend containers feature, honest unavailable values and action-flow tests. Remaining P0 risks must precede broader exposure.
+SEC-01 is corrected for updated binaries through file locking, reload and revocation ordering; see the identity follow-up below. The initial auth/health/container contract and list/inspect/lifecycle backend/frontend extraction are integrated. Next extend that partial contract to create/delete and extract those handlers incrementally; preserve current URLs, JSON behavior and minimum roles. Other capabilities remain legacy and share the extracted transport/session. Remaining P0 risks must precede broader exposure.
 
 Do not do a repository-wide move. Do not introduce microservices or multiple Go modules. Do not generate clients until a contract/tooling decision has been reviewed. New guide per extracted capability should live beside its code and be indexed from the module map.
 
@@ -54,7 +69,7 @@ Do not do a repository-wide move. Do not introduce microservices or multiple Go 
 - `cd frontend && pnpm build`: passed, no chunk-size warning.
 - No live API, Docker mutation, privileged host command, browser test, native build, dependency audit or deployment was performed.
 
-The earlier untracked Android resources/tests were subsequently cleaned with explicit authorization; see the cleanup section above. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. `toContainer` currently sets restart count to zero without source data, and the UI displays it: fix rather than claim all unavailable values are honest.
+The earlier untracked Android resources/tests were subsequently cleaned with explicit authorization; see the cleanup section above. CI builds `backend/scp-api`, but the unit starts `/opt/coreops/coreops-api`; installation/frontend delivery remains unresolved. The containers mapper now represents absent restart counts as null/—; other unavailable values and inspect redaction still need review.
 
 ## Commands for the next session
 
@@ -154,3 +169,12 @@ La conexión usa HTTPS con CA de sistema o PEM y token/certificado embebido; per
 No se dispone de un clúster real configurado en este host; falta la validación con el API del usuario y el build/dispositivo Android. La guía documenta contratos, límites, pruebas y cómo configurar la conexión. No se ha solicitado commit ni push para esta entrega.
 
 Validación final: Go full race/vet/build, formato/build web y 74/74 tests de interfaz; tras ajustes finales, race/vet/build y 10 escenarios Kubernetes nuevamente correctos. Chromium con API CoreOps aislada real comprobó estado sin clúster y rechazo de conexiones HTTP, sin credenciales Kubernetes persistidas en navegador. Recursos temporales/identidad aislada limpiados. API de desarrollo actual: `/tmp/coreops-kubernetes-final-api`, log/PID `/tmp/coreops-kubernetes-run/`; 8082 y proxy Vite 5173 verificados con identidad existente intacta. Falta integración contra Kubernetes vivo y build nativo Android.
+
+
+## Integración modular con todas las capacidades — 2026-11-16
+
+El usuario pidió verificar la rama `refactor/modular-foundation` con todos los cambios acumulados e integrar el resultado en develop. Kubernetes se conservó en dos commits de backend/frontend; después se combinó la modularización en la rama Kubernetes y se conciliaron los conflictos sin eliminar rutas nuevas ni revertir SEC-01. Ver [informe de integración](integration-validation-2026-11-16.md).
+
+Validación: Go full race/vet/build y verificación de módulos; Compose CLI real; formato/build/check-boundaries web; **77/77** tests de navegador. Navegación cruzada nueva reproduce y protege PTYs/directorio Files frente a carga lazy de Containers y Kubernetes: los workspaces persistentes están fuera del Suspense de rutas. API aislada + Docker/Chromium validó creación, inspección, start/restart/stop, logs, borrado, upload/download y dos proyectos Compose; todos los recursos temporales se limpiaron. PTY real conservó una variable con una sola sesión autenticada. Sin clúster Kubernetes real ni Java/SDK para build nativo.
+
+Al reanudar, confirmar branch/status; extracción parcial real en internal/ y features/shared. No volver a los imports/handlers eliminados, duplicar el cliente/sesión ni normalizar reinicios desconocidos a cero. El backend create/delete y otros módulos legacy siguen pendientes de extracción y OpenAPI aún es parcial. No se solicitó push ni despliegue de producción.

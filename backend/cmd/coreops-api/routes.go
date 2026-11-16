@@ -1,6 +1,9 @@
 package main
 
 import (
+	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 	"net/http"
 	"path/filepath"
 )
@@ -21,6 +24,10 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	}
 	mux := http.NewServeMux()
 	a.terminals = newTerminalServer(auth, audit)
+	if a.containers == nil {
+		a.containers = containers.New(dockeradapter.NewContainers(a.docker))
+	}
+	containerHTTP := httpapi.NewContainers(a.containers)
 	handle := func(pattern string, min Role, h http.HandlerFunc) {
 		mux.HandleFunc(pattern, auth.require(min, h))
 	}
@@ -39,17 +46,17 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/kubernetes/{cluster}/resources/{kind}/{namespace}/{name}/yaml", RoleOperator, kubeBounded(a.kubeYAML))
 	handle("GET /api/v1/kubernetes/{cluster}/resources/pods/{namespace}/{name}/logs", RoleOperator, kubeBounded(a.kubeLogs))
 	handle("POST /api/v1/kubernetes/{cluster}/deployments/{namespace}/{name}/{action}", RoleOperator, kubeBounded(a.kubeAction))
-	handle("GET /api/v1/containers", RoleViewer, a.listContainers)
+	handle("GET /api/v1/containers", RoleViewer, containerHTTP.List)
 	handle("POST /api/v1/containers", RoleAdmin, a.createContainer)
 	handle("GET /api/v1/compose", RoleAdmin, a.composeCapabilities)
 	handle("POST /api/v1/compose/validate", RoleAdmin, a.validateCompose)
 	handle("POST /api/v1/compose/projects", RoleAdmin, a.createCompose)
 	handle("DELETE /api/v1/containers/{id}", RoleAdmin, a.deleteContainer)
-	handle("GET /api/v1/containers/{id}", RoleOperator, a.getContainer)
+	handle("GET /api/v1/containers/{id}", RoleOperator, containerHTTP.Inspect)
 	handle("GET /api/v1/containers/{id}/logs", RoleOperator, a.containerLogs)
-	handle("POST /api/v1/containers/{id}/start", RoleOperator, a.startContainer)
-	handle("POST /api/v1/containers/{id}/stop", RoleOperator, a.stopContainer)
-	handle("POST /api/v1/containers/{id}/restart", RoleOperator, a.restartContainer)
+	handle("POST /api/v1/containers/{id}/start", RoleOperator, containerHTTP.Action(containers.Start))
+	handle("POST /api/v1/containers/{id}/stop", RoleOperator, containerHTTP.Action(containers.Stop))
+	handle("POST /api/v1/containers/{id}/restart", RoleOperator, containerHTTP.Action(containers.Restart))
 	handle("GET /api/v1/applications", RoleViewer, a.listApplications)
 	handle("POST /api/v1/applications/{id}/{action}", RoleOperator, a.applicationAction)
 	handle("GET /api/v1/virtual-machines", RoleViewer, a.listVirtualMachines)

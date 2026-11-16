@@ -228,17 +228,21 @@ A healthy Docker-enabled host returns a response equivalent to:
 
 ```text
 CoreOps/
-├── frontend/          # React + TypeScript web application
-│   ├── src/components # Shared UI components
-│   ├── src/views      # Product views
-│   └── src/lib        # API, types, data and utilities
-│
-├── backend/           # Go API and infrastructure integrations
-│   └── cmd/coreops-api/   # CoreOps API server
-│
-├── docs/              # Product, architecture and development docs
-├── AGENTS.md          # Development/Codex project instructions
-└── README.md
+├── api/                  # Initial OpenAPI contract + wire TypeScript types
+├── backend/
+│   ├── cmd/coreops-api/  # Composition, router/auth and remaining legacy capabilities
+│   └── internal/
+│       ├── containers/   # Use cases and Runtime port
+│       ├── adapters/docker/
+│       └── transport/httpapi/
+├── frontend/src/
+│   ├── features/containers/  # API adapter, models and lazy screens
+│   ├── shared/           # HTTP transport, session/platform and common status types
+│   ├── views/            # Screens awaiting migration
+│   ├── components/       # Existing UI primitives
+│   └── lib/              # Compatibility facades and remaining legacy clients/types
+├── docs/
+└── AGENTS.md
 ```
 
 ## API surface
@@ -286,7 +290,7 @@ CoreOps is being developed in vertical slices rather than attempting to implemen
 
 ## Architecture and module guides
 
-The proposed direction is a modular monolith: API contract, HTTP transport, backend capabilities/adapters and frontend features, with one Go backend process. Extraction is not implemented yet. Read [architecture](docs/architecture.md), [module guides](docs/modules/README.md), [migration plan](docs/modularization-plan.md) and [current state](docs/current-state.md).
+The proposed direction is a modular monolith: API contract, HTTP transport, backend capabilities/adapters and frontend features, with one Go backend process. The first containers slice, shared frontend transport/session and initial OpenAPI contract are implemented; other capabilities are still being migrated. Read [architecture](docs/architecture.md), [module guides](docs/modules/README.md), [migration plan](docs/modularization-plan.md) and [current state](docs/current-state.md).
 
 ## Development
 

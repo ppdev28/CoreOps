@@ -20,9 +20,13 @@ const lazyView = <C extends ComponentType<any>>(
   load: () => Promise<{ default: C }>,
 ) => lazy(load);
 const RealDashboardView = lazyView(() => import("./views/DashboardView"));
-const ContainersView = lazyView(() => import("./views/ContainersView"));
+const ContainersView = lazyView(
+  () => import("./features/containers/ContainersView"),
+);
 const KubernetesView = lazyView(() => import("./views/KubernetesView"));
-const ContainerDetail = lazyView(() => import("./views/ContainerDetail"));
+const ContainerDetail = lazyView(
+  () => import("./features/containers/ContainerDetail"),
+);
 const HostView = lazyView(() => import("./views/HostView"));
 const ApplicationsView = lazyView(() => import("./views/ApplicationsView"));
 const ServicesView = lazyView(() => import("./views/ServicesView"));
@@ -309,20 +313,6 @@ function AppShell({ user }: { user: AuthUser }) {
                 )}{" "}
                 {view === "services" && <ServicesView {...shell} />}{" "}
                 {view === "storage" && <StorageView {...shell} />}{" "}
-                {filesVisited && (
-                  <Suspense
-                    fallback={
-                      <div
-                        data-screen-loading
-                        style={{ padding: 24, fontSize: 12, color: T.textDim }}
-                      >
-                        Loading…
-                      </div>
-                    }
-                  >
-                    <FileExplorerView active={view === "files"} />
-                  </Suspense>
-                )}{" "}
                 {view === "network" && <NetworkView />}{" "}
                 {view === "virtual-machines" && (
                   <VirtualMachinesView addToast={addToast} />
@@ -339,12 +329,37 @@ function AppShell({ user }: { user: AuthUser }) {
                     <LogsView initialContainerId={logContainerId} />
                   </Suspense>
                 )}{" "}
-                {(terminalOpened || view === "terminal") && (
-                  <TerminalView visible={view === "terminal"} />
-                )}{" "}
                 {view === "security" && <SecurityView addToast={addToast} />}{" "}
                 {view === "updates" && <UpdatesView {...shell} />}{" "}
                 {view === "settings" && <SettingsView addToast={addToast} />}
+              </Suspense>
+              {/* Keep persistent workspaces outside route-level suspension. */}
+              {filesVisited && (
+                <Suspense
+                  fallback={
+                    <div
+                      data-screen-loading
+                      style={{ padding: 24, fontSize: 12, color: T.textDim }}
+                    >
+                      Loading…
+                    </div>
+                  }
+                >
+                  <FileExplorerView active={view === "files"} />
+                </Suspense>
+              )}{" "}
+              <Suspense
+                fallback={
+                  view === "terminal" ? (
+                    <div data-screen-loading style={{ padding: 24 }}>
+                      Loading terminal…
+                    </div>
+                  ) : null
+                }
+              >
+                {(terminalOpened || view === "terminal") && (
+                  <TerminalView visible={view === "terminal"} />
+                )}{" "}
               </Suspense>
             </section>
           </main>

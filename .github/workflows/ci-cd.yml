@@ -66,6 +66,10 @@ jobs:
         working-directory: frontend
         run: pnpm format:check
 
+      - name: Check frontend module boundaries
+        working-directory: frontend
+        run: pnpm check:boundaries
+
       - name: Build frontend
         working-directory: frontend
         run: pnpm build

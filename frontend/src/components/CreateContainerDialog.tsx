@@ -5,8 +5,8 @@ import {
   createContainer,
   type CreateContainerInput,
   type CreateContainerResult,
-  type ComposeResult,
-} from "../lib/api";
+} from "../features/containers";
+import type { ComposeResult } from "../lib/api";
 import "../styles/container-create.css";
 import CreateComposeForm from "./CreateComposeForm";
 

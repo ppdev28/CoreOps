@@ -1,6 +1,6 @@
 # Plan incremental de modularización
 
-Propuesta del 2026-11-12. En esta entrega sólo cambian documentos. [Arquitectura](architecture.md) define destino y dependencias; [módulos](modules/README.md) contiene instrucciones; [seguridad](security.md) registra evidencias y criterios de cierre.
+Propuesta del 2026-11-12. La propuesta inicial sólo cambió documentos; el avance actual se detalla a continuación. [Arquitectura](architecture.md) define destino y dependencias; [módulos](modules/README.md) contiene instrucciones; [seguridad](security.md) registra evidencias y criterios de cierre.
 
 ## Secuencia
 
@@ -24,3 +24,9 @@ Responsabilidad y dependencias explícitas; ninguna llamada privilegiada desde n
 ## Decisiones que se mantienen abiertas
 
 Motor de persistencia para coherencia (SQLite es candidato, no cambio aprobado ni implementado); cookies web frente a otra estrategia de sesión; plugin seguro nativo; mecanismo de jobs largos; tooling OpenAPI/generación; separación futura de agente privilegiado. Resolver cada una en su entrega con coste, compatibilidad y prueba de recuperación. No introducir microservicios para resolver estructura de carpetas.
+
+## Avance: primera extracción compatible
+
+Por petición explícita de modularización se implementó el contrato inicial (paso 2) y una primera extracción de contenedores backend/frontend (pasos 3–4) sin añadir operaciones ni privilegios. En la extracción original el paso 1 estaba pendiente. La integración del 2026-11-16 conserva la corrección posterior de SEC-01 (flock, recarga por operación y revocación) implementada el 2026-11-15. La extracción no sustituye ni revierte esa persistencia.
+
+Implementado: contrato OpenAPI health/auth/contenedores, DTOs TypeScript, casos de uso/puerto/adaptador/HTTP, feature frontend, transporte/sesión compartidos y controles de imports. Se mantiene metadata compleja de inspect como JSON propio y fachadas de compatibilidad para capacidades legacy. Refinar DTOs/hooks/identidad y extraer otros módulos sigue pendiente; no hacer una mudanza global por simetría de carpetas.

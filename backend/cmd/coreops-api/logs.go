@@ -16,6 +16,7 @@ import (
 
 	"github.com/containerd/errdefs"
 	"github.com/moby/moby/client"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
 )
 
 const maxLogBytes = 2 * 1024 * 1024
@@ -264,7 +265,7 @@ func normalizeLogLevel(value string) string {
 func (a *API) containerLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	id := r.PathValue("id")
-	if !containerIDPattern.MatchString(id) {
+	if !containers.ValidID(id) {
 		writeJSON(w, 400, ErrorResponse{Error: "invalid container ID"})
 		return
 	}

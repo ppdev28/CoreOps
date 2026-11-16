@@ -37,7 +37,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { getSession } from "../lib/auth";
-import { getApiBase } from "../lib/api";
+import { getApiBase } from "../shared/api/client";
 import { loadWebSettings, subscribeWebSettings } from "../lib/webSettings";
 import {
   kubeClusters,
