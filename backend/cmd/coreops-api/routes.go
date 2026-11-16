@@ -73,6 +73,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("GET /api/v1/files/download", a.files.download(auth))
 	handle("GET /api/v1/network", RoleViewer, a.network)
 	handle("GET /api/v1/monitoring", RoleViewer, a.monitoring)
+	handle("GET /api/v1/monitoring/history", RoleViewer, a.monitoringHistory)
 	handle("GET /api/v1/logs", RoleOperator, a.logs)
 	handle("GET /api/v1/logs/sources", RoleOperator, a.logSources)
 	handle("POST /api/v1/terminal/exec", RoleAdmin, a.terminalExec)

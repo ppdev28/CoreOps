@@ -479,6 +479,9 @@ interface LineChartProps extends React.HTMLAttributes<HTMLDivElement> {
   data: Record<string, any>[];
   index: string;
   categories: string[];
+  xAxisType?: "category" | "number";
+  xAxisDomain?: AxisDomain;
+  xAxisTickFormatter?: (value: number) => string;
   colors?: AvailableChartColorsKeys[];
   valueFormatter?: (value: number) => string;
   startEndOnly?: boolean;
@@ -510,6 +513,9 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
       data = [],
       categories = [],
       index,
+      xAxisType = "category",
+      xAxisDomain,
+      xAxisTickFormatter,
       colors = AvailableChartColors,
       valueFormatter = (value: number) => value.toString(),
       startEndOnly = false,
@@ -638,6 +644,9 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
               padding={{ left: paddingValue, right: paddingValue }}
               hide={!showXAxis}
               dataKey={index}
+              type={xAxisType}
+              domain={xAxisDomain}
+              tickFormatter={xAxisTickFormatter}
               interval={startEndOnly ? "preserveStartEnd" : intervalType}
               tick={{ transform: "translate(0, 6)" }}
               ticks={

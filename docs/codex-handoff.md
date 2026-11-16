@@ -181,3 +181,12 @@ Al reanudar, confirmar branch/status; extracción parcial real en internal/ y fe
 
 
 Integración completada: `7cfb6dd` combina la modularización y `7f040bf` la integra en develop con árbol idéntico al probado. API de desarrollo actual `/tmp/coreops-modular-api`, log/PID `/tmp/coreops-modular-run/`; health/proxy y users/sessions intactos verificados. No se hizo push ni despliegue de producción. El siguiente trabajo parte de develop y mantiene las extracciones parciales documentadas.
+
+
+## Históricos reales del host — 2026-11-16
+
+Corrección en develop después de integrar módulos: Dashboard mostraba “Earlier data unavailable” porque sólo conservaba el estado React de la sesión. El servidor ya tiene sadf/sysstat y archivos saDD del día anterior. Leer [históricos](modules/monitoring-history.md) antes de continuar. Backend `internal/monitoring` define el puerto/modelo; `internal/adapters/sysstat` lee por descriptor y cmd expone GET `/monitoring/history`. No reinstalar/habilitar sysstat ni guardar métricas ficticias.
+
+CPU y memoria de Dashboard/Monitoring mezclan archivo y live, con timestamps numéricos para conservar distancias temporales reales. La cadencia sysstat del host es de unos diez minutos; la retención depende de sus archivos. Archivo ausente/denegado/ilegible queda explícito. No se añadió historial Docker/Kubernetes/IO de disco/red. Los cambios de Go necesitan actualizar la API activa para evitar 404 en el endpoint nuevo.
+
+Validación históricos: Go full race/vet/build, formato/build/check-boundaries web, 80 escenarios UI correctos tras un reintento en un test existente de logs (repetición aislada correcta). Lectura real de 143 muestras 24 h vía API aislada y Chromium escritorio/320 px/recarga, contrastando CPU/memoria con sadf nativo. No se alteró sysstat ni infraestructura. API de desarrollo actual `/tmp/coreops-history-api`, log/PID `/tmp/coreops-history-run/`; identidad existente intacta y ruta nueva accesible mediante proxy Vite. El usuario solicitó registrar esta corrección en un commit antes de iniciar la nueva entrega de observabilidad Prometheus/Grafana.

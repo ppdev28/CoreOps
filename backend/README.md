@@ -162,3 +162,8 @@ Consultar [guía Kubernetes](../docs/modules/kubernetes.md) para configuración,
 `internal/containers` owns the container use cases and Runtime port; `internal/adapters/docker` implements it; `internal/transport/httpapi` owns container HTTP/DTOs and common JSON helpers. `main.go` wires them and `routes.go` preserves auth/roles/audit. The initial contract is [api/openapi.json](../api/openapi.json), validated in Go tests against real handlers and fake runtimes. The OpenAPI test dependency is not imported by the production binary. Identity persistence and other capabilities still await extraction; no new host privilege or endpoint is added.
 
 Integration with the later slices preserves admin-only creation/deletion/Compose, bounded operator logs, Files, Kubernetes and identity reload/revocation. Create/delete handlers are not yet extracted backend use cases; the OpenAPI contract remains partial. All web clients use the same extracted session/transport through compatibility facades.
+
+
+## Recorded host metrics
+
+`GET /api/v1/monitoring/history?range=24h` (viewer) returns retained host CPU/memory samples from existing sysstat archives. `sadf` and readable archives are required; `COREOPS_SYSSTAT_DIR` defaults to `/var/log/sysstat`. No collector is installed or enabled. Dashboard/Monitoring merge this history with live snapshots and show unavailable coverage explicitly. [Contract, definitions and limits](../docs/modules/monitoring-history.md).

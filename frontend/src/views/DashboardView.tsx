@@ -69,6 +69,7 @@ export default function DashboardView({
   const [updates, setUpdates] = useState<UpdatePackage[] | null>(null);
   const [activity, setActivity] = useState<LogEntry[] | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [historyRevision, setHistoryRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -269,7 +270,13 @@ export default function DashboardView({
           <h1>Dashboard</h1>
           <p>Observe, diagnose and operate your infrastructure.</p>
         </div>
-        <Btn onClick={() => void refresh()} disabled={refreshing}>
+        <Btn
+          onClick={() => {
+            setHistoryRevision((v) => v + 1);
+            void refresh();
+          }}
+          disabled={refreshing}
+        >
           <RefreshCw size={13} className={refreshing ? "is-refreshing" : ""} />
           {refreshing ? "Refreshing…" : "Refresh"}
         </Btn>
@@ -372,6 +379,8 @@ export default function DashboardView({
           data={history}
           metric="cpu"
           stale={monitoringStale}
+          refreshAt={historyRevision}
+          autoRefresh={settings.autoRefresh}
           intervalMs={settings.refreshSeconds * 1000}
         />
         <ResourceChart
@@ -379,6 +388,8 @@ export default function DashboardView({
           data={history}
           metric="memory"
           stale={monitoringStale}
+          refreshAt={historyRevision}
+          autoRefresh={settings.autoRefresh}
           intervalMs={settings.refreshSeconds * 1000}
         />
       </section>

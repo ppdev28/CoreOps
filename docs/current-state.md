@@ -243,3 +243,8 @@ Red/configuración/almacenamiento detallados, terminal de pods, métricas histó
 Se combina `refactor/modular-foundation` con los cambios acumulados de Kubernetes, Compose, creación/borrado, Files, logs y terminal responsive antes de integrar en develop. La extracción es parcial: contrato inicial, contenedores list/inspect/lifecycle y frontend compartido; el resto conserva sus módulos actuales. Se mantienen las 47 rutas autenticadas/roles y la corrección SEC-01. Se corrigen fixtures persistentes, validador de IDs compartido, API frontend create/delete y la reconexión de PTY al cargar pantallas nuevas.
 
 Go race/vet/build y verificación de dependencias correctos; formato/boundaries/build web y 77/77 tests UI correctos. API aislada con Docker real verificó lifecycle/create/delete/logs, subida/descarga y Compose con Nginx loopback; los recursos desechables se limpiaron. Chromium verificó una única sesión PTY autenticada y variable/directorio conservados al navegar entre módulos. No hay validación Kubernetes viva ni build nativo. [Informe reproducible y límites](integration-validation-2026-11-16.md).
+
+
+## Históricos CPU/memoria — 2026-11-16
+
+Se corrigió el selector 24 h que sólo filtraba datos acumulados por la sesión del navegador. Nuevo GET viewer `/monitoring/history` lee archivos sysstat del host mediante un adaptador confinado, con límites/caché y DTOs propios en `internal/monitoring`. Dashboard y Monitoring usan históricos CPU/memoria con eje proporcional al tiempo y cortes para periodos sin muestras. Los archivos actuales permiten recuperar datos del día anterior; no se inventan periodos fuera de retención. [Guía y validación](modules/monitoring-history.md).

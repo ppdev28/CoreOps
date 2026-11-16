@@ -4,6 +4,7 @@ Estas guías aplican a las rutas actuales indicadas y a sus futuras extracciones
 
 | Módulo | Implementación actual | Guía |
 | --- | --- | --- |
+| Históricos del host | `internal/monitoring`, `adapters/sysstat`, `lib/monitoring-history.ts` | [Históricos](monitoring-history.md) |
 | Kubernetes | `kubernetes_*.go`, `KubernetesView.tsx`, `lib/kubernetes.ts` | [Kubernetes](kubernetes.md) |
 | Creación con Compose | `compose*.go`, `CreateComposeForm.tsx` | [Compose](compose.md) |
 | Explorador de logs | `logs*.go`, `LogsView.tsx`, `LogPane.tsx` | [Logs](logs.md) |

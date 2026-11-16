@@ -1,5 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  useHostHistory,
+  mergeHostHistory,
+  type HostHistoryPoint,
+} from "../lib/monitoring-history";
+import {
   Activity,
   AlertTriangle,
   ArrowRight,
@@ -48,11 +53,7 @@ import type {
 } from "../lib/types";
 import type { MonitoringContainer } from "../lib/monitoring";
 
-export type HistoryPoint = {
-  time: number;
-  cpu: number | null;
-  memory: number | null;
-};
+export type HistoryPoint = HostHistoryPoint;
 export type Issue = { label: string; view: View; critical?: boolean };
 const ranges = {
   "5m": 5,
@@ -171,7 +172,11 @@ function ChartTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="mono-chart-tooltip">
-      <span>{label}</span>
+      <span>
+        {Number.isFinite(Number(label))
+          ? new Date(Number(label)).toLocaleString()
+          : label}
+      </span>
       <strong>
         {typeof payload[0]?.value === "number"
           ? `${payload[0].value.toFixed(1)}%`
@@ -186,34 +191,61 @@ export function ResourceChart({
   metric,
   stale = false,
   intervalMs,
+  refreshAt,
+  autoRefresh,
 }: {
   title: string;
   data: HistoryPoint[];
   metric: "cpu" | "memory";
   stale?: boolean;
   intervalMs: number;
+  refreshAt: number | null;
+  autoRefresh: boolean;
 }) {
   const [range, setRange] = useState<keyof typeof ranges>("5m");
-  const end = data.at(-1)?.time ?? Date.now();
+  const {
+    recorded,
+    error: historyError,
+    loading: historyLoading,
+  } = useHostHistory(range, refreshAt, autoRefresh);
+  const end = Math.max(Date.now(), data.at(-1)?.time ?? 0, recorded?.to ?? 0);
   const start = end - ranges[range] * 60000;
+  const merged = useMemo(
+    () =>
+      mergeHostHistory(
+        recorded?.samples ?? [],
+        data.map((p) => ({ ...p, intervalMs: p.intervalMs ?? intervalMs })),
+        start,
+        end,
+      ),
+    [recorded, data, start, end, intervalMs],
+  );
   const points = useMemo(() => {
-    const selected = data.filter((p) => p.time >= start);
-    const result: { time: string; value: number | null }[] = [];
+    const selected = merged;
+    const result: { time: number; value: number | null }[] = [];
     let previous: HistoryPoint | undefined;
     for (const p of selected) {
-      if (previous && p.time - previous.time > intervalMs * 2.5)
+      if (
+        previous &&
+        p.time - previous.time >
+          Math.max(
+            previous.intervalMs ?? intervalMs,
+            p.intervalMs ?? intervalMs,
+          ) *
+            2.5
+      )
         result.push({
-          time: new Date(previous.time + intervalMs).toLocaleTimeString(),
+          time: previous.time + (previous.intervalMs ?? intervalMs),
           value: null,
         });
       result.push({
-        time: new Date(p.time).toLocaleTimeString(),
+        time: p.time,
         value: p[metric],
       });
       previous = p;
     }
     return result;
-  }, [data, metric, start, intervalMs]);
+  }, [merged, metric, intervalMs]);
   const last = points.at(-1)?.value;
   const samples = points.filter((p) => p.value !== null).length;
   return (
@@ -250,6 +282,10 @@ export function ResourceChart({
         role="img"
         aria-label={`${title}: ${samples} real samples${stale ? ", stale" : ""}`}
         data-missing={points.filter((p) => p.value === null).length}
+        data-recorded-samples={
+          recorded?.samples.filter((p) => p[metric] !== null).length ?? 0
+        }
+        data-range={range}
       >
         {samples ? (
           <LineChart
@@ -257,6 +293,21 @@ export function ResourceChart({
             data={points}
             categories={["value"]}
             index="time"
+            xAxisType="number"
+            xAxisDomain={[start, end]}
+            xAxisTickFormatter={(value) =>
+              ranges[range] >= 1440
+                ? new Date(value).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : new Date(value).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+            }
             colors={["monochrome"]}
             minValue={0}
             maxValue={100}
@@ -272,8 +323,22 @@ export function ResourceChart({
         )}
       </div>
       <div className="chart-footnote">
-        <span>Session history · {samples} samples</span>
-        <span>Earlier data unavailable</span>
+        <span>
+          {historyLoading
+            ? "Loading recorded history…"
+            : recorded
+              ? `Recorded + live · ${samples} samples`
+              : `Session history · ${samples} samples`}
+        </span>
+        <span>
+          {historyError
+            ? `${recorded ? "Recorded history is stale" : "Recorded history unavailable"}: ${historyError}`
+            : recorded?.warnings.length
+              ? recorded.warnings.join(" ")
+              : recorded?.samples.length
+                ? `Recorded from ${new Date(recorded.samples[0].time).toLocaleString()}`
+                : "No archived samples in this range"}
+        </span>
       </div>
     </Card>
   );

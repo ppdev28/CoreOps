@@ -15,6 +15,7 @@ func TestExtractedModuleDependencies(t *testing.T) {
 		forbidden []string
 	}{
 		{"../../internal/containers", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},
+		{"../../internal/monitoring", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},
 		{"../../internal/transport/httpapi", []string{"os/exec", "github.com/moby/", "/internal/adapters/"}},
 	}
 	for _, rule := range rules {

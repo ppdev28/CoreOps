@@ -14,7 +14,14 @@ import {
   ArrowDown,
   ArrowUp,
 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  YAxis,
+  XAxis,
+} from "recharts";
 import { T } from "../lib/tokens";
 import {
   Card,
@@ -25,6 +32,7 @@ import {
   ErrorState,
 } from "../components/ui";
 import { getMonitoring } from "../lib/api";
+import { useHostHistory, mergeHostHistory } from "../lib/monitoring-history";
 import { loadWebSettings, subscribeWebSettings } from "../lib/webSettings";
 import type { MonitoringOverview } from "../lib/monitoring";
 
@@ -120,11 +128,13 @@ function MetricChart({
   range,
   onRangeChange,
   formatter,
+  note,
 }: {
   label: string;
   color: string;
   unit: string;
-  data: { t: number; value: number }[];
+  data: { t: number; value: number | null }[];
+  note?: string;
   range: Range;
   onRangeChange: (r: Range) => void;
   formatter?: (v: number) => string;
@@ -193,6 +203,13 @@ function MetricChart({
               margin={{ top: 8, right: 10, bottom: 0, left: 8 }}
             >
               <YAxis hide domain={["auto", "auto"]} />
+              <XAxis
+                hide
+                dataKey="t"
+                type="number"
+                domain={[Date.now() - RANGE_MS[range], Date.now()]}
+              />
+
               <Tooltip
                 contentStyle={{
                   background: T.overlay,
@@ -222,12 +239,26 @@ function MetricChart({
                 stroke={color}
                 strokeWidth={1.7}
                 dot={false}
+                connectNulls={false}
                 isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
+      {note && (
+        <div
+          style={{
+            padding: "0 16px 14px",
+            fontSize: 10,
+            color: T.textDim,
+            overflowWrap: "anywhere",
+          }}
+          role="status"
+        >
+          {note}
+        </div>
+      )}
     </Card>
   );
 }
@@ -241,6 +272,8 @@ export default function MonitoringView() {
     [refreshing, setRefreshing] = useState(false),
     [error, setError] = useState<string | null>(null),
     [settings, setSettings] = useState(loadWebSettings);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const archive = useHostHistory(range, historyRevision, settings.autoRefresh);
   const load = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
     else setRefreshing(true);
@@ -289,6 +322,57 @@ export default function MonitoringView() {
       }),
     [visible],
   );
+  const hostChart = useMemo(() => {
+    const end = Date.now(),
+      from = end - RANGE_MS[range];
+    const points = mergeHostHistory(
+      archive.recorded?.samples ?? [],
+      samples.map((s) => ({
+        time: s.timestamp,
+        cpu: s.host.cpuUsagePercent,
+        memory: s.host.memoryUsagePercent,
+        intervalMs: settings.refreshSeconds * 1000,
+      })),
+      from,
+      end,
+    );
+    const result: {
+      time: number;
+      cpu: number | null;
+      memory: number | null;
+    }[] = [];
+    let previous: (typeof points)[number] | undefined;
+    for (const p of points) {
+      if (
+        previous &&
+        p.time - previous.time >
+          Math.max(
+            previous.intervalMs ?? settings.refreshSeconds * 1000,
+            p.intervalMs ?? settings.refreshSeconds * 1000,
+          ) *
+            2.5
+      )
+        result.push({
+          time:
+            previous.time +
+            (previous.intervalMs ?? settings.refreshSeconds * 1000),
+          cpu: null,
+          memory: null,
+        });
+      result.push(p);
+      previous = p;
+    }
+    return result;
+  }, [archive.recorded, samples, range, settings.refreshSeconds]);
+  const historyNote = archive.error
+    ? `Recorded history unavailable or stale: ${archive.error}`
+    : archive.loading
+      ? "Loading recorded history…"
+      : archive.recorded?.warnings.length
+        ? archive.recorded.warnings.join(" ")
+        : archive.recorded?.samples.length
+          ? `Recorded sysstat history + live samples · from ${new Date(archive.recorded.samples[0].time).toLocaleString()}`
+          : "No archived samples in this range; displaying current session measurements.";
   if (loading)
     return (
       <div style={{ padding: "22px 24px" }}>
@@ -368,7 +452,10 @@ export default function MonitoringView() {
             Updated {new Date(current.timestamp).toLocaleTimeString()}
           </span>
           <Btn
-            onClick={() => void load(false)}
+            onClick={() => {
+              setHistoryRevision((v) => v + 1);
+              void load(false);
+            }}
             disabled={refreshing}
             icon={<RefreshCw size={12} />}
           >
@@ -483,7 +570,8 @@ export default function MonitoringView() {
               label="CPU Usage"
               color={T.accent}
               unit="%"
-              data={chart.map((d) => ({ t: d.t, value: d.cpu }))}
+              data={hostChart.map((d) => ({ t: d.time, value: d.cpu }))}
+              note={historyNote}
               range={range}
               onRangeChange={setRange}
             />
@@ -491,12 +579,14 @@ export default function MonitoringView() {
               label="Memory Usage"
               color="#a78bfa"
               unit="%"
-              data={chart.map((d) => ({ t: d.t, value: d.memory }))}
+              data={hostChart.map((d) => ({ t: d.time, value: d.memory }))}
+              note={historyNote}
               range={range}
               onRangeChange={setRange}
             />
             <MetricChart
               label="Disk I/O Read"
+              note="Current browser session only"
               color={T.yellow}
               unit=" MB/s"
               data={chart.map((d) => ({ t: d.t, value: d.diskRead }))}
@@ -505,6 +595,7 @@ export default function MonitoringView() {
             />
             <MetricChart
               label="Network RX"
+              note="Current browser session only"
               color={T.green}
               unit=" MB/s"
               data={chart.map((d) => ({ t: d.t, value: d.netRx }))}

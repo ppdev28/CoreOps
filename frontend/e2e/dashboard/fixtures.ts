@@ -160,7 +160,19 @@ export async function mockDashboard(
                   ? { ...c, state: "restarting", status: "Restarting" }
                   : c,
             );
-    else if (path === "/monitoring") {
+    else if (path === "/monitoring/history") {
+      const now = await page.evaluate(() => Date.now());
+      const range =
+        new URL(route.request().url()).searchParams.get("range") || "24h";
+      body = {
+        source: "sysstat",
+        range,
+        from: now - 86400000,
+        to: now,
+        samples: [],
+        warnings: [],
+      };
+    } else if (path === "/monitoring") {
       control.samples++;
       body = {
         timestamp: await page.evaluate(() => Date.now()),

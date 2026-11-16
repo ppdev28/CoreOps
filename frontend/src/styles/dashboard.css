@@ -236,3 +236,7 @@
 
 .app-workspace .dashboard-heading > button:hover:not(:disabled) { background: var(--coreops-text); }
 .app-workspace .dashboard-heading > button:active:not(:disabled) { background: var(--coreops-textSub); }
+
+/* History status may include retention/permission details on narrow screens. */
+.app-workspace .chart-footnote { flex-wrap: wrap; align-items: flex-start; }
+.app-workspace .chart-footnote > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

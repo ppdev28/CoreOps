@@ -14,10 +14,13 @@ import (
 
 	"github.com/moby/moby/client"
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/sysstat"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/monitoring"
 )
 
 type API struct {
+	history      *monitoring.History
 	containers   *containers.Service
 	kube         *kubeManager
 	compose      *composeManager
@@ -63,6 +66,7 @@ func main() {
 	}
 	defer files.close()
 	api := &API{containers: containers.New(dockeradapter.NewContainers(docker)), docker: docker, files: files, logRoot: envString("COREOPS_LOG_ROOT", "/var/log")}
+	api.history = monitoring.NewHistory(sysstat.NewReader(envString("COREOPS_SYSSTAT_DIR", "/var/log/sysstat")))
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")
