@@ -40,3 +40,9 @@ Pruebas reales con API/identidad aisladas y Docker del host: listado → crear �
 ## Límites conservados
 
 No hay un clúster Kubernetes configurado para integración viva: sus consultas/RBAC/mutaciones tienen pruebas TLS/HTTP con un servidor de prueba y escenarios UI aislados. Android/iOS y teclado físico requieren sus toolchains/dispositivos. No se despliega producción, se amplían permisos del host ni se afirma resolver los hallazgos SEC aún abiertos.
+
+## Resultado del merge
+
+Integración de modularización: `7cfb6dd`. Merge en `develop`: `7f040bf`, con árbol idéntico al validado. Kubernetes quedó previamente en commits `96dc24e` y `16218c2`. Checkout final develop, historial preservado y sin push/despliegue de producción.
+
+API de desarrollo actualizada a `/tmp/coreops-modular-api`, log/PID `/tmp/coreops-modular-run/`, conservando entorno/directorio y users/sessions idénticos. Health 200 y cinco rutas protegidas verificadas a través de Vite 5173 con 401 antes de acceder a infraestructura. Las identidades y procesos de pruebas aisladas se eliminaron; no hay recursos Docker temporales pendientes.
