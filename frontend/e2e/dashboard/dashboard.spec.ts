@@ -249,6 +249,7 @@ test("tablet sidebar collapses without changing navigation order", async ({
     "Host",
     "Containers",
     "Applications",
+    "Kubernetes",
     "Services",
     "Storage",
     "Network",

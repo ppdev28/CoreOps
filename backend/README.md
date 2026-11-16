@@ -59,7 +59,7 @@ The backend is intentionally designed to talk to Docker through the local Unix s
 
 For the first integration, CoreOps is expected to run on the same Ubuntu host as Docker and be reachable remotely through the user's private network (for example Tailscale). Authentication and authorization already exist. Remaining security risks are tracked in [security review](../docs/security.md); Tailscale does not replace them.
 
-See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. The proposed internal packages are not implemented yet.
+See [backend module instructions](../docs/modules/backend.md), [API instructions](../docs/modules/api.md) and [identity/audit instructions](../docs/modules/identity-audit.md) before refactoring. Containers now has real internal capability, Docker adapter and HTTP transport packages. Other capabilities remain in the executable package; see [architecture](../docs/architecture.md).
 
 ## Interactive terminal
 
@@ -150,3 +150,15 @@ Logs now exposes the retained journal across boots (`category=all|kernel|service
 Admin-only `GET /api/v1/compose`, `POST /api/v1/compose/validate`, `POST /api/v1/compose/projects` support the Compose tab in Create container. Submit `{project,compose,start}` for preview, then include its `validationHash` when creating. Only new projects are supported, using local images, project bridge networks and named/anonymous volumes. No pulls/builds/host mounts/external files/resources or privileged configuration. Ports without an explicit IP bind to loopback; start defaults to false.
 
 The server needs the installed Docker Compose CLI plugin (tested v5.7.0) and its existing Unix Docker endpoint. CLI and SDK use the same daemon. Manifests/reservations live privately under `COREOPS_DATA_DIR/compose`; relative data paths are normalized. 201 confirms creation/start request; 202 explicitly reports partial/uncertain results and keeps the project reserved. No destructive rollback or automatic retry. See [Compose guide](../docs/modules/compose.md) for supported fields, limits, persisted secrets, permissions, CLI isolation and recovery.
+
+## Kubernetes
+
+La pantalla Kubernetes conecta desde el backend con API servers HTTPS existentes. Configuración admin mediante `/api/v1/kubernetes/clusters`, perfiles privados bajo `COREOPS_DATA_DIR/kubernetes`, namespace scope y RBAC upstream. Viewer consulta inventario/eventos; operator accede a logs/YAML y escala/reinicia Deployments; admin configura conexiones. No requiere kubectl. El soporte inicial no incluye pods/exec, rollback, historial de métricas ni gestión de red/configuración/storage.
+
+Consultar [guía Kubernetes](../docs/modules/kubernetes.md) para configuración, permisos, rutas, límites, semántica de aceptación/recuperación y pruebas. No guardar tokens/kubeconfigs en el repositorio ni dar cluster-admin para ocultar fallos de permisos.
+
+## Modules and contract
+
+`internal/containers` owns the container use cases and Runtime port; `internal/adapters/docker` implements it; `internal/transport/httpapi` owns container HTTP/DTOs and common JSON helpers. `main.go` wires them and `routes.go` preserves auth/roles/audit. The initial contract is [api/openapi.json](../api/openapi.json), validated in Go tests against real handlers and fake runtimes. The OpenAPI test dependency is not imported by the production binary. Identity persistence and other capabilities still await extraction; no new host privilege or endpoint is added.
+
+Integration with the later slices preserves admin-only creation/deletion/Compose, bounded operator logs, Files, Kubernetes and identity reload/revocation. Create/delete handlers are not yet extracted backend use cases; the OpenAPI contract remains partial. All web clients use the same extracted session/transport through compatibility facades.

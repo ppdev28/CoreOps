@@ -1,6 +1,8 @@
 # Current State
 
-Reviewed on **2026-11-12**, checkout **`develop`**, commit **`ece1b7a`**. Architecture and module layout proposals are documented in [architecture.md](architecture.md), [modules/README.md](modules/README.md) and [modularization-plan.md](modularization-plan.md). They have not been implemented. Security findings: [security.md](security.md).
+Latest integrated validation: **2026-11-16**, modular foundation plus all accumulated features, validated for `develop`. See [integration report](integration-validation-2026-11-16.md) and the final section for scope, test results and remaining limitations. The dated baseline below is historical.
+
+Reviewed on **2026-11-12**, checkout **`develop`**, commit **`ece1b7a`**. Architecture and module layout proposals are documented in [architecture.md](architecture.md), [modules/README.md](modules/README.md) and [modularization-plan.md](modularization-plan.md). The first containers/API/shared frontend extraction is now implemented; the broader target remains partial. Security findings: [security.md](security.md).
 
 Last known working milestone: **the Figma-designed Containers UI displays real Docker data and performs tested start, stop and restart operations against the Ubuntu Server Docker Engine**.
 
@@ -54,15 +56,19 @@ Implementada en la rama actual `feature/terminal-redesign`: xterm.js con PTY Lin
 
 Validado con `go test -race ./...`, vet/build, frontend formato/build y 20 pruebas Playwright. Además, Chromium conectado a una API aislada y una PTY real: estado, Ctrl+C, `top`, pestañas independientes, resize, conexión >45 s y logout. Se actualizó después la API de desarrollo activa de 8082, que aún devolvía 404 en el endpoint, conservando identidad y configuración. Verificación adicional: proxy Vite preserva Host por LAN/Tailscale; prompt real con `/bin/bash -l`. El cliente comprueba compatibilidad antes de abrir xterm y muestra errores accionables. No se instaló un servicio de producción ni se recompiló Capacitor. Las rutas aisladas legacy permanecen; SEC-01/03/04 y los riesgos legacy de SEC-02 siguen pendientes.
 
+## Primera modularización
+
+Rama `refactor/modular-foundation`, basada en `develop`/`b4d64db`. `api/` contiene contrato OpenAPI inicial y tipos wire; backend separa contenedores en casos de uso, adaptador Moby y HTTP; frontend separa la feature, transporte, sesión y estados compartidos. Las fachadas legacy permiten migrar gradualmente sin cambiar UI/rutas/roles. El contrato se valida contra handlers/middleware reales con dependencias falsas; hay controles automáticos de imports. No hay tercer servicio API, clientes generados, nuevos privilegios ni migración de identidad. La extracción original precedía a la corrección de SEC-01; la integración actual conserva el bloqueo/recarga posterior. Guías junto a cada módulo e inventario en [modules/README.md](modules/README.md). Validado con Go race/vet/build, controles de imports, formato/build web, 23 pruebas Playwright y smoke de lectura sobre Docker real desde una API aislada. No se sustituyó el proceso de desarrollo ni se ejecutaron acciones Docker para esta extracción.
+
 ## Backend
 
 Stack: Go (stdlib `net/http`), Moby Docker client, no database (JSON files under `COREOPS_DATA_DIR`).
 
 The backend lives in `backend/cmd/coreops-api` and listens on `127.0.0.1:8082` by default (`COREOPS_HOST`, `COREOPS_PORT`). See `backend/README.md` for configuration.
 
-All backend source is still one `package main`; splitting files has not yet separated transport, use cases and adapters. `go test ./...`, `go vet ./...` and `go build ./...` passed on 2026-11-12.
+Container use cases, Docker adapter and HTTP transport are now separate `internal` packages. Remaining capabilities and identity/audit still live in `package main`; see [architecture](architecture.md). `go test ./...`, `go vet ./...` and `go build ./...` passed on 2026-11-12.
 
-Source layout: `main.go` (startup), `routes.go` (route table with minimum role per endpoint), `http.go` (JSON helpers, CORS, logging, env), `auth.go` (users, sessions, roles), `audit.go` (audit log), `users_cli.go` (`coreops-api user ...`), `containers.go` and one file per area (`host`, `services`, `storage`, `network`, `monitoring`, `logs`, `security`, `updates`, `applications`, `virtual_machines`, `terminal`).
+Source layout: `main.go` (startup), `routes.go` (route table with minimum role per endpoint), `http.go` (JSON helpers, CORS, logging, env), `auth.go` (users, sessions, roles), `audit.go` (audit log), `users_cli.go` (`coreops-api user ...`), `internal/{containers,adapters/docker,transport/httpapi}` for containers, and one legacy file per area (`host`, `services`, `storage`, `network`, `monitoring`, `logs`, `security`, `updates`, `applications`, `virtual_machines`, `terminal`).
 
 Implemented endpoints (all require a session except health and login):
 
@@ -154,7 +160,7 @@ Android repository cleanup (2026-11-13): backed up all 36 untracked template fil
 See [roadmap](../roadmap.md) for priorities and [security.md](security.md) for open security findings. Highlights:
 
 - Container detail logs/metrics and richer inspection: aggregate `/logs` already reads Docker logs and `/monitoring` already uses ContainerStats; these are not absent from the backend.
-- The list mapper currently assigns `restarts: 0` and the UI displays it although the list response has no restart count. This violates the unavailable-data rule and needs a code fix.
+- Container restart counts are now correctly unavailable (`null`/`—`) in list presentation; fine-grained inspect DTOs and other unavailable-value cleanup remain.
 - Docker handler tests. Auth, roles/audit, apt/UFW/security-event parsers and input validators already have Go tests. Dashboard Playwright fixture tests now exist; broader frontend coverage remains pending.
 - UI for the audit log and for user management (users are managed through the CLI).
 - Hiding UI actions the current role cannot perform (the API already enforces them).
@@ -225,3 +231,15 @@ Formato/build y 57 pruebas de interfaz completadas (una prueba existente requiri
 Create container now offers Single container / Docker Compose. Compose accepts YAML or a UTF-8 file, validates/previews services, and creates a new admin-owned project with optional start (off by default). Local images, named/anonymous volumes and project bridge networks are supported; external files/host binds/builds/privileged fields are rejected. The API uses a bounded, isolated Compose CLI against the same Unix Docker endpoint, private project manifests and real post-operation inventory. Existing projects are never updated by this flow; partial operations remain reserved for inspection. Applications already groups the resulting Compose labels. [Contract/security/recovery](modules/compose.md).
 
 Validation: full Go race tests/vet/build and focused Compose reruns including real CLI validation; frontend format/build and Compose/container creation tests. Real HTTP + mobile Chromium created two disposable projects (multi-service stopped and optional start), verified Docker states/loopback/HTTP, including relative data-directory configuration; all test resources/identity were removed. No production/native deployment.
+
+## Kubernetes operativo — 2026-11-15
+
+En `feature/kubernetes-observability`, Kubernetes añade una pantalla con el estilo CoreOps y distribución responsive. Incluye conexiones HTTPS gestionadas en backend, namespaces/filtros persistentes, resumen, lectura de Workloads/Pods/Nodos, incidencias con evidencia, eventos, YAML y logs actuales/anteriores. Admin configura conexiones; operator escala y reinicia Deployments con revisión explícita del target, comprobación RBAC/UID/resourceVersion y seguimiento del estado observado. No hay métricas ni recursos inventados. [Contrato, límites y validación](modules/kubernetes.md).
+
+Red/configuración/almacenamiento detallados, terminal de pods, métricas históricas y rollback quedan pendientes, identificados como tales en pantalla. Las credenciales de servicio son compartidas entre usuarios CoreOps sujetos a sus roles y al scope configurado; no hay impersonación por usuario. No se encontró un clúster configurado para validación viva: TLS/API y permisos se verifican con httptest, y la interfaz con fixtures aislados. No instalar ni modificar un clúster para rellenar la pantalla con datos de ejemplo.
+
+## Integración de modularización y funcionalidades — 2026-11-16
+
+Se combina `refactor/modular-foundation` con los cambios acumulados de Kubernetes, Compose, creación/borrado, Files, logs y terminal responsive antes de integrar en develop. La extracción es parcial: contrato inicial, contenedores list/inspect/lifecycle y frontend compartido; el resto conserva sus módulos actuales. Se mantienen las 47 rutas autenticadas/roles y la corrección SEC-01. Se corrigen fixtures persistentes, validador de IDs compartido, API frontend create/delete y la reconexión de PTY al cargar pantallas nuevas.
+
+Go race/vet/build y verificación de dependencias correctos; formato/boundaries/build web y 77/77 tests UI correctos. API aislada con Docker real verificó lifecycle/create/delete/logs, subida/descarga y Compose con Nginx loopback; los recursos desechables se limpiaron. Chromium verificó una única sesión PTY autenticada y variable/directorio conservados al navegar entre módulos. No hay validación Kubernetes viva ni build nativo. [Informe reproducible y límites](integration-validation-2026-11-16.md).

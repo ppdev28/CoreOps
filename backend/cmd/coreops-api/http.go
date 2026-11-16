@@ -1,27 +1,22 @@
 package main
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 )
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
+// Compatibility aliases keep unmigrated capabilities on the same JSON format.
+type ErrorResponse = httpapi.ErrorResponse
 
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
-}
-func writeError(w http.ResponseWriter, status int, err error) {
-	writeJSON(w, status, ErrorResponse{Error: err.Error()})
-}
+var writeJSON = httpapi.WriteJSON
+var writeError = httpapi.WriteError
+
 func withCORS(next http.Handler) http.Handler {
 	allowedOrigins := map[string]struct{}{
 		"http://localhost:5173": {},

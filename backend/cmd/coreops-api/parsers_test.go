@@ -56,24 +56,12 @@ func TestClassifySecurityEvent(t *testing.T) {
 
 func TestInputValidators(t *testing.T) {
 	good := map[string][]string{
-		"container": {"abcdef123456", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},
-		"service":   {"ssh.service", "docker.service", "getty@tty1.service"},
-		"package":   {"openssl", "libc6:amd64", "g++"},
+		"service": {"ssh.service", "docker.service", "getty@tty1.service"},
+		"package": {"openssl", "libc6:amd64", "g++"},
 	}
 	bad := map[string][]string{
-		"container": {"", "abc", "../etc", "abcdef123456; rm -rf /", "zzzzzzzzzzzz"},
-		"service":   {"ssh", "ssh.service; reboot", "$(id).service", "../x.service"},
-		"package":   {"", "-oAPT::x=1", "a b", "a;b"},
-	}
-	for _, v := range good["container"] {
-		if !containerIDPattern.MatchString(v) {
-			t.Errorf("container %q rejected", v)
-		}
-	}
-	for _, v := range bad["container"] {
-		if containerIDPattern.MatchString(v) {
-			t.Errorf("container %q accepted", v)
-		}
+		"service": {"ssh", "ssh.service; reboot", "$(id).service", "../x.service"},
+		"package": {"", "-oAPT::x=1", "a b", "a;b"},
 	}
 	for _, v := range good["service"] {
 		if !systemdUnitPattern.MatchString(v) {

@@ -112,6 +112,7 @@ export async function mockDashboard(
     let body: unknown;
     if (path === "/terminal/session") body = { available: true, protocol: 1 };
     else if (path === "/host") body = host;
+    else if (path === "/kubernetes/clusters") body = [];
     else if (path === "/files") {
       const directory =
         new URL(route.request().url()).searchParams.get("path") || "/";

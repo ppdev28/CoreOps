@@ -58,6 +58,7 @@ const NAV = [
         label: "Applications",
         icon: <AppWindow size={14} />,
       },
+      { id: "kubernetes", label: "Kubernetes", icon: <Network size={14} /> },
       { id: "services", label: "Services", icon: <Layers size={14} /> },
       { id: "storage", label: "Storage", icon: <HardDrive size={14} /> },
       { id: "network", label: "Network", icon: <Network size={14} /> },

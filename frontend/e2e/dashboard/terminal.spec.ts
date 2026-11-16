@@ -53,6 +53,28 @@ test("terminal streams keys, keeps independent tabs and survives navigation", as
   await expect(
     page.getByLabel("Directory path relative to server root"),
   ).toHaveValue("/documents");
+  // Newly extracted container screens and lazy Kubernetes must share the
+  // existing session without suspending/recreating mounted PTYs or Files.
+  await page
+    .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Containers", exact: true })
+    .click();
+  await expect(
+    page
+      .locator('[data-screen="containers"]')
+      .getByText("nginx", { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await page
+    .locator(".sidebar-desktop")
+    .getByRole("button", { name: "Kubernetes", exact: true })
+    .click();
+  await expect(
+    page.getByText("Your cluster, one operational workspace", { exact: true }),
+  ).toBeVisible();
+  expect(
+    control.terminalMessages.filter((m) => m.type === "auth"),
+  ).toHaveLength(2);
   await page
     .locator(".sidebar-desktop")
     .getByRole("button", { name: "Dashboard", exact: true })

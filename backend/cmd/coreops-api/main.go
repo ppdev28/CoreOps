@@ -13,9 +13,13 @@ import (
 	"time"
 
 	"github.com/moby/moby/client"
+	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
 )
 
 type API struct {
+	containers   *containers.Service
+	kube         *kubeManager
 	compose      *composeManager
 	logRoot      string
 	auditLogPath string
@@ -58,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer files.close()
-	api := &API{docker: docker, files: files, logRoot: envString("COREOPS_LOG_ROOT", "/var/log")}
+	api := &API{containers: containers.New(dockeradapter.NewContainers(docker)), docker: docker, files: files, logRoot: envString("COREOPS_LOG_ROOT", "/var/log")}
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")

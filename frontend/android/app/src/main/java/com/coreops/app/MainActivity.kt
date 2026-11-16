@@ -68,6 +68,7 @@ class MainActivity : BridgeActivity() {
                 NativeDestination("host", "Host", R.drawable.ic_host),
                 NativeDestination("containers", "Containers", R.drawable.ic_containers),
                 NativeDestination("applications", "Applications", R.drawable.ic_applications),
+                NativeDestination("kubernetes", "Kubernetes", R.drawable.ic_network),
                 NativeDestination("services", "Services", R.drawable.ic_services),
                 NativeDestination("storage", "Storage", R.drawable.ic_storage),
                 NativeDestination("network", "Network", R.drawable.ic_network),
