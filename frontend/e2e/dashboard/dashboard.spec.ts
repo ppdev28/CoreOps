@@ -244,7 +244,11 @@ test("tablet sidebar collapses without changing navigation order", async ({
       .locator("aside")
       .evaluate((el) => el.getBoundingClientRect().width),
   ).toBe(64);
-  expect(await page.locator("aside nav button").allTextContents()).toEqual([
+  expect(
+    await page
+      .locator("aside nav button")
+      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("aria-label"))),
+  ).toEqual([
     "Dashboard",
     "Host",
     "Containers",

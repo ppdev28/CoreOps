@@ -50,6 +50,7 @@ type fileEntry struct {
 	Size     int64     `json:"size"`
 	Modified time.Time `json:"modified"`
 	Mode     string    `json:"mode"`
+	Version  string    `json:"version,omitempty"`
 }
 type fileListing struct {
 	Path           string      `json:"path"`
@@ -207,7 +208,7 @@ func (f *FileExplorer) list(w http.ResponseWriter, r *http.Request) {
 			case info.Mode()&os.ModeSymlink != 0:
 				kind = "symlink"
 			}
-			entries = append(entries, fileEntry{Name: name, Path: logicalPath(path.Join(relative, name)), Kind: kind, Size: info.Size(), Modified: info.ModTime(), Mode: info.Mode().String()})
+			entries = append(entries, fileEntry{Name: name, Path: logicalPath(path.Join(relative, name)), Kind: kind, Size: info.Size(), Modified: info.ModTime(), Mode: info.Mode().String(), Version: fileVersion(info)})
 		}
 		if r.Context().Err() != nil {
 			return

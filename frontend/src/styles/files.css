@@ -196,7 +196,7 @@
 .files-table-head,
 .files-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px 170px 110px 44px;
+  grid-template-columns: minmax(0, 1fr) 100px 170px 110px 92px;
   align-items: center;
   gap: 12px;
   padding: 4px 16px;
@@ -409,7 +409,7 @@
 @media (max-width: 1200px) {
   .files-table-head,
   .files-row {
-    grid-template-columns: minmax(0, 1fr) 90px 150px 44px;
+    grid-template-columns: minmax(0, 1fr) 90px 150px 92px;
   }
   .files-mode,
   .files-table-head > span:nth-child(4) {
@@ -470,7 +470,7 @@
     display: none;
   }
   .files-row {
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) 92px;
     padding: 6px 12px;
     gap: 8px;
   }
@@ -505,4 +505,11 @@
   .files-spin {
     animation: none;
   }
+}
+
+.files-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }

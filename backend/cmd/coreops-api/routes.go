@@ -2,7 +2,9 @@ package main
 
 import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/security"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 	"net/http"
@@ -17,6 +19,12 @@ import (
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	a.auditLogPath = audit.path
+	if a.hostSecurity == nil {
+		a.hostSecurity = security.New(linuxsecurity.New())
+	}
+	if a.updateTasks == nil {
+		a.updateTasks = newUpdateJobs(aptRunner{}, audit)
+	}
 	if a.telemetry == nil {
 		a.telemetry = telemetry.New("")
 	}
@@ -79,6 +87,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/services/{name}/restart", RoleOperator, a.restartService)
 	handle("GET /api/v1/storage", RoleViewer, a.storage)
 	handle("GET /api/v1/files", RoleAdmin, a.files.list)
+	handle("DELETE /api/v1/files", RoleAdmin, a.files.remove(auth.dir))
 	handle("POST /api/v1/files/upload", RoleAdmin, a.files.upload)
 	handle("POST /api/v1/files/download-ticket", RoleAdmin, a.files.downloadTicket)
 	// This endpoint consumes a one-use capability minted by an authenticated admin.
@@ -103,6 +112,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/security/sessions/{pid}/terminate", RoleAdmin, a.terminateSecuritySession)
 	handle("POST /api/v1/security/fix/{item}", RoleAdmin, a.fixSecurity)
 	handle("GET /api/v1/updates", RoleViewer, a.updates)
+	handle("GET /api/v1/updates/jobs/{id}", RoleAdmin, a.updateJob)
 	handle("POST /api/v1/updates/refresh", RoleAdmin, a.refreshUpdates)
 	handle("POST /api/v1/updates/apply", RoleAdmin, a.applyUpdates)
 	handle("GET /api/v1/audit", RoleAdmin, audit.handler)

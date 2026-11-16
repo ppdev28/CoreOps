@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Trash2,
   File,
   Folder,
   FolderOpen,
@@ -29,6 +30,7 @@ import { Capacitor } from "@capacitor/core";
 import { getSession } from "../lib/auth";
 import {
   downloadFile,
+  deleteFile,
   fileSize,
   listFiles,
   uploadFile,
@@ -36,6 +38,7 @@ import {
   type ServerFile,
 } from "../lib/files";
 import { T } from "../lib/tokens";
+import type { ConfirmDialog } from "../lib/types";
 import "../styles/files.css";
 
 type Transfer = {
@@ -52,7 +55,13 @@ const date = (value: string) => new Date(value).toLocaleString();
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Unable to complete the operation";
 
-export default function FileExplorerView({ active }: { active: boolean }) {
+export default function FileExplorerView({
+  active,
+  onConfirm,
+}: {
+  active: boolean;
+  onConfirm: (dialog: ConfirmDialog) => void;
+}) {
   const admin = getSession()?.user.role === "admin";
   const [path, setPath] = useState("/");
   const [pathInput, setPathInput] = useState("/");
@@ -70,6 +79,8 @@ export default function FileExplorerView({ active }: { active: boolean }) {
   const [dragging, setDragging] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [uploading, setUploading] = useState(false);
+  const deletingRef = useRef(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [previous, setPrevious] = useState<string[]>([]);
   const picker = useRef<HTMLInputElement>(null);
@@ -157,6 +168,51 @@ export default function FileExplorerView({ active }: { active: boolean }) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [uploading]);
+  const askDelete = (file: ServerFile) => {
+    if (
+      deletingRef.current ||
+      loading ||
+      uploading ||
+      !file.version ||
+      listing?.path !== path
+    )
+      return;
+    onConfirm({
+      title: "Delete file permanently?",
+      message: `Server: ${listing.root}. File: ${file.path}. This permanently removes this file. There is no recycle bin.`,
+      action: "Delete file",
+      danger: true,
+      requireConfirmation: true,
+      onConfirm: () => {
+        if (deletingRef.current) return;
+        deletingRef.current = true;
+        setDeleting(file.path);
+        setNotice("");
+        void deleteFile(file)
+          .then(() => {
+            if (mounted.current) {
+              setListing((old) =>
+                old
+                  ? {
+                      ...old,
+                      entries: old.entries.filter((e) => e.path !== file.path),
+                    }
+                  : old,
+              );
+              setNotice(`Deleted ${file.path}`);
+              setRefresh((v) => v + 1);
+            }
+          })
+          .catch((e) => {
+            if (mounted.current) setNotice(`Delete failed: ${message(e)}`);
+          })
+          .finally(() => {
+            deletingRef.current = false;
+            if (mounted.current) setDeleting(null);
+          });
+      },
+    });
+  };
   const startUpload = async (files: File[]) => {
     if (
       !files.length ||
@@ -299,7 +355,7 @@ export default function FileExplorerView({ active }: { active: boolean }) {
           <h1>
             <FolderOpen size={23} /> File explorer
           </h1>
-          <p>Browse and transfer files on your server.</p>
+          <p>Browse, transfer and delete files on your server.</p>
         </div>
         <button
           className="files-primary"
@@ -532,18 +588,43 @@ export default function FileExplorerView({ active }: { active: boolean }) {
                         <ChevronRight size={18} />
                       </button>
                     ) : file.kind === "file" ? (
-                      <button
-                        disabled={!!downloading}
-                        onClick={() => void startDownload(file)}
-                        aria-label={`Save ${file.name}`}
-                        title="Download"
-                      >
-                        {downloading === file.path ? (
-                          <LoaderCircle size={18} className="files-spin" />
-                        ) : (
-                          <Download size={18} />
-                        )}
-                      </button>
+                      <div className="files-row-actions">
+                        <button
+                          disabled={!!downloading}
+                          onClick={() => void startDownload(file)}
+                          aria-label={`Save ${file.name}`}
+                          title="Download"
+                        >
+                          {downloading === file.path ? (
+                            <LoaderCircle size={18} className="files-spin" />
+                          ) : (
+                            <Download size={18} />
+                          )}
+                        </button>
+                        <button
+                          aria-label={`Delete ${file.name}`}
+                          title={
+                            file.version
+                              ? "Delete file permanently"
+                              : "Refresh listing or update the API to enable deletion"
+                          }
+                          disabled={
+                            !!deleting ||
+                            loading ||
+                            uploading ||
+                            !!error ||
+                            !file.version
+                          }
+                          onClick={() => askDelete(file)}
+                          style={{ color: T.red }}
+                        >
+                          {deleting === file.path ? (
+                            <LoaderCircle size={18} className="files-spin" />
+                          ) : (
+                            <Trash2 size={18} />
+                          )}
+                        </button>
+                      </div>
                     ) : (
                       <span />
                     )}

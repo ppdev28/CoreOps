@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   RefreshCw,
   Shield,
@@ -8,9 +8,16 @@ import {
   TerminalSquare,
 } from "lucide-react";
 import { T } from "../lib/tokens";
-import { applyUpdates, getUpdates, refreshUpdates } from "../lib/api";
+import { getSession } from "../lib/auth";
+import {
+  applyUpdates,
+  getUpdates,
+  refreshUpdates,
+  getUpdateJob,
+} from "../lib/api";
 import type {
   ConfirmDialog,
+  UpdateJob,
   UpdatePackage,
   UpdatesOverview,
 } from "../lib/types";
@@ -26,11 +33,13 @@ function UpdateTable({
   selected,
   toggle,
   allToggle,
+  disabled,
 }: {
   items: UpdatePackage[];
   selected: Set<string>;
   toggle: (pkg: string) => void;
   allToggle: () => void;
+  disabled: boolean;
 }) {
   const all = items.length > 0 && items.every((u) => selected.has(u.package));
   return (
@@ -47,6 +56,7 @@ function UpdateTable({
             >
               <input
                 type="checkbox"
+                disabled={disabled}
                 checked={all}
                 onChange={allToggle}
                 style={{ accentColor: T.accent, cursor: "pointer" }}
@@ -75,6 +85,7 @@ function UpdateTable({
               >
                 <input
                   type="checkbox"
+                  disabled={disabled}
                   checked={selected.has(u.package)}
                   onChange={() => toggle(u.package)}
                   style={{ accentColor: T.accent, cursor: "pointer" }}
@@ -127,6 +138,10 @@ export default function UpdatesView({
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
+  const admin = getSession()?.user.role === "admin";
+  const starting = useRef(false);
+  const jobRevision = useRef(0);
+  const [job, setJob] = useState<UpdateJob | null>(null);
   const [data, setData] = useState<UpdatesOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -174,50 +189,108 @@ export default function UpdatesView({
       return next;
     });
 
-  const checkNow = async () => {
-    setRefreshing(true);
+  const startOperation = async (action: "refresh" | "apply", all = false) => {
+    if (starting.current || job?.status === "running" || !admin) return;
+    starting.current = true;
+    jobRevision.current++;
     setError("");
+    setOutput("");
+    if (action === "refresh") setRefreshing(true);
+    else setApplying(true);
     try {
-      const fresh = await refreshUpdates();
-      setData(fresh);
-      setSelected(new Set());
-      addToast(
-        `${fresh.updates.length} update${fresh.updates.length === 1 ? "" : "s"} available`,
-        "info",
-      );
+      const task =
+        action === "refresh"
+          ? await refreshUpdates()
+          : await applyUpdates(all ? [] : Array.from(selected), all);
+      if (!task?.id || task.status !== "running")
+        throw new Error(
+          "API does not support tracked updates. Rebuild/restart CoreOps before retrying.",
+        );
+      setJob(task);
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Unable to refresh package index";
-      setError(message);
-      addToast(message, "error");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-  const performApply = async (all: boolean) => {
-    setApplying(true);
-    setError("");
-    try {
-      const result = await applyUpdates(all ? [] : Array.from(selected), all);
-      setOutput(result.output);
-      setSelected(new Set());
-      const fresh = await getUpdates();
-      setData(fresh);
-      addToast(
-        all
-          ? "All updates applied successfully"
-          : "Selected updates applied successfully",
-        "success",
+      setError(
+        e instanceof Error ? e.message : "Unable to start package operation",
       );
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Unable to apply updates";
-      setError(message);
-      addToast(message, "error");
-    } finally {
       setApplying(false);
+      setRefreshing(false);
+    } finally {
+      starting.current = false;
     }
   };
+  const checkNow = () => startOperation("refresh");
+  const performApply = (all: boolean) => startOperation("apply", all);
+  useEffect(() => {
+    if (!admin) return;
+    const controller = new AbortController();
+    const revision = jobRevision.current;
+    void getUpdateJob("current", controller.signal)
+      .then((task) => {
+        if (!controller.signal.aborted && revision === jobRevision.current) {
+          setJob(task);
+          if (task) {
+            setOutput(task.output || "");
+            if (task.error) setError(task.error);
+          }
+        }
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(`Update job status unavailable: ${e.message}`);
+      });
+    return () => controller.abort();
+  }, [admin]);
+  useEffect(() => {
+    if (!job || job.status !== "running") return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const task = await getUpdateJob(job.id, controller.signal);
+        if (controller.signal.aborted) return;
+        if (!task)
+          throw new Error(
+            "Job status unavailable; check APT/dpkg before retrying.",
+          );
+        setJob(task);
+        setOutput(task.output || "");
+        if (task.status === "running") {
+          timer = setTimeout(() => void poll(), 1000);
+          return;
+        }
+        setRefreshing(false);
+        setApplying(false);
+        if (task.status === "failed") {
+          setError(task.error || "Package operation failed");
+          addToast("Package operation failed; inspect the result", "error");
+        } else {
+          setSelected(new Set());
+          if (task.overview) setData(task.overview);
+          else void load();
+          if (task.warning) setError(task.warning);
+          addToast(
+            task.action === "refresh"
+              ? "Package index refreshed"
+              : "Package operation completed",
+            "success",
+          );
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          setError(
+            `Status unavailable: ${e instanceof Error ? e.message : "connection lost"}. The operation may still be running; status will be checked again automatically.`,
+          );
+          timer = setTimeout(() => void poll(), 5000);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [job?.id, job?.status]);
+  const busy = refreshing || applying || job?.status === "running";
+  const allowed = admin && data?.capability?.available !== false;
   const confirmApply = (all: boolean) =>
     onConfirm({
       title: all
@@ -228,6 +301,7 @@ export default function UpdatesView({
         : "The selected packages will be upgraded. Some services may restart automatically.",
       action: all ? "Apply all updates" : "Apply selected",
       danger: true,
+      requireConfirmation: true,
       onConfirm: () => void performApply(all),
     });
 
@@ -261,6 +335,7 @@ export default function UpdatesView({
         <div style={{ display: "flex", gap: 8 }}>
           <Btn
             onClick={() => void checkNow()}
+            disabled={!allowed || busy}
             variant="secondary"
             icon={
               <RefreshCw
@@ -276,12 +351,17 @@ export default function UpdatesView({
             {refreshing ? "Refreshing…" : "Check now"}
           </Btn>
           {selected.size > 0 && (
-            <Btn onClick={() => confirmApply(false)} variant="primary">
+            <Btn
+              onClick={() => confirmApply(false)}
+              variant="primary"
+              disabled={!allowed || busy}
+            >
               {applying ? "Applying…" : `Apply ${selected.size} selected`}
             </Btn>
           )}
           <Btn
             onClick={() => confirmApply(true)}
+            disabled={!allowed || busy || !data || total === 0}
             variant="primary"
             icon={<Check size={11} />}
           >
@@ -290,8 +370,48 @@ export default function UpdatesView({
         </div>
       </div>
 
+      {!admin && (
+        <p style={{ color: T.textDim, marginBottom: 12 }}>
+          Admin role required to change packages.
+        </p>
+      )}
+      {data?.capability?.available === false && (
+        <p role="alert" style={{ color: T.yellow, marginBottom: 12 }}>
+          {data.capability.error}
+        </p>
+      )}
+      {job && (
+        <section
+          aria-label="Package operation"
+          data-surface="panel"
+          style={{
+            padding: 12,
+            marginBottom: 14,
+            border: `1px solid ${T.border}`,
+            borderRadius: 8,
+            color: T.textSub,
+          }}
+        >
+          <strong>
+            {job.action} · {job.status}
+          </strong>
+          <p>
+            Job {job.id} · Started {new Date(job.startedAt).toLocaleString()}
+            {job.finishedAt
+              ? ` · Finished ${new Date(job.finishedAt).toLocaleString()}`
+              : " · Continues if you navigate away"}
+          </p>
+          {job.status === "running" && (
+            <span role="status">
+              Package operation running. Progress is confirmed by APT; do not
+              start another operation.
+            </span>
+          )}
+        </section>
+      )}
       {error && (
         <div
+          role="alert"
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -392,7 +512,7 @@ export default function UpdatesView({
             fontFamily: "JetBrains Mono,monospace",
           }}
         >
-          Last checked {formatUpdatedAt(data?.updatedAt ?? "")}
+          Local index read {formatUpdatedAt(data?.updatedAt ?? "")}
         </div>
       </div>
 
@@ -409,6 +529,11 @@ export default function UpdatesView({
             Reading package index…
           </div>
         </Card>
+      ) : !data ? (
+        <p>
+          Package status unavailable. Retry after checking the connection and
+          permissions.
+        </p>
       ) : total === 0 ? (
         <Card>
           <div style={{ padding: "42px 20px", textAlign: "center" }}>
@@ -449,6 +574,7 @@ export default function UpdatesView({
                 items={security}
                 selected={selected}
                 toggle={toggle}
+                disabled={!admin || busy}
                 allToggle={() => toggleItems(security)}
               />
             </div>
@@ -474,6 +600,7 @@ export default function UpdatesView({
                 items={system}
                 selected={selected}
                 toggle={toggle}
+                disabled={!admin || busy}
                 allToggle={() => toggleItems(system)}
               />
             </div>

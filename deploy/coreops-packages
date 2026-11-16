@@ -1,0 +1,21 @@
+#!/bin/sh
+# Root-owned restricted helper. Install only with the accompanying sudoers rule.
+set -eu
+[ "$(/usr/bin/id -u)" = 0 ] || { echo 'Must run through the restricted sudo rule' >&2; exit 77; }
+[ "$#" -ge 1 ] || exit 64
+action=$1
+shift
+case "$action" in
+  check) [ "$#" -eq 0 ] || exit 64; echo 'coreops-packages ready'; exit 0 ;;
+  refresh) [ "$#" -eq 0 ] || exit 64; set -- update ;;
+  upgrade) [ "$#" -eq 0 ] || exit 64; set -- -y --with-new-pkgs -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade ;;
+  apply)
+    [ "$#" -ge 1 ] && [ "$#" -le 100 ] || exit 64
+    for package in "$@"; do
+      case "$package" in ''|*[!a-zA-Z0-9+_.:-]*|[!a-zA-Z0-9]*) echo 'Invalid package name' >&2; exit 64 ;; esac
+    done
+    set -- -y --only-upgrade -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install -- "$@" ;;
+  *) echo 'Unsupported operation' >&2; exit 64 ;;
+esac
+# No API secrets, user APT_CONFIG, shell hooks or user-supplied options survive.
+exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l /usr/bin/timeout -k 30s 20m /usr/bin/apt-get -o APT::Update::Error-Mode=any -o DPkg::Lock::Timeout=15 "$@"

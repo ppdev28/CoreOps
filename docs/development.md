@@ -175,3 +175,19 @@ Python generator tests and promtool config/rule validation also run in CI.
 and a disposable target's pending/firing/recovery; never stop production services
 to demonstrate alerting. Browser fixtures still intercept infrastructure calls;
 run the smoke separately against the real backend.
+
+## ppserver / LAN and operational repairs
+
+Vite listens on interfaces by default and explicitly accepts `ppserver` and
+`ppserver.local`, retaining its default localhost/IP allowance and denying other
+hostnames. Access `http://ppserver:5173` or the server LAN IP, currently
+`http://192.168.1.128:5173`. The client must resolve ppserver through local DNS,
+Tailscale MagicDNS or a hosts entry; allowedHosts does not create DNS records.
+No wildcard allowedHosts or CORS bypass is enabled. Same-origin `/api` and WebSocket
+proxy keep Host for the terminal's Origin check.
+
+Sidebar uses actual React collapsed state (initially collapsed at 768–1150 px);
+its arrow can expand in that interval. CSS no longer forces the narrow width.
+Dashboard Create container reuses the admin container/Compose dialog and refreshes
+real inventory. Files deletion and Updates contracts are in
+[Files](modules/files.md) and [Updates](modules/updates.md).

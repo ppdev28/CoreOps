@@ -9,6 +9,7 @@ export interface ServerFile {
   size: number;
   modified: string;
   mode: string;
+  version?: string;
 }
 export interface FileListing {
   path: string;
@@ -156,4 +157,16 @@ export function fileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 4);
   return `${(bytes / 1024 ** unit).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${["B", "KiB", "MiB", "GiB", "TiB"][unit]}`;
+}
+
+export async function deleteFile(file: ServerFile): Promise<void> {
+  const result = await jsonRequest<{ ok: boolean; path: string }>("/files", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: file.path, version: file.version }),
+  });
+  if (result.ok !== true || result.path !== file.path)
+    throw new Error(
+      "Invalid deletion result. Refresh the folder to check its actual state.",
+    );
 }

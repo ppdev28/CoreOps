@@ -151,16 +151,29 @@ export interface LogsOverview {
   updatedAt: string;
 }
 export interface SecurityCheck {
+  id: string;
   label: string;
   ok: boolean | null;
+  status: "pass" | "attention" | "unknown" | "info";
   detail: string;
 }
 export interface SecuritySession {
+  id: string;
   user: string;
+  uid: number;
   from: string;
   since: string;
+  sinceSource?: string;
   method: string;
   pid: number;
+  parentPid: number;
+  terminal: string;
+  name: string;
+  loginId?: string;
+  process: string;
+  verified: boolean;
+  canTerminate: boolean;
+  terminationReason?: string;
 }
 export interface FirewallRule {
   number: string;
@@ -178,10 +191,12 @@ export interface SecurityOverview {
   updatedAt: string;
   checks: SecurityCheck[];
   sessions: SecuritySession[];
-  firewallActive: boolean;
+  firewallActive: boolean | null;
   firewallRules: FirewallRule[];
   firewallVersion: string;
   events: SecurityEvent[];
+  sources: Record<string, { state: string; detail?: string }>;
+  capabilities: Record<string, { available: boolean; reason?: string }>;
 }
 export interface UpdatePackage {
   package: string;
@@ -190,7 +205,20 @@ export interface UpdatePackage {
   type: "security" | "system";
   source?: string;
 }
+export interface UpdateJob {
+  id: string;
+  action: "refresh" | "apply" | "upgrade";
+  status: "running" | "succeeded" | "failed";
+  packages: string[];
+  startedAt: string;
+  finishedAt?: string;
+  output: string;
+  error?: string;
+  warning?: string;
+  overview?: UpdatesOverview;
+}
 export interface UpdatesOverview {
+  capability?: { available: boolean; error?: string };
   updatedAt: string;
   updates: UpdatePackage[];
   securityCount: number;

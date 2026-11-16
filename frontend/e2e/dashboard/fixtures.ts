@@ -128,6 +128,7 @@ export async function mockDashboard(
       const directory =
         new URL(route.request().url()).searchParams.get("path") || "/";
       const entry = {
+        version: "a".repeat(64),
         size: 42,
         modified: "2026-11-15T12:00:00Z",
         mode: "-rw-------",
@@ -341,8 +342,20 @@ export async function mockDashboard(
       body = {
         updatedAt: new Date().toISOString(),
         checks: [
-          { label: "Firewall", ok: true, detail: "Active" },
-          { label: "SSH", ok: true, detail: "Key authentication enabled" },
+          {
+            id: "firewall",
+            label: "Firewall",
+            ok: true,
+            status: "pass",
+            detail: "Active",
+          },
+          {
+            id: "ssh-key-auth",
+            label: "SSH",
+            ok: true,
+            status: "pass",
+            detail: "Key authentication enabled",
+          },
         ],
         sessions: [
           {
@@ -351,8 +364,27 @@ export async function mockDashboard(
             since: "10:30",
             method: "ssh",
             pid: 12345,
+            id: "a".repeat(64),
+            uid: 1000,
+            parentPid: 12300,
+            terminal: "pts/4",
+            name: "operator · pts/4",
+            process: "sshd",
+            verified: true,
+            canTerminate: true,
           },
         ],
+        sources: {
+          sessions: { state: "ok" },
+          ufw: { state: "ok" },
+          events: { state: "ok" },
+        },
+        capabilities: {
+          autoUpdates: {
+            available: false,
+            reason: "Restricted host permission required",
+          },
+        },
         firewallActive: true,
         firewallRules: [
           { number: "1", to: "22/tcp", action: "ALLOW", from: "192.0.2.0/24" },
@@ -372,6 +404,8 @@ export async function mockDashboard(
         exitCode: 0,
         cwd: "/home/operator",
       };
+    else if (path === "/updates/jobs/current")
+      return route.fulfill({ contentType: "application/json", body: "null" });
     else if (path === "/updates")
       body = {
         updates: [],

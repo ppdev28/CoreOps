@@ -163,11 +163,6 @@
 .app-workspace .dashboard-footer-note { border-color: var(--coreops-border); padding: 11px 22px; font-size: 10px; color: var(--coreops-textDim); }
 .app-workspace .dashboard-empty { color: var(--coreops-textDim); font-size: 11px; padding: 30px 16px; text-align: center; }
 @media (min-width: 901px) and (max-width: 1150px) {
-  .app-workspace .coreops-sidebar { width: 64px !important; }
-  .app-workspace .coreops-sidebar > div:first-child > div:first-child { display: none !important; }
-  .app-workspace .coreops-sidebar > div:first-child > span, .app-workspace .coreops-sidebar nav > div > div, .app-workspace .coreops-sidebar nav button > span, .app-workspace .coreops-sidebar > div:last-child { display: none !important; }
-  .app-workspace .coreops-sidebar nav button { padding: 10px 16px !important; }
-  .app-workspace .coreops-sidebar > div:first-child { padding: 16px 20px !important; }
   .app-workspace .coreops-brand { display: none; }
 }
 @media (max-width: 1150px) {

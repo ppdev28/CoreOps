@@ -121,8 +121,9 @@ export function Sidebar({
   return (
     <aside
       className="coreops-sidebar"
+      data-collapsed={collapsed}
       style={{
-        width: collapsed ? 52 : 220,
+        width: collapsed ? 64 : 220,
         flexShrink: 0,
         background: T.bgSidebar,
         borderRight: `1px solid ${T.borderRight}`,
@@ -134,88 +135,24 @@ export function Sidebar({
         position: "relative",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: collapsed ? "14px 14px" : "14px 16px",
-          height: 52,
-          flexShrink: 0,
-          borderBottom: `1px solid ${T.borderRight}`,
-        }}
-      >
-        <div
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 7,
-            flexShrink: 0,
-            background: T.primary,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Server size={13} color={T.onAccent} />
-        </div>
+      <div className="sidebar-brand">
         {!collapsed && (
           <>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: T.text,
-                whiteSpace: "nowrap",
-                flex: 1,
-                overflow: "hidden",
-              }}
-            >
-              CoreOps
-            </span>
-            <button
-              onClick={onToggle}
-              aria-label={
-                collapsed ? "Expand navigation" : "Collapse navigation"
-              }
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: T.textDim,
-                display: "flex",
-                padding: 2,
-                borderRadius: 4,
-              }}
-            >
-              <ChevronLeft size={14} />
-            </button>
+            <div className="sidebar-logo">
+              <Server size={13} color={T.onAccent} />
+            </div>
+            <span>CoreOps</span>
           </>
         )}
-        {collapsed && (
-          <button
-            onClick={onToggle}
-            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-            style={{
-              position: "absolute",
-              right: -12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 20,
-              height: 28,
-              borderRadius: "0 6px 6px 0",
-              background: T.overlay,
-              border: `1px solid ${T.border}`,
-              cursor: "pointer",
-              color: T.textDim,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <ChevronRight size={11} />
-          </button>
-        )}
+        <button
+          className="sidebar-toggle"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          title={collapsed ? "Expand navigation" : "Collapse navigation"}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
       </div>
       <nav style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
         {NAV.map((sec, si) => (

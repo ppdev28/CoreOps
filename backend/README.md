@@ -174,3 +174,20 @@ The read-only `/api/v1/observability/*` capability uses the existing viewer sess
 `GET /metrics` uses a separate configured scrape token and is disabled when it is absent.
 See [installation, environment variables, metrics/rules and diagnostics](../docs/observability.md)
 and [validation evidence](../docs/observability-validation-2026-11-16.md).
+
+## File deletion and tracked package updates
+
+Admin-only DELETE `/api/v1/files` deletes a regular file after validating its
+listing version; no directories, recursion, sudo or symlink targets. Existing
+filesystem permissions apply. [Contract/limits](../docs/modules/files.md).
+
+Package refresh/apply now return 202 jobs instead of waiting through the HTTP
+write timeout. Admin polls `/api/v1/updates/jobs/{id}` or `/current`. The restricted
+root-owned APT helper must be installed by a sudo-enabled operator; the current
+service account has no passwordless sudo. [Installation](../docs/modules/updates.md).
+
+### Host Security
+
+`GET /api/v1/security` requires operator/admin. Independent source states distinguish missing tools and denied permissions from disabled controls. SSH rows include a stable ID, user/UID, terminal, PID/parent and available origin/login evidence. `POST /api/v1/security/sessions/{pid}/terminate` requires admin and exactly `{"id":"<session-id>"}`; fresh verified identity, trusted OpenSSH executables and OS signal permission are mandatory. It returns 202 `termination_requested`, not confirmed termination. The inventory confirms disappearance. There is no arbitrary PID kill or sudo signal fallback.
+
+`POST /api/v1/security/fix/auto-updates` requires admin and verifies effective APT policy and `apt-daily-upgrade.timer` after enabling it. An unreadable policy or missing host permission prevents changes. The optional root-owned helper has fixed read-only operations; timer modification is a separate opt-in sudo rule. See [Security module](../docs/modules/host-security.md) before installing anything. No new host privilege is installed automatically.

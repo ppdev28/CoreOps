@@ -5,9 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -21,10 +20,11 @@ type UpdatePackage struct {
 	Source    string `json:"source,omitempty"`
 }
 type UpdatesOverview struct {
-	UpdatedAt     string          `json:"updatedAt"`
-	Updates       []UpdatePackage `json:"updates"`
-	SecurityCount int             `json:"securityCount"`
-	SystemCount   int             `json:"systemCount"`
+	UpdatedAt     string            `json:"updatedAt"`
+	Updates       []UpdatePackage   `json:"updates"`
+	SecurityCount int               `json:"securityCount"`
+	SystemCount   int               `json:"systemCount"`
+	Capability    *UpdateCapability `json:"capability,omitempty"`
 }
 type ApplyUpdatesRequest struct {
 	Packages []string `json:"packages"`
@@ -56,6 +56,9 @@ func collectUpdates(ctx context.Context) (UpdatesOverview, error) {
 		} else {
 			overview.SystemCount++
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return overview, fmt.Errorf("reading package listing: %w", err)
 	}
 	return overview, nil
 }
@@ -102,85 +105,40 @@ func parseAptUpgradableLine(line string) (UpdatePackage, bool) {
 func (a *API) updates(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	overview, err := collectUpdates(ctx)
+	overview, err := a.updateTasks.runner.List(ctx)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)
 		return
 	}
+	capability := a.updateTasks.capability(r.Context())
+	overview.Capability = &capability
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, overview)
 }
 func (a *API) refreshUpdates(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
-	defer cancel()
-	if _, err := runUpdateCommand(ctx, "apt-get", "update"); err != nil {
-		writeError(w, http.StatusBadGateway, err)
-		return
-	}
-	overview, err := collectUpdates(ctx)
-	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, overview)
+	a.startUpdateJob(w, r, "refresh", nil)
 }
-
 func (a *API) applyUpdates(w http.ResponseWriter, r *http.Request) {
 	var req ApplyUpdatesRequest
 	if err := decodeUpdatesBody(w, r, &req); err != nil {
 		return
 	}
-	if !req.All && len(req.Packages) == 0 {
-		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "select at least one package or set all=true"})
+	if req.All && len(req.Packages) > 0 || len(req.Packages) > 100 || !req.All && len(req.Packages) == 0 {
+		writeError(w, 400, fmt.Errorf("choose all=true or 1–100 package names"))
 		return
 	}
 	packages := uniqueValidPackages(req.Packages)
-	if !req.All && len(packages) != len(req.Packages) {
-		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid package name"})
+	if len(packages) != len(req.Packages) {
+		writeError(w, 400, fmt.Errorf("invalid or duplicate package name"))
 		return
 	}
-	displayPackages := append([]string(nil), packages...)
+	action := "apply"
 	if req.All {
-		displayPackages = []string{"all available packages"}
+		action = "upgrade"
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Minute)
-	defer cancel()
-	var out string
-	var err error
-	if req.All {
-		out, err = runUpdateCommand(ctx, "apt-get", "-y", "--with-new-pkgs", "upgrade")
-	} else {
-		args := append([]string{"-y", "--only-upgrade", "install"}, packages...)
-		out, err = runUpdateCommand(ctx, "apt-get", args...)
-	}
-	if err != nil {
-		writeError(w, http.StatusBadGateway, fmt.Errorf("apply updates: %w", err))
-		return
-	}
-	writeJSON(w, http.StatusOK, ApplyUpdatesResponse{OK: true, Packages: displayPackages, Output: trimCommandOutput(out)})
+	a.startUpdateJob(w, r, action, packages)
 }
 
-func runUpdateCommand(ctx context.Context, name string, args ...string) (string, error) {
-	env := append([]string{}, os.Environ()...)
-	env = append(env, "DEBIAN_FRONTEND=noninteractive")
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Env = env
-	out, err := cmd.CombinedOutput()
-	if err == nil {
-		return string(out), nil
-	}
-	if os.Geteuid() != 0 {
-		sudo := exec.CommandContext(ctx, "sudo", append([]string{"-n", name}, args...)...)
-		sudo.Env = env
-		sudoOut, sudoErr := sudo.CombinedOutput()
-		if sudoErr == nil {
-			return string(sudoOut), nil
-		}
-		if len(sudoOut) > 0 {
-			return string(sudoOut), sudoErr
-		}
-	}
-	return string(out), err
-}
 func uniqueValidPackages(input []string) []string {
 	result := make([]string, 0, len(input))
 	seen := map[string]bool{}
@@ -207,9 +165,14 @@ func decodeUpdatesBody(w http.ResponseWriter, r *http.Request, dst any) error {
 		return fmt.Errorf("request body is required")
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dst); err != nil {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid request body"})
 		return err
+	}
+	if decoder.Decode(&struct{}{}) != io.EOF {
+		writeError(w, 400, fmt.Errorf("unexpected trailing request data"))
+		return fmt.Errorf("trailing data")
 	}
 	return nil
 }

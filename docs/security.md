@@ -99,3 +99,24 @@ historial/auditoría de incidentes inexistente. Configuración y recarga de regl
 son tareas operativas del servidor, fuera del frontend; no se añade un endpoint
 de edición sin audit. Se conservan los riesgos abiertos de sesión/localStorage,
 permisos del servicio, logs/audit y despliegue. [Guía](observability.md).
+
+## Operational repairs — files / updates / hostnames
+
+File deletion is admin, requires fresh metadata and explicit UI confirmation,
+uses descriptor confinement and no sudo/recursion, excludes links/devices/dirs and
+protects live identity/audit files. Existing OS permissions remain authoritative.
+Package operations use bounded jobs with actor/outcome audit, no automatic retry
+or inherited API secrets, and a fixed root-owned argv-validating helper. Installation
+requires root and grants only that helper in sudoers; no host policy was modified
+by the coding session. Jobs are in memory and cannot prove completion after an API
+restart; inspect APT before retrying. See [Updates](modules/updates.md).
+Vite accepts only explicit owned hostnames plus its normal IP/localhost defaults.
+
+
+## Security del host — revisión 2026-11-16
+
+Se corrigió la terminación arbitraria de PID: antes bastaba un número y se enviaba SIGKILL; ahora exige sesión OpenSSH autenticada con ID estable, revalidación de ejecutable/proceso/padre y pidfd, SIGTERM y permiso efectivo. No hay sudo para señales. Admin sigue siendo obligatorio en backend y UI; operator sólo consulta. La confirmación muestra usuario/TTY/origen/PID, y HTTP 202 no se presenta como cierre confirmado.
+
+Se corrigió el parser de `who -u` que podía usar el año como PID, así como políticas SSH/root, jails vacías y scheduling APT. Los fallos de permisos permanecen desconocidos, separados por fuente. Se eliminó una inyección global de CSS de sidebar desde Security. Comandos fijos, entorno mínimo, buffers/deadlines/concurrencia limitados; helper opcional de consultas con reglas sudo exactas y permiso de temporizador separado. No instalado en el host automáticamente; no amplía autoridad de la cuenta por defecto.
+
+Guía y límites en [Security](modules/host-security.md). Esto no cierra SEC-02/03/04/06 ni sustituye la revisión de permisos de terminal, Docker, almacenamiento del Bearer y auditoría.

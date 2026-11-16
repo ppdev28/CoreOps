@@ -1,0 +1,4 @@
+# Replace coreops with the actual CoreOps API service account (pepe in development).
+# The helper must be installed root:root, 0755 in a root-owned non-writable directory.
+# It validates its entire argv; never allow apt-get, sh, env, install or ALL directly.
+coreops ALL=(root) NOPASSWD: /usr/local/libexec/coreops-packages

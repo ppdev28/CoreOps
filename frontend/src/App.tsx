@@ -57,7 +57,10 @@ function AppShell({ user }: { user: AuthUser }) {
         : "dashboard",
     ),
     [filesVisited, setFilesVisited] = useState(false),
-    [collapsed, setCollapsed] = useState(false),
+    [collapsed, setCollapsed] = useState(
+      () =>
+        window.matchMedia("(min-width: 768px) and (max-width: 1150px)").matches,
+    ),
     [mobileOpen, setMobileOpen] = useState(false),
     [showCmd, setShowCmd] = useState(false),
     [toasts, setToasts] = useState<Toast[]>([]),
@@ -67,6 +70,14 @@ function AppShell({ user }: { user: AuthUser }) {
       null,
     );
   useEffect(() => subscribeWebSettings(setSettings), []);
+  useEffect(() => {
+    const media = window.matchMedia(
+      "(min-width: 768px) and (max-width: 1150px)",
+    );
+    const changed = () => setCollapsed(media.matches);
+    media.addEventListener("change", changed);
+    return () => media.removeEventListener("change", changed);
+  }, []);
   const [logContainerId, setLogContainerId] = useState<string | null>(null);
   const [terminalOpened, setTerminalOpened] = useState(false);
   useEffect(() => {
@@ -361,7 +372,7 @@ function AppShell({ user }: { user: AuthUser }) {
                     <LogsView initialContainerId={logContainerId} />
                   </Suspense>
                 )}{" "}
-                {view === "security" && <SecurityView addToast={addToast} />}{" "}
+                {view === "security" && <SecurityView {...shell} />}{" "}
                 {view === "updates" && <UpdatesView {...shell} />}{" "}
                 {view === "settings" && <SettingsView addToast={addToast} />}
               </Suspense>
@@ -377,7 +388,10 @@ function AppShell({ user }: { user: AuthUser }) {
                     </div>
                   }
                 >
-                  <FileExplorerView active={view === "files"} />
+                  <FileExplorerView
+                    active={view === "files"}
+                    onConfirm={setConfirm}
+                  />
                 </Suspense>
               )}{" "}
               <Suspense

@@ -22,7 +22,9 @@ import type {
   StorageOverview,
   SystemService,
   SecurityOverview,
+  SecuritySession,
   UpdatesOverview,
+  UpdateJob,
   AppService,
   VirtualMachine,
 } from "./types";
@@ -300,24 +302,39 @@ export async function getLogs(
     signal: options.signal,
   });
 }
-export async function getSecurity(): Promise<SecurityOverview> {
-  return request("/security");
+export async function getSecurity(
+  signal?: AbortSignal,
+): Promise<SecurityOverview> {
+  return request("/security", { signal });
 }
-export async function terminateSecuritySession(pid: number): Promise<void> {
-  const response = await request<{ ok: boolean; pid: number }>(
-    `/security/sessions/${pid}/terminate`,
-    { method: "POST" },
-  );
-  if (!response.ok || response.pid !== pid)
+export async function terminateSecuritySession(
+  session: SecuritySession,
+): Promise<void> {
+  const response = await request<{
+    ok: boolean;
+    pid: number;
+    id: string;
+    status: string;
+  }>(`/security/sessions/${session.pid}/terminate`, {
+    method: "POST",
+    body: JSON.stringify({ id: session.id }),
+  });
+  if (
+    !response.ok ||
+    response.pid !== session.pid ||
+    response.id !== session.id ||
+    response.status !== "termination_requested"
+  )
     throw new Error("CoreOps API returned an invalid session response");
 }
 export async function fixSecurityItem(item: "auto-updates"): Promise<void> {
-  const response = await request<{ ok: boolean; item: string }>(
-    `/security/fix/${item}`,
-    { method: "POST" },
-  );
-  if (!response.ok || response.item !== item)
-    throw new Error("CoreOps API returned an invalid security fix response");
+  const response = await request<{
+    ok: boolean;
+    item: string;
+    verified: boolean;
+  }>(`/security/fix/${item}`, { method: "POST" });
+  if (!response.ok || response.item !== item || response.verified !== true)
+    throw new Error("CoreOps API could not verify the security fix");
 }
 export async function getVirtualMachines(): Promise<VirtualMachine[]> {
   return request("/virtual-machines");
@@ -338,16 +355,23 @@ export async function runVirtualMachineAction(
 export async function getUpdates(): Promise<UpdatesOverview> {
   return request("/updates");
 }
-export async function refreshUpdates(): Promise<UpdatesOverview> {
+export async function refreshUpdates(): Promise<UpdateJob> {
   return request("/updates/refresh", { method: "POST" });
 }
 export async function applyUpdates(
   packages: string[],
   all = false,
-): Promise<ApplyUpdatesResponse> {
+): Promise<UpdateJob> {
   return request("/updates/apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ packages, all }),
   });
+}
+
+export function getUpdateJob(
+  id = "current",
+  signal?: AbortSignal,
+): Promise<UpdateJob | null> {
+  return request(`/updates/jobs/${encodeURIComponent(id)}`, { signal });
 }

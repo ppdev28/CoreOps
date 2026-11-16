@@ -1,11 +1,51 @@
-/* Both collapsed and expanded navigation keep the toggle in the brand slot. */
-.coreops-sidebar > div:first-child > button:last-child {
-  position: static !important;
-  transform: none !important;
-  background: none !important;
-  box-shadow: none !important;
-  color: var(--coreops-textSub) !important;
-  border: 1px solid transparent !important;
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--coreops-borderRight);
 }
-.coreops-sidebar > div:first-child:not(:has(> span)) > div:first-child { display: none; }
-.coreops-sidebar > div:first-child:not(:has(> span)) > button:last-child { width: 24px !important; height: 24px !important; padding: 0 !important; }
+.sidebar-brand > span {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
+  color: var(--coreops-text);
+}
+.sidebar-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--coreops-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+  color: var(--coreops-textSub);
+}
+.sidebar-toggle:hover {
+  background: var(--coreops-hover);
+}
+.sidebar-toggle:focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: -2px;
+}
+.coreops-sidebar[data-collapsed="true"] .sidebar-toggle {
+  width: 44px;
+}

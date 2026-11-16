@@ -71,11 +71,6 @@ html[data-coreops-compact="true"] .app-workspace .coreops-card { border-radius: 
 @media (min-width: 1920px) { .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { max-width: 1900px; } }
 @media (min-width: 768px) and (max-width: 1150px) {
   .app-workspace .sidebar-desktop { display: block !important; }
-  .app-workspace .coreops-sidebar { width: 64px !important; }
-  .app-workspace .coreops-sidebar > div:first-child > div:first-child { display: none !important; }
-  .app-workspace .coreops-sidebar > div:first-child > span, .app-workspace .coreops-sidebar nav > div > div, .app-workspace .coreops-sidebar nav button > span, .app-workspace .coreops-sidebar > div:last-child { display: none !important; }
-  .app-workspace .coreops-sidebar nav button { padding: 10px 16px !important; }
-  .app-workspace .coreops-sidebar > div:first-child { padding: 16px 20px !important; }
   .app-workspace .mobile-menu-btn { display: none !important; }
   .app-workspace .coreops-brand { display: none; }
 }

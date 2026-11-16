@@ -21,6 +21,7 @@ import {
   getUpdates,
 } from "../lib/api";
 import { getSession } from "../lib/auth";
+import CreateContainerDialog from "../components/CreateContainerDialog";
 import { loadWebSettings, subscribeWebSettings } from "../lib/webSettings";
 import type {
   Container,
@@ -55,11 +56,13 @@ const uptime = (seconds: number) =>
 export default function DashboardView({
   onNavigate,
   onDetail,
+  addToast,
 }: {
   onNavigate: (view: View) => void;
   onDetail: (id: string) => void;
   addToast: (message: string, type: ToastType) => void;
 }) {
+  const [creating, setCreating] = useState(false);
   const [host, setHost] = useState<HostOverview | null>(null);
   const [hostSampleAt, setHostSampleAt] = useState<number | null>(null);
   const [containers, setContainers] = useState<Container[] | null>(null);
@@ -476,9 +479,13 @@ export default function DashboardView({
               label="Create container"
               icon={<Plus size={14} />}
               primary
-              disabled
-              title="Container creation is not yet implemented"
-              onClick={() => {}}
+              disabled={!isAdmin}
+              title={
+                isAdmin
+                  ? "Create a container or Compose project"
+                  : "Admin role required"
+              }
+              onClick={() => setCreating(true)}
             />
             <QuickAction
               label="Open terminal"
@@ -509,6 +516,30 @@ export default function DashboardView({
           </div>
         </Card>
       </section>
+      {creating && isAdmin && (
+        <CreateContainerDialog
+          images={Array.from(new Set((containers || []).map((c) => c.image)))}
+          onClose={() => setCreating(false)}
+          onInspect={(id) => {
+            setCreating(false);
+            onDetail(id);
+          }}
+          onCreated={async (result) => {
+            await refresh();
+            addToast(
+              `${result.name} created${result.started ? "; start requested" : ""}`,
+              result.startError ? "info" : "success",
+            );
+          }}
+          onComposeCreated={async (result) => {
+            await refresh();
+            addToast(
+              `${result.project}: ${result.state}`,
+              result.state === "partial" ? "info" : "success",
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

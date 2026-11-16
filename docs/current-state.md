@@ -1,5 +1,24 @@
 # Current State
 
+## Correcciones operativas — 2026-11-16
+
+Cambios en develop tras `af69725`: ppserver/IP local, flecha de sidebar con anchura
+real en tablet/escritorio, Create container/Compose desde Dashboard, borrado admin
+de archivos regulares con confirmación/versión/audit y Updates mediante trabajos
+202 con seguimiento. [Validación](operations-validation-2026-11-16.md).
+
+Go race/vet/build y frontend formato/fronteras/build correctos; 95 escenarios web
+superados (uno previo necesitó retry y pasó también aislado). Docker/archivos reales
+verificados sólo con recursos desechables. API de desarrollo reconstruida con
+identidad existente intacta: `/tmp/coreops-operations-api-verified`, log/PID en
+`/tmp/coreops-operations-run/`; Vite sigue en 5173.
+
+Updates aún requiere que una persona con sudo instale el helper acotado para la
+cuenta `pepe`: `sudo sh deploy/install-updates-helper.sh pepe`. El proceso actual
+no dispone de sudo sin contraseña; no se eludió ese límite ni se actualizó el host.
+[Instalación y contrato](modules/updates.md), [Files](modules/files.md).
+
+
 ## Observabilidad Prometheus / Grafana — 2026-11-16
 
 Slice implementado en `feature/observability-prometheus-grafana`, creado después
@@ -266,3 +285,11 @@ Go race/vet/build y verificación de dependencias correctos; formato/boundaries/
 ## Históricos CPU/memoria — 2026-11-16
 
 Se corrigió el selector 24 h que sólo filtraba datos acumulados por la sesión del navegador. Nuevo GET viewer `/monitoring/history` lee archivos sysstat del host mediante un adaptador confinado, con límites/caché y DTOs propios en `internal/monitoring`. Dashboard y Monitoring usan históricos CPU/memoria con eje proporcional al tiempo y cortes para periodos sin muestras. Los archivos actuales permiten recuperar datos del día anterior; no se inventan periodos fuera de retención. [Guía y validación](modules/monitoring-history.md).
+
+## Security del host — 2026-11-16
+
+Revisión en develop, conservando los cambios pendientes de Files/Updates/sidebar/Dashboard. Se extrae el núcleo de Security a `internal/security` y Linux a `adapters/linuxsecurity`; HTTP/auth/audit siguen compuestos en cmd y la vista sigue legacy. Se elimina la terminación arbitraria SIGKILL por PID: requiere identidad SSH fresca/estable, ejecutable confiable del proceso y padre, permisos efectivos y pidfd con SIGTERM. Admin para acciones, operator/admin para lectura; confirmación obligatoria y resultado real diferenciado de aceptación.
+
+Sesiones con usuario/UID, terminal o notty, PID/padre, ID estable, logind/origen/fecha si existen. Se corrige el año de utmp interpretado como PID y se excluyen registros locales/closing de la enumeración. UFW/fail2ban/sshd/journal no inventan estados saludables al fallar permisos; se corrigen root prohibit-password, autenticación interactiva, jails vacías y programación APT. UI responsive, refresco cancelable cada 15 s/pausa, datos antiguos visibles, errores persistentes y eliminación del CSS global que interfería con sidebar.
+
+Helper opcional de consultas con sudoers exacto y permiso de temporizador separado, preparado **sin instalar**. El usuario actual no tiene sudo no interactivo; UFW, sshd y fail2ban quedan correctamente desconocidos. APT, sockets y journal se consultan realmente. No se alteró ningún servicio del host ni se cerraron sesiones de usuario; la prueba SSH creó su propio listener y conexión loopback. Guía: [Security](modules/host-security.md); evidencia: [validación](security-validation-2026-11-16.md).

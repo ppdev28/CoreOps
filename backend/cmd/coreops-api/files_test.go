@@ -22,6 +22,7 @@ type fileFixture struct {
 	auth        *AuthStore
 	handler     http.Handler
 	root, token string
+	audit       *AuditLog
 }
 
 func newFileFixture(t *testing.T) *fileFixture {
@@ -42,7 +43,9 @@ func newFileFixture(t *testing.T) *fileFixture {
 	}
 	api := &API{files: files}
 	audit := NewAuditLog(t.TempDir())
-	return &fileFixture{files, auth, withAudit(audit, api.routes(auth, audit)), root, token}
+	handler := withAudit(audit, api.routes(auth, audit))
+	t.Cleanup(api.terminals.Close)
+	return &fileFixture{files, auth, handler, root, token, audit}
 }
 func (f *fileFixture) request(method, target string, body io.Reader, token string) *httptest.ResponseRecorder {
 	request := httptest.NewRequest(method, target, body)
@@ -82,7 +85,7 @@ func TestFileListingFiltersPaginationAndRoles(t *testing.T) {
 			t.Fatal(err)
 		}
 		token, _, _, _ := f.auth.Login(name, testPassword, "127.0.0.1")
-		for _, route := range []struct{ method, path string }{{"GET", "/api/v1/files"}, {"POST", "/api/v1/files/upload?name=x"}, {"POST", "/api/v1/files/download-ticket"}} {
+		for _, route := range []struct{ method, path string }{{"DELETE", "/api/v1/files"}, {"GET", "/api/v1/files"}, {"POST", "/api/v1/files/upload?name=x"}, {"POST", "/api/v1/files/download-ticket"}} {
 			if response := f.request(route.method, route.path, nil, token); response.Code != 403 {
 				t.Errorf("%s %s: got %d", role, route.path, response.Code)
 			}

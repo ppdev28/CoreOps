@@ -1,5 +1,24 @@
 # Codex Handoff
 
+## Correcciones operativas — 2026-11-16
+
+Cambios en develop tras `af69725`: ppserver/IP local, flecha de sidebar con anchura
+real en tablet/escritorio, Create container/Compose desde Dashboard, borrado admin
+de archivos regulares con confirmación/versión/audit y Updates mediante trabajos
+202 con seguimiento. [Validación](operations-validation-2026-11-16.md).
+
+Go race/vet/build y frontend formato/fronteras/build correctos; 95 escenarios web
+superados (uno previo necesitó retry y pasó también aislado). Docker/archivos reales
+verificados sólo con recursos desechables. API de desarrollo reconstruida con
+identidad existente intacta: `/tmp/coreops-operations-api-verified`, log/PID en
+`/tmp/coreops-operations-run/`; Vite sigue en 5173.
+
+Updates aún requiere que una persona con sudo instale el helper acotado para la
+cuenta `pepe`: `sudo sh deploy/install-updates-helper.sh pepe`. El proceso actual
+no dispone de sudo sin contraseña; no se eludió ese límite ni se actualizó el host.
+[Instalación y contrato](modules/updates.md), [Files](modules/files.md).
+
+
 ## Observabilidad Prometheus / Grafana — 2026-11-16
 
 Slice implementado en `feature/observability-prometheus-grafana`, creado después
@@ -208,3 +227,9 @@ Corrección en develop después de integrar módulos: Dashboard mostraba “Earl
 CPU y memoria de Dashboard/Monitoring mezclan archivo y live, con timestamps numéricos para conservar distancias temporales reales. La cadencia sysstat del host es de unos diez minutos; la retención depende de sus archivos. Archivo ausente/denegado/ilegible queda explícito. No se añadió historial Docker/Kubernetes/IO de disco/red. Los cambios de Go necesitan actualizar la API activa para evitar 404 en el endpoint nuevo.
 
 Validación históricos: Go full race/vet/build, formato/build/check-boundaries web, 80 escenarios UI correctos tras un reintento en un test existente de logs (repetición aislada correcta). Lectura real de 143 muestras 24 h vía API aislada y Chromium escritorio/320 px/recarga, contrastando CPU/memoria con sadf nativo. No se alteró sysstat ni infraestructura. API de desarrollo actual `/tmp/coreops-history-api`, log/PID `/tmp/coreops-history-run/`; identidad existente intacta y ruta nueva accesible mediante proxy Vite. El usuario solicitó registrar esta corrección en un commit antes de iniciar la nueva entrega de observabilidad Prometheus/Grafana.
+
+## Security — revisión 2026-11-16
+
+Confirmar rama/status: trabajo en develop, con cambios anteriores de operaciones aún pendientes; no descartar ni mezclar silenciosamente. Leer [Security del host](modules/host-security.md). Nuevo core `internal/security`, adaptador `internal/adapters/linuxsecurity`, handlers cmd finos. No restaurar kill numérico/SIGKILL ni el CSS global de sidebar que inyectaba la antigua vista. No equiparar errores de permisos con inactive/0. Las sesiones SSH usan ID estable, terminal real y pidfd; un 202 sólo reconoce la solicitud de señal.
+
+Helper root-owned opcional en deploy, consultas por defecto y `--allow-auto-updates` separado; no instalado por falta de sudo no interactivo, no usar Docker para cambiar sudoers del host. Readback APT/timer obligatorio. Ensayo SSH opt-in crea un servidor propio en loopback sin PTY; no señaliza conexiones ajenas. API de desarrollo actual `/tmp/coreops-security-api-final`, log `api-final.log` y PID en `/tmp/coreops-security-run/`, Vite 5173/API 8082; entorno e identidad conservados. Evidencia y limitaciones en [validación](security-validation-2026-11-16.md). Sin commit, push ni merge solicitados para esta revisión.

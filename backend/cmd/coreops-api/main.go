@@ -18,10 +18,13 @@ import (
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
 	"github.com/ppdev28/CoreOps/backend/internal/monitoring"
 	"github.com/ppdev28/CoreOps/backend/internal/observability"
+	"github.com/ppdev28/CoreOps/backend/internal/security"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 )
 
 type API struct {
+	hostSecurity  *security.Service
+	updateTasks   *updateJobs
 	observability *observability.Service
 	telemetry     *telemetry.HTTP
 	history       *monitoring.History
