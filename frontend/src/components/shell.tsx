@@ -72,6 +72,11 @@ const NAV = [
   {
     group: "Observability",
     items: [
+      {
+        id: "observability",
+        label: "Observability",
+        icon: <Activity size={14} />,
+      },
       { id: "monitoring", label: "Monitoring", icon: <Activity size={14} /> },
       { id: "logs", label: "Logs", icon: <ScrollText size={14} /> },
     ],
@@ -752,6 +757,12 @@ const CMD_NAV = [
     sub: "Installed apps",
     view: "applications" as View,
     icon: <AppWindow size={13} />,
+  },
+  {
+    label: "Observability",
+    sub: "Prometheus metrics and alerts",
+    view: "observability" as View,
+    icon: <Activity size={13} />,
   },
   {
     label: "Monitoring",

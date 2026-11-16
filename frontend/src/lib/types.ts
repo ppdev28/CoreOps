@@ -16,6 +16,7 @@ export type View =
   | "files"
   | "network"
   | "virtual-machines"
+  | "observability"
   | "monitoring"
   | "logs"
   | "terminal"

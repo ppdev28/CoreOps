@@ -78,6 +78,7 @@ class MainActivity : BridgeActivity() {
         NavigationSection(
             "Observability",
             listOf(
+                NativeDestination("observability", "Observability", R.drawable.ic_monitoring),
                 NativeDestination("monitoring", "Monitoring", R.drawable.ic_monitoring),
                 NativeDestination("logs", "Logs", R.drawable.ic_logs)
             )

@@ -36,6 +36,9 @@ const NetworkView = lazyView(() => import("./views/NetworkView"));
 const VirtualMachinesView = lazyView(
   () => import("./views/VirtualMachinesView"),
 );
+const ObservabilityView = lazyView(
+  () => import("./features/observability/ObservabilityView"),
+);
 const MonitoringView = lazyView(() => import("./views/MonitoringView"));
 const LogsView = lazyView(() => import("./views/LogsView"));
 const TerminalView = lazyView(() => import("./views/TerminalView"));
@@ -48,7 +51,11 @@ function AppShell({ user }: { user: AuthUser }) {
   // The Android shell owns the top bar and drawer when running inside Capacitor.
   // Keep the existing React shell for the browser/PWA so the web app is unchanged.
   const isNative = Capacitor.isNativePlatform();
-  const [view, setView] = useState<View>("dashboard"),
+  const [view, setView] = useState<View>(() =>
+      new URLSearchParams(location.search).get("view") === "observability"
+        ? "observability"
+        : "dashboard",
+    ),
     [filesVisited, setFilesVisited] = useState(false),
     [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
@@ -65,6 +72,26 @@ function AppShell({ user }: { user: AuthUser }) {
   useEffect(() => {
     if (view === "terminal") setTerminalOpened(true);
   }, [view]);
+  useEffect(() => {
+    history.replaceState(
+      {
+        coreopsView:
+          new URLSearchParams(location.search).get("view") === "observability"
+            ? "observability"
+            : "dashboard",
+      },
+      "",
+      location.href,
+    );
+    const handler = () =>
+      setView(
+        new URLSearchParams(location.search).get("view") === "observability"
+          ? "observability"
+          : ((history.state?.coreopsView || "dashboard") as View),
+      );
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
   const playNotificationSound = useCallback(() => {
     try {
       const AudioContextClass =
@@ -103,6 +130,10 @@ function AppShell({ user }: { user: AuthUser }) {
   const navigate = useCallback((v: View) => {
     if (v === "files") setFilesVisited(true);
     if (v === "logs") setLogContainerId(null);
+    const url = new URL(location.href);
+    if (v === "observability") url.searchParams.set("view", v);
+    else url.searchParams.delete("view");
+    history.pushState({ coreopsView: v }, "", url);
     setView(v);
     setMobileOpen(false);
   }, []);
@@ -317,6 +348,7 @@ function AppShell({ user }: { user: AuthUser }) {
                 {view === "virtual-machines" && (
                   <VirtualMachinesView addToast={addToast} />
                 )}{" "}
+                {view === "observability" && <ObservabilityView />}
                 {view === "monitoring" && <MonitoringView />}{" "}
                 {view === "logs" && (
                   <Suspense

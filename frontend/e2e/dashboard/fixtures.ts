@@ -112,6 +112,17 @@ export async function mockDashboard(
     let body: unknown;
     if (path === "/terminal/session") body = { available: true, protocol: 1 };
     else if (path === "/host") body = host;
+    else if (path === "/observability/integrations")
+      body = {
+        prometheus: {
+          configured: false,
+          healthy: false,
+          endpoint: "",
+          error: "Source not configured",
+        },
+        grafana: { configured: false, healthy: false, endpoint: "" },
+      };
+    else if (path === "/observability/targets") body = [];
     else if (path === "/kubernetes/clusters") body = [];
     else if (path === "/files") {
       const directory =
