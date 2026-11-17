@@ -12,6 +12,38 @@ Repository path on that host:
 
 The developer also works from a Mac and can access the server through Tailscale. The mobile client is useful for responsive and remote-access testing.
 
+## Arranque de frontend y backend con tmux
+
+Desde la raíz del repositorio:
+
+```bash
+./scripts/dev-tmux.sh
+# Arrancar sin conectar la terminal (también sirve desde automatizaciones):
+./scripts/dev-tmux.sh --detach
+```
+
+Requiere Bash, tmux, Go, pnpm, curl, ss y las dependencias frontend instaladas
+(`cd frontend && pnpm install --frozen-lockfile`). Puede ejecutarse desde cualquier
+directorio. Compila la API fuera del checkout, crea la sesión `coreops` con dos
+paneles y comprueba el frontend y su proxy a `/api/v1/health`. Si la sesión del
+mismo checkout ya existe, la reutiliza sin reiniciar procesos. Si los puertos
+5173/8082 están ocupados por otros procesos, se detiene sin matarlos.
+
+La API escucha en loopback:8082 y Vite en 0.0.0.0:5173. Conserva las variables
+exportadas del terminal que lanza el script, incluso si tmux ya estaba abierto;
+los archivos temporales privados usados para transferirlas se borran al arrancar.
+`COREOPS_HOST` y `COREOPS_DATA_DIR` pueden sobrescribirse. El directorio de datos
+predeterminado es siempre `backend/data` del checkout; las rutas relativas de
+datos se interpretan desde `backend/`. No crea ni cambia usuarios. Una instalación
+nueva necesita crear su primer usuario según `backend/README.md`.
+
+Para volver a los paneles: `tmux attach -t coreops`. Para desconectar conservando
+los procesos: `Ctrl+B`, después `D`. Para detenerlos: `tmux kill-session -t coreops`.
+Tras cambiar código Go, detén la sesión y vuelve a ejecutar el script para
+recompilar. Los fallos conservan los paneles para diagnóstico; un health correcto
+no valida todas las integraciones ni el login. Es un launcher de desarrollo, no
+instala un servicio ni modifica Docker, sudo o la configuración del host.
+
 ## Frontend
 
 Use pnpm, not npm.
