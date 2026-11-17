@@ -40,6 +40,14 @@ Timestamps proceden del registro original; los que no se pueden interpretar se m
 
 ## Límites y actualización
 
+Corrección 2026-11-17: Pause cancela también una primera lectura todavía pendiente
+sin lanzar otra por el cambio de estado. Congela los dos paneles de comparación y
+no vuelve a consultar el inventario Docker al pulsarlo. Resume reanuda desde datos
+reales actuales; no reproduce comandos ni inventa líneas perdidas. Refresh, cambiar
+de fuente y paginar siguen permitiendo snapshots manuales mientras está pausado.
+El botón expone `aria-pressed` y un primer snapshot cancelado muestra un estado de
+pausa explícito, sin afirmar que no hay registros.
+
 Polling de snapshots a los 2 s de cada respuesta; catálogo Docker a 15 s y catálogo de archivos al abrir/actualizar la vista. Se respeta `autoRefresh` inicial y se suspenden lecturas de paneles ocultos. Pause cancela la lectura; los errores conservan el último snapshot marcado como antiguo. Archivos comprimidos, páginas anteriores y rangos con fecha final no hacen polling.
 
 Lecturas de logs: hasta cuatro solicitudes concurrentes, deadline general 12 s; archivos/eventos hasta 10 s dentro de ese plazo. Journal/texto: ventanas de 2 MiB; mensajes de hasta 64 KiB. Páginas journal demasiado grandes fallan explícitamente: reducir tamaño/rango. Archivos normales tienen cursor de offset + identidad de dispositivo/inode; reemplazo o reducción detectados devuelven 409. El lector gzip mantiene memoria acotada, verifica el stream y repite descompresión hasta el offset de la página, con deadline; archivos grandes/profundos pueden superar ese plazo. No se genera un índice persistente.

@@ -195,6 +195,63 @@ test("pause freezes log reads, resume polls and display stays manual when paused
   await expect.poll(() => state.requests.length).toBeGreaterThan(paused);
 });
 
+test("pause cancels the first pending snapshot without replacing it or refreshing sources", async ({
+  page,
+}) => {
+  const { control } = await mockLogs(page);
+  await page.addInitScript(() => {
+    const settings = JSON.parse(
+      localStorage.getItem("coreops-web-settings") || "{}",
+    );
+    localStorage.setItem(
+      "coreops-web-settings",
+      JSON.stringify({ ...settings, autoRefresh: true }),
+    );
+  });
+  const pending: import("@playwright/test").Route[] = [];
+  await page.route("**/api/v1/logs", (route) => {
+    pending.push(route);
+  });
+  await navigate(page);
+  await expect.poll(() => pending.length).toBeGreaterThan(0);
+  await page
+    .getByRole("button", { name: "Pause log updates", exact: true })
+    .click();
+  const reads = pending.length;
+  const catalogs = control.requests.filter(
+    (path) => path === "/containers",
+  ).length;
+  await expect(
+    page.getByRole("button", { name: "Resume log updates", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByText("Resume or refresh to load a snapshot.", { exact: true }),
+  ).toBeVisible();
+  await page.waitForTimeout(2300);
+  expect(pending.length).toBe(reads);
+  expect(
+    control.requests.filter((path) => path === "/containers"),
+  ).toHaveLength(catalogs);
+  await page
+    .getByRole("button", { name: "Resume log updates", exact: true })
+    .click();
+  await expect.poll(() => pending.length).toBeGreaterThan(reads);
+  await Promise.all(
+    pending.map((route) =>
+      route
+        .fulfill({
+          json: {
+            entries: [],
+            sources: [],
+            updatedAt: new Date().toISOString(),
+          },
+        })
+        .catch(() => {}),
+    ),
+  );
+  expect(control.runtimeErrors).toEqual([]);
+});
+
 test("downloads and copies only the displayed filtered logs", async ({
   page,
   context,

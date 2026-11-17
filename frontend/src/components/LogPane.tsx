@@ -200,6 +200,7 @@ export default function LogPane({
   const [manualRefresh, setManualRefresh] = useState(0);
   const viewer = useRef<HTMLDivElement>(null);
   const completedRequest = useRef<string | null>(null);
+  const previouslyFollowing = useRef(following);
   const [visible, setVisible] = useState(!document.hidden);
   useEffect(() => {
     const change = () => setVisible(!document.hidden);
@@ -212,6 +213,16 @@ export default function LogPane({
       return;
     }
     const requestKey = `${cacheKey}:${filters.tail}:${refresh}:${manualRefresh}:${cursor || ""}`;
+    const justPaused = previouslyFollowing.current && !following;
+    previouslyFollowing.current = following;
+    if (justPaused) {
+      // Cleanup aborts the pending read. Do not replace it with a new snapshot
+      // merely because the live flag changed before the first response arrived.
+      completedRequest.current = requestKey;
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     if (!live && completedRequest.current === requestKey) {
       setRefreshing(false);
       return;
@@ -267,6 +278,7 @@ export default function LogPane({
     source.containerId,
     source.kind,
     live,
+    following,
     journal,
     timed,
     cacheKey,
@@ -420,6 +432,12 @@ export default function LogPane({
           <div className="logs-empty" role="status">
             <RefreshCw size={24} className="logs-spin" />
             <p>Loading logs…</p>
+          </div>
+        ) : !data && !following && !error ? (
+          <div className="logs-empty" role="status">
+            <FileText size={30} />
+            <strong>Log updates paused</strong>
+            <p>Resume or refresh to load a snapshot.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="logs-empty">

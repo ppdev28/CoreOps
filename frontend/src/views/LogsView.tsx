@@ -100,6 +100,7 @@ export default function LogsView({
   const cache = useRef<LogCache>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const catalogWasFollowing = useRef(following);
   useEffect(() => {
     tabsRef.current
       ?.querySelector('[aria-selected="true"]')
@@ -118,6 +119,9 @@ export default function LogsView({
 
   useEffect(() => {
     if (!canRead) return;
+    const justPaused = catalogWasFollowing.current && !following;
+    catalogWasFollowing.current = following;
+    if (justPaused) return;
     const controller = new AbortController();
     let timer: number | undefined;
     const load = async () => {
@@ -326,6 +330,12 @@ export default function LogsView({
           </button>
           <button
             aria-label={following ? "Pause log updates" : "Resume log updates"}
+            aria-pressed={!following}
+            title={
+              following
+                ? "Freeze log snapshots and automatic source updates"
+                : "Resume automatic log updates"
+            }
             className={`logs-follow ${following ? "is-following" : ""}`}
             onClick={() => setFollowing(!following)}
           >
