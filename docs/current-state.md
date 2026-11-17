@@ -1,5 +1,95 @@
 # Current State
 
+## Commits por funcionalidad y alcance de Logs — 2026-11-17
+
+A petición del usuario, se registran todos los cambios pendientes en commits
+separados, sin cambiar de develop ni hacer push:
+
+- `c85a7de` — feat(dev): add persistent tmux development launcher
+- `c97e959` — feat(files): add bounded read-only text and image previews
+- `1a4d19c` — feat(terminal): open authenticated container TTY sessions
+- `0beb034` — fix(observability): recover private stack configuration safely
+- `cfd3824` — style(observability): distinguish navigation and improve spacing
+- `82276a3` — fix(logs): freeze pending reads and source updates when paused
+- `b0820ac` — feat(applications): inspect member containers with application context
+
+La regla persistente de actualizar docs con cambios muy relevantes y los informes
+de validación quedan en el commit de documentación de esta entrega. Consultar
+Git para el hash actual. No se versionan secretos, generated/ ni binarios.
+La separación de visor y Terminal se comprobó exportando ambos commits por
+separado: typecheck TypeScript y pruebas Go focalizadas con race detector correctos.
+
+Logs no es captura exhaustiva en tiempo real: snapshots, ventanas y permisos
+limitan la cobertura. La comprobación actual encontró 175 archivos de catálogo,
+164 legibles y 11 inaccesibles, más cuatro directorios que no se pueden listar.
+Journal sin aviso de permisos en la consulta realizada; no implica cobertura total.
+La prueba fue de lectura con una API/identidad aislada, ya retirada, sin ampliar
+permisos. [Alcance y evidencia](modules/logs.md#cobertura-comprobada-el-2026-11-17).
+
+
+## Logs, recuperación de Observability y Applications — 2026-11-17
+
+Sobre el worktree existente de develop, sin descartar el visor/terminal ni el
+launcher previo. Pause en Logs cancela una primera lectura pendiente sin crear un
+snapshot nuevo ni refrescar fuentes al pausar; Resume/Refresh siguen operativos.
+Observability tiene margen/separación/padding consistente y métricas en filas más
+legibles. Applications muestra miembros reales por ID, casos ausentes/errores,
+refresh y el mismo inspector de Containers con vuelta contextual. Acciones por
+rol, confirmación y reconciliación del estado real, con errores persistentes.
+
+Prometheus/Grafana no arrancaban por secretos desaparecidos que Docker convirtió
+en directorios. Configuración privada recuperada, token de scraping nuevo coordinado
+con CoreOps, ambos servicios recreados con sus volúmenes intactos; exporter sin
+recrear. Los dos targets están up. Montajes rechazan rutas ausentes y configure.py
+rechaza entradas malformadas sin reemplazar secretos. Launcher carga valores
+opcionales sólo en backend respetando exports explícitos. Identidad intacta.
+
+Grafana sigue en loopback: esta cuenta no puede configurar Serve y sudo necesita
+autenticación interactiva. La configuración Tailscale existente se conserva.
+No se amplió exposición de red ni se cambió la contraseña persistida en Grafana.
+Guías: [Logs](modules/logs.md), [Applications](modules/applications.md),
+[Observability](observability.md). Validado: formato/fronteras/build web; 115 escenarios UI contando dos repeticiones
+previas, y 24/24 específicos tras el último ajuste; cinco pruebas Python,
+promtool/Compose y loader Bash. Chromium/API aislada/Docker/Prometheus reales:
+3 miembros, inspect/vuelta, pausa/resume, móvil y 2/2 targets, sin mutaciones de apps.
+Identidad/API/Vite de prueba retirados. [Evidencia y límites](applications-logs-observability-validation-2026-11-17.md).
+
+API actual en el panel Backend de tmux `coreops`, binario
+`/tmp/coreops-dev.2dZfh1D5/coreops-api` y nuevas variables de observabilidad;
+identidad y frontend 5173 conservados. Sin cambios Go adicionales ni commit/push.
+
+
+## Visor, iconos y terminal Docker — 2026-11-17
+
+Implementado en `develop`: Observability usa Radar y Monitoring conserva Activity
+(web/Android); Files abre texto UTF-8 e imágenes raster en un visor de sólo lectura
+con descarga para formatos no compatibles; Terminal de inspect/menú abre una shell
+real del contenedor en el workspace persistente. Sólo admin y contenedor running,
+sin elevar el usuario de la imagen ni enviar comandos/tokens en URL.
+
+La terminal reutiliza auth/Origin/revocación/límites/audit existentes mediante un
+puerto TTY independiente del SDK. Cerrar el attach Docker puede dejar procesos
+vivos: usar `exit`, y conservar el aviso explícito. La PTY host conserva su cierre.
+El visor limita bytes/concurrencia, exige versión del listado y no ejecuta HTML.
+Guías actualizadas: [Files](modules/files.md), [Terminal](modules/terminal.md),
+[Observability](modules/observability.md), [Security](security.md).
+
+Validado: Go full race/vet/build; web formato/fronteras/build; 110 escenarios UI
+superados contando dos repeticiones aisladas de fallos previos, más 7/7 pruebas
+nuevas tras el último ajuste. Chromium/API aislada/Docker real comprobó visor,
+UID/TTY/resize/persistencia y exit code. [Evidencia y límites](terminal-files-validation-2026-11-17.md).
+
+API de desarrollo reconstruida en `/tmp/coreops-dev.2dZfh1D5/coreops-api`, panel
+Backend de tmux `coreops`; entorno y hashes de users/sessions intactos, health y
+rutas nuevas verificadas en 8082 y proxy 5173. Frontend previo conservado. API,
+identidad y contenedor de prueba retirados; sin producción ni build nativo.
+No se solicitó commit ni push.
+
+Preferencia persistente del usuario registrada en `AGENTS.md`: cada cambio muy
+relevante debe actualizar los docs aplicables y el estado/handoff. Se preservan
+los cambios previos del launcher en `docs/development.md` y `scripts/`.
+
+
 ## Correcciones operativas — 2026-11-16
 
 Cambios en develop tras `af69725`: ppserver/IP local, flecha de sidebar con anchura

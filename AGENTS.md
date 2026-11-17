@@ -18,6 +18,7 @@ Before changing code, read these files in this order:
 
 ## Working rules
 
+- Update the relevant module documentation and current-state/handoff docs whenever making a very relevant change (new capabilities, contracts, security behavior or operational workflows). This is a persistent user preference.
 - Work in small, reviewable vertical slices.
 - Prefer real infrastructure over mocks as soon as a feature can be safely exercised against it.
 - Do not redesign the Figma UI merely because implementation is easier another way.

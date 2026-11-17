@@ -30,6 +30,25 @@ El journal incluye kernel de boots anteriores mediante `_TRANSPORT=kernel` (sin 
 
 ## Acceso, retención y formatos
 
+### Cobertura comprobada el 2026-11-17
+
+Logs es un lector de snapshots, no un capturador exhaustivo ni un archivador
+continuo. Sólo se consulta mientras la vista/fuente está activa y se permite el
+seguimiento; la siguiente lectura se programa 2 s después de acabar la anterior.
+Un volumen superior a la ventana de lectura puede dejar registros fuera del
+snapshot. La retención original sigue dependiendo de journald, archivos y Docker.
+No se observan todas las syscalls, comandos, accesos a ficheros o procesos del host.
+
+Comprobación de sólo lectura con la identidad Linux/grupos de la API activa:
+UID 1000 (`pepe`), miembro de `adm`, raíz `/var/log`. El catálogo devolvió
+**175 archivos, 164 legibles y 11 no legibles**, además de cuatro directorios
+inaccesibles: `samba/cores`, `private`, `ajenti` y `swtpm`. Entre los archivos
+inaccesibles había registros de instalación, QEMU/libvirt y `ubuntu-advantage.log`.
+Una consulta de journal no mostró advertencias de permisos; esto no prueba que
+exista o se pueda consultar todo evento del sistema. Los recuentos son una muestra
+de ese momento, no un valor fijo de producto ni un inventario de lo oculto.
+La API/identidad operator de comprobación se retiró sin cambiar permisos del host.
+
 El backend utiliza los permisos existentes de su cuenta. No se añade sudo, root, permisos ni grupos automáticamente. Para ampliar cobertura, el administrador del host debe conceder sólo lectura al journal (por ejemplo grupo `systemd-journal`) y a los archivos deseados (ACL/grupo apropiado; `adm` en Ubuntu puede dar acceso amplio), y reiniciar el servicio tras cambiar grupos. Un journal parcial, un archivo bloqueado o un directorio inaccesible se señalan en la UI. No equivalen a ausencia de eventos.
 
 `COREOPS_LOG_ROOT` permite mapear el directorio de logs del host (por defecto `/var/log`; ese es el namespace mostrado). Se admiten nombres de logs estándar y extensiones `.log`, `.err`, `.out`, con rotaciones numéricas/fecha y `.gz`. No se exponen rutas arbitrarias, enlaces simbólicos, dispositivos/FIFO ni formatos binarios (`journal`, wtmp/btmp/lastlog, sysstat). El journal binario se consulta exclusivamente mediante `journalctl`.
