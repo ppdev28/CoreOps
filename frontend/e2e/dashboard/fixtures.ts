@@ -111,6 +111,15 @@ export async function mockDashboard(
       });
     let body: unknown;
     if (path === "/terminal/session") body = { available: true, protocol: 1 };
+    else if (path === "/files/preview")
+      body = {
+        path: new URL(route.request().url()).searchParams.get("path"),
+        kind: "text",
+        content:
+          "hello from fixture\n<script>window.untrustedFileExecuted=true</script>",
+        size: 64,
+        truncated: false,
+      };
     else if (path === "/host") body = host;
     else if (path === "/observability/integrations")
       body = {

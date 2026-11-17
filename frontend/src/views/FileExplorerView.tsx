@@ -40,6 +40,7 @@ import {
 import { T } from "../lib/tokens";
 import type { ConfirmDialog } from "../lib/types";
 import "../styles/files.css";
+import FileViewer from "../components/FileViewer";
 
 type Transfer = {
   id: number;
@@ -82,6 +83,7 @@ export default function FileExplorerView({
   const deletingRef = useRef(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ServerFile | null>(null);
   const [previous, setPrevious] = useState<string[]>([]);
   const picker = useRef<HTMLInputElement>(null);
   const uploadController = useRef<AbortController | null>(null);
@@ -543,10 +545,10 @@ export default function FileExplorerView({
                       onClick={() =>
                         file.kind === "directory"
                           ? navigate(file.path)
-                          : void startDownload(file)
+                          : setViewing(file)
                       }
                       title={file.name}
-                      aria-label={`${file.kind === "directory" ? "Open folder" : file.kind === "file" ? "Download" : file.kind}: ${file.name}`}
+                      aria-label={`${file.kind === "directory" ? "Open folder" : file.kind === "file" ? "View file" : file.kind}: ${file.name}`}
                     >
                       <span className={`files-icon files-icon-${file.kind}`}>
                         {file.kind === "directory" ? (
@@ -719,6 +721,15 @@ export default function FileExplorerView({
             ))}
           </ul>
         </section>
+      )}
+      {viewing && active && (
+        <FileViewer
+          key={`${viewing.path}:${viewing.version}`}
+          file={viewing}
+          onClose={() => setViewing(null)}
+          onDownload={() => void startDownload(viewing)}
+          downloading={!!downloading}
+        />
       )}
       {dragging && (
         <div className="files-drop-overlay">

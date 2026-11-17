@@ -71,6 +71,11 @@ See [terminal protocol, proxy example and validation](../docs/modules/terminal.m
 
 ## File explorer
 
+Click a regular file's name to open the read-only viewer. Authenticated admin
+`GET /api/v1/files/preview?path=…&version=…` returns bounded UTF-8 text or raster
+image data as JSON, with explicit binary/size fallback and changed-file conflicts.
+Preview reads are audited without content. [Viewer contract](../docs/modules/files.md).
+
 The **Files** screen in the web sidebar, command palette and Android drawer browses the actual host filesystem. All listing, upload and ticket endpoints require `admin`. File access uses the API service's OS identity; it does not use sudo or bypass Unix permissions or systemd sandboxing.
 
 | Variable | Default | Meaning |

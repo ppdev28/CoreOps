@@ -48,7 +48,7 @@ test("terminal streams keys, keeps independent tabs and survives navigation", as
     .getByRole("button", { name: "Open folder: documents", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Download: example.txt", exact: true }),
+    page.getByRole("button", { name: "View file: example.txt", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByLabel("Directory path relative to server root"),

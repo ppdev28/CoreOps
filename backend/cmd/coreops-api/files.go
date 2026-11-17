@@ -36,6 +36,7 @@ type FileExplorer struct {
 	mu        sync.Mutex
 	tickets   map[string]fileTicket
 	stop      chan struct{}
+	previews  chan struct{}
 }
 type fileTicket struct {
 	file    *os.File
@@ -71,7 +72,7 @@ func newFileExplorer(rootPath string, maxUpload int64, timeout time.Duration) (*
 	if err != nil {
 		return nil, err
 	}
-	f := &FileExplorer{root: root, rootPath: absolute, maxUpload: maxUpload, timeout: timeout, tickets: make(map[string]fileTicket), stop: make(chan struct{})}
+	f := &FileExplorer{root: root, rootPath: absolute, maxUpload: maxUpload, timeout: timeout, tickets: make(map[string]fileTicket), stop: make(chan struct{}), previews: make(chan struct{}, 4)}
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()

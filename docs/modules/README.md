@@ -6,7 +6,7 @@ Estas guías aplican a las rutas actuales indicadas y a sus futuras extracciones
 | --- | --- | --- |
 | Seguridad del host | `internal/security`, `adapters/linuxsecurity`, `SecurityView.tsx`, helper restringido opcional | [Security](host-security.md) |
 | Observabilidad | `internal/{observability,telemetry}`, `adapters/prometheus`, `features/observability`, `deploy/observability` | [Observabilidad](observability.md) |
-| Explorador de archivos | `files*.go`, `lib/files.ts`, `FileExplorerView.tsx` | [Archivos](files.md) |
+| Explorador de archivos y visor | `files*.go`, `lib/files.ts`, `FileExplorerView.tsx`, `FileViewer.tsx` | [Archivos](files.md) |
 | Actualizaciones | `updates*.go`, `UpdatesView.tsx`, helper APT de deploy | [Updates](updates.md) |
 | Históricos del host | `internal/monitoring`, `adapters/sysstat`, `lib/monitoring-history.ts` | [Históricos](monitoring-history.md) |
 | Kubernetes | `kubernetes_*.go`, `KubernetesView.tsx`, `lib/kubernetes.ts` | [Kubernetes](kubernetes.md) |

@@ -5,6 +5,21 @@ servicio. Backend en `files*.go`, cliente `lib/files.ts`, vista persistente
 `FileExplorerView.tsx`; [contrato original](../../backend/README.md#file-explorer).
 Las transferencias/directorio siguen montados al navegar y no suspenden Terminal.
 
+## Visor de archivos — 2026-11-17
+
+Pulsar el nombre de un archivo abre un diálogo de sólo lectura, con cierre Escape,
+foco acotado, descarga y texto copiable/con ajuste de líneas. Texto UTF-8 hasta
+256 KiB con aviso si queda contenido; imágenes PNG/JPEG/GIF/WebP hasta 8 MiB.
+Otros binarios/codificaciones ofrecen descarga. HTML/SVG/scripts se representan
+como texto: no iframe, HTML ejecutable ni URLs remotas de contenido.
+
+`GET /api/v1/files/preview?path=…&version=…` exige admin y la versión del listado.
+Respuesta JSON `{path,kind,mediaType?,content?,size,truncated,reason?}`; imágenes
+en base64, texto literal. No-store, cuatro lecturas simultáneas, `os.Root`, nofollow
+final, sólo archivos regulares, comprobación de versión antes/después (409 si
+cambia), exclusión por inode de identidad/lock/audit activos. Lecturas auditadas
+sin contenido. La UI cancela al cerrar y libera URLs Blob. El visor no edita.
+
 ## Eliminación de archivos
 
 `DELETE /api/v1/files` recibe JSON `{path,version}`. Cada fichero regular en el

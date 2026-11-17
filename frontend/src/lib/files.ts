@@ -28,6 +28,24 @@ export interface FileQuery {
   order: string;
   offset: number;
 }
+export interface FilePreview {
+  path: string;
+  kind: "text" | "image" | "unavailable";
+  mediaType?: string;
+  content?: string;
+  size: number;
+  truncated: boolean;
+  reason?: string;
+}
+export function previewFile(
+  file: ServerFile,
+  signal: AbortSignal,
+): Promise<FilePreview> {
+  return jsonRequest(
+    `/files/preview?${new URLSearchParams({ path: file.path, version: file.version ?? "" })}`,
+    { signal, cache: "no-store" },
+  );
+}
 const NativeFiles = registerPlugin<{
   saveDownload(options: { url: string; name: string }): Promise<void>;
 }>("CoreOpsFiles");

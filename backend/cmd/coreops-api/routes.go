@@ -87,6 +87,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/services/{name}/restart", RoleOperator, a.restartService)
 	handle("GET /api/v1/storage", RoleViewer, a.storage)
 	handle("GET /api/v1/files", RoleAdmin, a.files.list)
+	handle("GET /api/v1/files/preview", RoleAdmin, a.files.preview(auth.dir))
 	handle("DELETE /api/v1/files", RoleAdmin, a.files.remove(auth.dir))
 	handle("POST /api/v1/files/upload", RoleAdmin, a.files.upload)
 	handle("POST /api/v1/files/download-ticket", RoleAdmin, a.files.downloadTicket)
