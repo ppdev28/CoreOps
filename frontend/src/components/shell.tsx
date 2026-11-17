@@ -7,6 +7,7 @@ import {
   HardDrive,
   Network,
   Activity,
+  Radar,
   ScrollText,
   Terminal,
   Shield,
@@ -75,7 +76,7 @@ const NAV = [
       {
         id: "observability",
         label: "Observability",
-        icon: <Activity size={14} />,
+        icon: <Radar size={14} />,
       },
       { id: "monitoring", label: "Monitoring", icon: <Activity size={14} /> },
       { id: "logs", label: "Logs", icon: <ScrollText size={14} /> },
@@ -699,7 +700,7 @@ const CMD_NAV = [
     label: "Observability",
     sub: "Prometheus metrics and alerts",
     view: "observability" as View,
-    icon: <Activity size={13} />,
+    icon: <Radar size={13} />,
   },
   {
     label: "Monitoring",

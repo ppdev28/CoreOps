@@ -1,5 +1,14 @@
 # Observabilidad Prometheus / Grafana
 
+Desde 2026-11-17 Observability usa Radar (sidebar, búsqueda y cabecera), mientras
+Monitoring conserva Activity. Android tiene un drawable independiente equivalente;
+no cambian navegación, contratos ni permisos. El build nativo requiere su entorno.
+
+El ajuste posterior de espacios añade margen exterior y separación de 24 px,
+cards de 20 px, grids de 16–20 px, cabeceras/cálculos de gráficas separados y
+padding explícito de alertas (antes heredaban el padding compacto de botones).
+Móvil reduce medidas sin eliminar la separación ni cambiar navegación/datos.
+
 ## Responsabilidad e implementación
 
 Implementado en `feature/observability-prometheus-grafana`, después de guardar los

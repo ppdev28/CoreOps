@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Activity,
+  Radar,
   ArrowUpRight,
   CirclePause,
   Play,
@@ -535,7 +535,7 @@ export default function ObservabilityView() {
       <header className="obs-heading">
         <div>
           <h1>
-            <Activity size={22} /> Observability
+            <Radar size={22} /> Observability
           </h1>
           <p>Host and CoreOps health, metrics and active Prometheus alerts.</p>
         </div>

@@ -2,10 +2,10 @@
   color: var(--coreops-text);
   font-size: 12px;
   min-width: 0;
-  padding: 4px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 .obs-view * {
   box-sizing: border-box;
@@ -87,20 +87,20 @@
   border: 1px solid var(--coreops-border);
   background: var(--coreops-raised);
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .obs-toolbar {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: end;
   flex-wrap: wrap;
 }
 .obs-toolbar label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   color: var(--coreops-textSub);
   font-size: 10px;
   min-width: 105px;
@@ -118,7 +118,15 @@
   flex-basis: 100%;
 }
 .obs-status {
+  gap: 12px;
+}
+.obs-status > span {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.obs-view > p {
+  margin-block: 0;
 }
 .obs-badge {
   display: inline-block;
@@ -160,8 +168,8 @@
 }
 .obs-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 .obs-view .obs-stat {
   display: flex;
@@ -169,8 +177,8 @@
   align-items: flex-start;
   text-align: left;
   justify-content: flex-start;
-  padding: 15px;
-  gap: 10px;
+  padding: 20px;
+  gap: 12px;
 }
 .obs-stat > span {
   color: var(--coreops-textSub);
@@ -187,13 +195,20 @@
 .obs-charts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 20px;
 }
 .obs-chart {
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .obs-chart > .obs-row {
-  margin-bottom: 10px;
+  margin-bottom: 0;
+}
+.obs-chart > details {
+  padding-top: 12px;
+  border-top: 1px solid var(--coreops-border);
 }
 .obs-chart-empty {
   min-height: 220px;
@@ -231,7 +246,10 @@
 .obs-integrations {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 20px;
+}
+.obs-integrations .obs-badge {
+  margin-top: 12px;
 }
 .obs-resource-title {
   font-weight: 600 !important;
@@ -259,6 +277,7 @@
   width: 100%;
   text-align: left;
   justify-content: initial;
+  padding: 20px;
 }
 .obs-alert strong {
   display: inline-flex;
@@ -296,6 +315,9 @@
   }
 }
 @media (max-width: 900px) {
+  .obs-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .obs-charts,
   .obs-resources,
   .obs-integrations {
@@ -304,14 +326,26 @@
 }
 @media (max-width: 540px) {
   .obs-view {
-    padding: 0;
-    gap: 12px;
+    padding: 14px;
+    gap: 20px;
   }
   .obs-view h1 {
     font-size: 20px;
   }
   .obs-card {
-    padding: 12px;
+    padding: 16px;
+  }
+  .obs-view .obs-alert,
+  .obs-view .obs-stat {
+    padding: 16px;
+  }
+  .obs-stats {
+    gap: 12px;
+  }
+  .obs-charts,
+  .obs-resources,
+  .obs-integrations {
+    gap: 16px;
   }
   .obs-heading {
     align-items: flex-start;
