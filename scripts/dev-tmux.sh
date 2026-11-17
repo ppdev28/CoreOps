@@ -72,6 +72,22 @@ else
     export -p > "$runtime/backend.env"
     cp -- "$runtime/backend.env" "$runtime/frontend.env"
 
+    # Optional local observability defaults, only for the backend. Explicit
+    # caller settings win; parse generated KEY=value data without executing it.
+    if [[ -f "$root/deploy/observability/generated/coreops.env" ]]; then
+        while IFS='=' read -r obs_key obs_value; do
+            case "$obs_key" in
+                COREOPS_METRICS_TOKEN_FILE|COREOPS_PROMETHEUS_URL|COREOPS_GRAFANA_URL|COREOPS_GRAFANA_PUBLIC_URL|COREOPS_PROMETHEUS_NODE_JOB|COREOPS_PROMETHEUS_API_JOB)
+                    if [[ "$obs_key" == COREOPS_METRICS_TOKEN_FILE && -v COREOPS_METRICS_TOKEN ]]; then
+                        continue
+                    fi
+                    if [[ ! -v "$obs_key" ]]; then
+                        printf 'export %s=%q\n' "$obs_key" "$obs_value" >> "$runtime/backend.env"
+                    fi
+                    ;;
+            esac
+        done < "$root/deploy/observability/generated/coreops.env"
+    fi
 
     backend=$(tmux new-session -d -s "$session" -n dev -x 180 -y 45 \
         -c "$root/backend" -P -F '#{pane_id}' /bin/bash --noprofile --norc)

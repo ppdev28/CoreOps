@@ -44,6 +44,13 @@ recompilar. Los fallos conservan los paneles para diagnóstico; un health correc
 no valida todas las integraciones ni el login. Es un launcher de desarrollo, no
 instala un servicio ni modifica Docker, sudo o la configuración del host.
 
+Observability opcional (2026-11-17): si existe
+`deploy/observability/generated/coreops.env`, una sesión nueva carga sus seis
+variables conocidas únicamente en el backend, sin ejecutar el fichero. Las
+variables exportadas por el usuario prevalecen (también un metrics token inline).
+Reutilizar una sesión existente no aplica cambios de configuración. No se arrancan
+contenedores automáticamente: seguir [Observability](observability.md).
+
 ## Frontend
 
 Use pnpm, not npm.

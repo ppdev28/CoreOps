@@ -73,6 +73,17 @@ def main():
     if not re.fullmatch(r'https?://[a-zA-Z0-9_.:\[\]/-]+',public):
         raise ValueError('GRAFANA_PUBLIC_URL must be a credential-free HTTP(S) URL')
     generated = ROOT/'generated'
+    # Short-form Docker bind mounts used to create root-owned directories when
+    # these inputs were absent. Refuse malformed paths without replacing secrets.
+    for directory in (generated, generated/'config'):
+        if directory.exists() or directory.is_symlink():
+            if directory.is_symlink() or not directory.is_dir() or directory.stat().st_uid != os.getuid():
+                raise ValueError(f'{directory}: expected a directory owned by the current user. Move the malformed generated directory aside and rerun; keep the Docker data volumes.')
+    for name in ('metrics-token', 'grafana-password'):
+        secret = generated/name
+        if secret.exists() or secret.is_symlink():
+            if secret.is_symlink() or not secret.is_file():
+                raise ValueError(f'{secret}: expected an existing regular secret file, not a directory or symbolic link. Preserve credentials or move the malformed generated directory aside before rerunning.')
     generated.mkdir(mode=0o700, exist_ok=True)
     os.chmod(generated,0o700)
     config_dir = generated/'config'
@@ -90,4 +101,7 @@ def main():
     print('Rendered private generated/ configuration. Apply generated/coreops.env to CoreOps; docker compose up -d. Credentials were not printed.')
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (ValueError, PermissionError) as error:
+        raise SystemExit(str(error))

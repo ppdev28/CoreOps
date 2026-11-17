@@ -22,6 +22,26 @@ La retención sysstat del Dashboard/Monitoring sigue siendo independiente.
 
 ## Arranque reproducible en Ubuntu Linux
 
+Reparación 2026-11-17: los archivos locales ignorados habían desaparecido y Docker
+había creado directorios root-owned en las rutas de los secretos; los dos servicios
+fallaban antes de arrancar (exit 127). Se preservaron esos directorios vacíos como
+`deploy/observability/generated.empty-mounts-20261117`, se regeneró la configuración
+privada y se recrearon sólo Prometheus/Grafana conservando los volúmenes nombrados.
+node_exporter permaneció activo. Los mounts de configuración ahora usan
+`create_host_path: false`: si faltan archivos, ejecutar configure.py antes de up.
+El generador rechaza directorios/enlaces en lugar de secretos y no sobrescribe
+credenciales existentes. No borrar volúmenes para resolver un error de montaje.
+
+Al perderse los secretos se creó un nuevo token de scraping y se aplicó al backend
+y Prometheus conjuntamente. La nueva contraseña bootstrap de Grafana no cambia la
+contraseña ya guardada en su base de datos: conservar el login existente. Nunca
+publicar esos ficheros ni limpiarlos con `git clean -fdx`.
+
+El launcher `scripts/dev-tmux.sh` carga valores opcionales de generated/coreops.env
+sólo para el backend al crear una sesión nueva. Respeta variables exportadas y
+admite únicamente sus seis claves conocidas; no ejecuta ese fichero como shell.
+Una sesión tmux existente sigue requiriendo reinicio para aplicar configuración.
+
 Requisitos: Docker Engine con Compose v2, Python 3 (stdlib), Go >=1.24 y pnpm 10.
 No arrancar un segundo CoreOps si ya hay un proceso/servicio en 8082: actualizar la
 configuración y el binario de ese proceso conservando su identidad y entorno.

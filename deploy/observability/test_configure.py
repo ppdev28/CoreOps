@@ -11,6 +11,18 @@ from configure import configuration, rules
 from render_dashboards import dashboard
 
 class ConfigureTests(unittest.TestCase):
+    def test_malformed_mount_paths_do_not_replace_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            generated=root/'generated'; generated.mkdir()
+            (generated/'metrics-token').mkdir()
+            password=generated/'grafana-password'; password.write_text('keep-existing-password')
+            with mock.patch.object(configure,'ROOT',root),mock.patch.dict(os.environ,{},clear=True):
+                with self.assertRaisesRegex(ValueError,'metrics-token'):
+                    configure.main()
+            self.assertTrue((generated/'metrics-token').is_dir())
+            self.assertEqual(password.read_text(),'keep-existing-password')
+            self.assertFalse((root/'.env').exists())
     def test_private_targets_and_metrics_auth(self):
         config=configuration({})
         self.assertEqual(config['global']['scrape_interval'],'15s')
