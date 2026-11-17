@@ -1,0 +1,146 @@
+.applications-view {
+  padding: 22px 24px;
+  width: 100%;
+}
+.application-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-wrap: anywhere;
+}
+.application-identity {
+  min-width: 0;
+  max-width: 100%;
+}
+.application-identity > div:last-child {
+  min-width: 0;
+}
+.application-identity-meta {
+  flex-wrap: wrap;
+}
+.application-action-error {
+  padding: 14px;
+  border: 1px solid var(--coreops-red);
+  border-radius: 12px;
+  color: var(--coreops-red);
+  overflow-wrap: anywhere;
+}
+.application-container-content {
+  padding: 18px 20px 20px;
+  min-width: 0;
+}
+.application-container-content > p {
+  margin-bottom: 18px;
+  color: var(--coreops-textSub);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.application-container-content [role="alert"] {
+  padding: 12px;
+  border: 1px solid var(--coreops-red);
+  border-radius: 10px;
+  color: var(--coreops-red);
+  margin-bottom: 14px;
+}
+.application-container-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+}
+.application-container-list li {
+  padding: 18px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 14px;
+  background: var(--coreops-bg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.application-container-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.application-container-heading strong {
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+.application-container-image {
+  display: block;
+  color: var(--coreops-textSub);
+  font-size: 11px;
+  margin-bottom: 18px;
+}
+.application-container-list dl {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  font-size: 11px;
+}
+.application-container-list dl > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+}
+.application-container-list dt,
+.application-container-list small {
+  color: var(--coreops-textDim);
+}
+.application-container-list dd {
+  margin: 0;
+  color: var(--coreops-textSub);
+}
+.application-container-list [role="status"] > code {
+  display: block;
+  margin-block: 10px;
+}
+.application-inspect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 999px;
+  background: var(--coreops-raised);
+  color: var(--coreops-text);
+  cursor: pointer;
+}
+.application-inspect:hover {
+  background: var(--coreops-hover);
+}
+.application-inspect:focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .application-container-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .applications-view {
+    padding: 16px;
+  }
+  .application-container-content {
+    padding: 14px;
+  }
+  .application-container-list li {
+    padding: 14px;
+  }
+  .application-container-list dl > div {
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .application-inspect {
+    min-height: 44px;
+    width: 100%;
+  }
+}

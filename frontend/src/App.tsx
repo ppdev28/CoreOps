@@ -374,7 +374,26 @@ function AppShell({ user }: { user: AuthUser }) {
                   />
                 )}{" "}
                 {view === "applications" && (
-                  <ApplicationsView addToast={addToast} />
+                  <ApplicationsView
+                    {...shell}
+                    renderContainer={(id, application, onBack) => (
+                      <Suspense
+                        fallback={
+                          <div data-screen-loading>Loading container…</div>
+                        }
+                      >
+                        <ContainerDetail
+                          key={id}
+                          containerId={id}
+                          backLabel={application}
+                          onBack={onBack}
+                          onLogs={openContainerLogs}
+                          onTerminal={openContainerTerminal}
+                          {...shell}
+                        />
+                      </Suspense>
+                    )}
+                  />
                 )}{" "}
                 {view === "services" && <ServicesView {...shell} />}{" "}
                 {view === "storage" && <StorageView {...shell} />}{" "}

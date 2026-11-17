@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Search,
   RefreshCw,
@@ -9,6 +15,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { T } from "../lib/tokens";
+import { getSession } from "../lib/auth";
+import type { ConfirmDialog } from "../lib/types";
+import ApplicationContainers from "../components/ApplicationContainers";
+import "../styles/applications.css";
 import type { AppService } from "../lib/types";
 import {
   getApplications,
@@ -97,8 +107,15 @@ function AppIcon({ app, size = 40 }: { app: AppService; size?: number }) {
 
 export default function ApplicationsView({
   addToast,
+  onConfirm,
+  renderContainer,
 }: {
-  onDetail?: () => void;
+  onConfirm: (dialog: ConfirmDialog) => void;
+  renderContainer: (
+    id: string,
+    application: string,
+    onBack: () => void,
+  ) => ReactNode;
   addToast: (m: string, t: any) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -109,11 +126,24 @@ export default function ApplicationsView({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [action, setAction] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [containerId, setContainerId] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  const canOperate = ["operator", "admin"].includes(
+    getSession()?.user.role ?? "",
+  );
 
   const load = useCallback(async (initial = false) => {
     initial ? setLoading(true) : setRefreshing(true);
     try {
-      setApps(await getApplications());
+      const next = await getApplications();
+      setApps(next);
+      setSelected((previous) =>
+        previous
+          ? (next.find((app) => app.id === previous.id) ?? previous)
+          : null,
+      );
+      setRevision((value) => value + 1);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load applications");
@@ -125,6 +155,9 @@ export default function ApplicationsView({
   useEffect(() => {
     void load(true);
   }, [load]);
+  useEffect(() => {
+    setActionError("");
+  }, [selected?.id]);
 
   const categories = useMemo(() => {
     const dynamic = apps.map((a) => a.category).filter(Boolean);
@@ -150,6 +183,8 @@ export default function ApplicationsView({
   );
 
   async function actionApp(app: AppService, verb: ApplicationAction) {
+    if (action || !canOperate) return;
+    setActionError("");
     setAction(`${app.id}:${verb}`);
     try {
       await runApplicationAction(app.id, verb);
@@ -158,20 +193,10 @@ export default function ApplicationsView({
         "success",
       );
       await load(true);
-      setSelected((prev) =>
-        prev?.id === app.id
-          ? {
-              ...prev,
-              status:
-                verb === "stop"
-                  ? "stopped"
-                  : verb === "start"
-                    ? "running"
-                    : "restarting",
-            }
-          : prev,
-      );
     } catch (e) {
+      setActionError(
+        e instanceof Error ? e.message : `Unable to ${verb} ${app.name}`,
+      );
       addToast(
         e instanceof Error ? e.message : `Unable to ${verb} ${app.name}`,
         "error",
@@ -181,9 +206,18 @@ export default function ApplicationsView({
     }
   }
 
+  if (selected && containerId)
+    return renderContainer(containerId, selected.name, () =>
+      setContainerId(null),
+    );
   if (selected) {
+    const missing =
+      !loading &&
+      !refreshing &&
+      !error &&
+      !apps.some((app) => app.id === selected.id);
     return (
-      <div style={{ padding: "22px 24px", maxWidth: 1100, width: "100%" }}>
+      <div className="applications-view application-detail">
         <div
           style={{
             display: "flex",
@@ -215,7 +249,10 @@ export default function ApplicationsView({
             flexWrap: "wrap",
           }}
         >
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div
+            className="application-identity"
+            style={{ display: "flex", gap: 14, alignItems: "center" }}
+          >
             <AppIcon app={selected} size={52} />
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: T.text }}>
@@ -225,6 +262,7 @@ export default function ApplicationsView({
                 {selected.description}
               </div>
               <div
+                className="application-identity-meta"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -239,37 +277,67 @@ export default function ApplicationsView({
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {selected.status === "running" ? (
-              <Btn
-                size="xs"
-                variant="secondary"
-                disabled={action === `${selected.id}:stop`}
-                onClick={() => void actionApp(selected, "stop")}
-                icon={<Square size={10} />}
-              >
-                Stop
-              </Btn>
-            ) : (
-              <Btn
-                size="xs"
-                variant="primary"
-                disabled={action === `${selected.id}:start`}
-                onClick={() => void actionApp(selected, "start")}
-                icon={<Play size={10} />}
-              >
-                Start
-              </Btn>
-            )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Btn
               size="xs"
               variant="secondary"
-              disabled={!!action}
-              onClick={() => void actionApp(selected, "restart")}
-              icon={<RotateCw size={10} />}
+              disabled={refreshing || !!action}
+              onClick={() => void load(false)}
+              icon={<RefreshCw size={11} />}
             >
-              Restart
+              Refresh application
             </Btn>
+            {canOperate && !missing && !error && (
+              <>
+                {selected.status === "running" ? (
+                  <Btn
+                    size="xs"
+                    variant="secondary"
+                    disabled={!!action}
+                    onClick={() =>
+                      onConfirm({
+                        title: `Stop "${selected.name}"?`,
+                        message:
+                          "This stops the containers currently belonging to this application.",
+                        action: "Stop application",
+                        danger: true,
+                        onConfirm: () => void actionApp(selected, "stop"),
+                      })
+                    }
+                    icon={<Square size={10} />}
+                  >
+                    Stop
+                  </Btn>
+                ) : (
+                  <Btn
+                    size="xs"
+                    variant="primary"
+                    disabled={!!action}
+                    onClick={() => void actionApp(selected, "start")}
+                    icon={<Play size={10} />}
+                  >
+                    Start
+                  </Btn>
+                )}
+                <Btn
+                  size="xs"
+                  variant="secondary"
+                  disabled={!!action}
+                  onClick={() =>
+                    onConfirm({
+                      title: `Restart "${selected.name}"?`,
+                      message:
+                        "Running containers belonging to this application will be briefly unavailable.",
+                      action: "Restart application",
+                      onConfirm: () => void actionApp(selected, "restart"),
+                    })
+                  }
+                  icon={<RotateCw size={10} />}
+                >
+                  Restart
+                </Btn>
+              </>
+            )}
           </div>
         </div>
         <div
@@ -328,6 +396,31 @@ export default function ApplicationsView({
             </div>
           </Card>
         </div>
+        {actionError && (
+          <div className="application-action-error" role="alert">
+            {actionError}
+          </div>
+        )}
+        {error && (
+          <div role="alert">
+            {error} The last application snapshot may be stale.
+          </div>
+        )}
+        {missing ? (
+          <Card>
+            <div role="status" style={{ padding: 20 }}>
+              This application is no longer present in the Docker inventory.
+              Return to Applications or refresh to check again.
+            </div>
+          </Card>
+        ) : (
+          <ApplicationContainers
+            key={selected.id}
+            ids={selected.containerIds}
+            revision={revision}
+            onInspect={setContainerId}
+          />
+        )}
         <Card>
           <CardHeader title="Application model" />
           <div
@@ -351,7 +444,7 @@ export default function ApplicationsView({
   }
 
   return (
-    <div style={{ padding: "22px 24px", maxWidth: 1200, width: "100%" }}>
+    <div className="applications-view">
       <div
         style={{
           display: "flex",

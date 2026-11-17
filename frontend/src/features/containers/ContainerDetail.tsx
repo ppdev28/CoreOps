@@ -30,6 +30,7 @@ export default function ContainerDetail({
   onTerminal,
   addToast,
   onConfirm,
+  backLabel = "Containers",
 }: {
   containerId: string;
   onBack: () => void;
@@ -37,6 +38,7 @@ export default function ContainerDetail({
   onTerminal: (id: string, name: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
+  backLabel?: string;
 }) {
   const [container, setContainer] = useState<ContainerDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +126,7 @@ export default function ContainerDetail({
     return (
       <div className="native-container-detail">
         <button className="native-container-back" onClick={onBack}>
-          <ArrowLeft size={16} /> Containers
+          <ArrowLeft size={16} /> {backLabel}
         </button>
         <Card>
           <div className="native-container-error">
@@ -144,7 +146,7 @@ export default function ContainerDetail({
     <div className="native-container-detail">
       <button className="native-container-back" onClick={onBack}>
         <ArrowLeft size={16} />
-        <span>Containers</span>
+        <span>{backLabel}</span>
         <ChevronRight size={12} />
         <strong>{container.name}</strong>
       </button>
