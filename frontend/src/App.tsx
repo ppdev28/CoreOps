@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   useSyncExternalStore,
   lazy,
   Suspense,
@@ -46,6 +47,7 @@ const SecurityView = lazyView(() => import("./views/SecurityView"));
 const UpdatesView = lazyView(() => import("./views/UpdatesView"));
 const SettingsView = lazyView(() => import("./views/SettingsView"));
 import { loadWebSettings, subscribeWebSettings } from "./lib/webSettings";
+import type { ContainerTerminalRequest } from "./views/TerminalView";
 
 function AppShell({ user }: { user: AuthUser }) {
   // The Android shell owns the top bar and drawer when running inside Capacitor.
@@ -80,6 +82,13 @@ function AppShell({ user }: { user: AuthUser }) {
   }, []);
   const [logContainerId, setLogContainerId] = useState<string | null>(null);
   const [terminalOpened, setTerminalOpened] = useState(false);
+  const [containerTerminal, setContainerTerminal] =
+    useState<ContainerTerminalRequest | null>(null);
+  const terminalRequestId = useRef(0);
+  const terminalRequestHandled = useCallback(
+    () => setContainerTerminal(null),
+    [],
+  );
   useEffect(() => {
     if (view === "terminal") setTerminalOpened(true);
   }, [view]);
@@ -153,6 +162,18 @@ function AppShell({ user }: { user: AuthUser }) {
     setView("logs");
     setMobileOpen(false);
   }, []);
+  const openContainerTerminal = useCallback(
+    (id: string, name: string) => {
+      if (user.role !== "admin") return;
+      setContainerTerminal({
+        requestId: ++terminalRequestId.current,
+        containerId: id,
+        name,
+      });
+      navigate("terminal");
+    },
+    [navigate, user.role],
+  );
   const openContainerDetail = useCallback((id: string) => {
     setSelectedContainerId(id);
     setView("container-detail");
@@ -339,6 +360,7 @@ function AppShell({ user }: { user: AuthUser }) {
                   <ContainersView
                     onDetail={openContainerDetail}
                     onLogs={openContainerLogs}
+                    onTerminal={openContainerTerminal}
                     {...shell}
                   />
                 )}{" "}
@@ -346,6 +368,7 @@ function AppShell({ user }: { user: AuthUser }) {
                   <ContainerDetail
                     containerId={selectedContainerId}
                     onLogs={openContainerLogs}
+                    onTerminal={openContainerTerminal}
                     onBack={() => navigate("containers")}
                     {...shell}
                   />
@@ -404,7 +427,11 @@ function AppShell({ user }: { user: AuthUser }) {
                 }
               >
                 {(terminalOpened || view === "terminal") && (
-                  <TerminalView visible={view === "terminal"} />
+                  <TerminalView
+                    visible={view === "terminal"}
+                    containerRequest={containerTerminal}
+                    onRequestHandled={terminalRequestHandled}
+                  />
                 )}{" "}
               </Suspense>
             </section>

@@ -72,6 +72,13 @@ Go `internal` restricts consumers outside the backend tree, not sibling imports.
 
 ## Contract and operations
 
+Container Terminal (2026-11-17) adds the separate `containers.TerminalRuntime`
+port and SDK-free TTY session interface, implemented in `adapters/docker`.
+The existing WebSocket transport composes it with the legacy host PTY and keeps
+admin enforcement, revocation, shared quotas and audit. No Docker types cross
+into the frontend or a new generic command API. Files preview remains in the
+existing Files capability; both slices are documented in the module guides.
+
 Keep existing `/api/v1` routes and wire behavior during extraction. First capture health, session and containers in OpenAPI from handlers and client behavior, then expand per capability. Explicitly specify roles, nullable fields, errors, timeouts and action results. No shared Docker types. Introduce generated clients only after choosing tooling and reviewing generated diffs. Incompatible changes need coordinated migration or versioning.
 
 Preserve cancellation and define per-operation deadlines. Long apt operations need job/status semantics rather than merely extending HTTP timeouts. No automatic retries for mutations. Reconcile actual state after actions; report partial failure in composed operations.

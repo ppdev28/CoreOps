@@ -13,25 +13,24 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
-	"golang.org/x/sys/unix"
+	"github.com/ppdev28/CoreOps/backend/internal/containers"
 )
 
 const terminalWindow = 8 // At most 8 × 8 KiB awaiting browser rendering.
 
 type terminalServer struct {
-	auth   *AuthStore
-	audit  *AuditLog
-	ctx    context.Context
-	cancel context.CancelFunc
-	slots  chan struct{}
-	mu     sync.Mutex
-	wg     sync.WaitGroup
-	users  map[string]int
+	auth       *AuthStore
+	audit      *AuditLog
+	ctx        context.Context
+	cancel     context.CancelFunc
+	slots      chan struct{}
+	mu         sync.Mutex
+	wg         sync.WaitGroup
+	users      map[string]int
+	containers *containers.TerminalService
 }
 
 func newTerminalServer(auth *AuthStore, audit *AuditLog) *terminalServer {
@@ -95,6 +94,10 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	// transport failure without starting a process or exposing identity data.
 	if !websocket.IsWebSocketUpgrade(r) {
 		s.auth.require(RoleAdmin, func(w http.ResponseWriter, r *http.Request) {
+			if err := s.checkTarget(r); err != nil {
+				writeError(w, terminalTargetStatus(err), err)
+				return
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"available": true, "protocol": 1})
 		})(w, r)
 		return
@@ -141,6 +144,9 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	u, authenticated := s.auth.Authenticate(hello.Token)
 	hello.Token = ""
 	record := func(detail string, status int) {
+		if r.PathValue("id") != "" {
+			detail = "container " + r.PathValue("id") + ": " + detail
+		}
 		s.audit.Append(AuditEntry{Time: time.Now().UTC(), User: u.Name, Role: u.Role, Method: "GET", Path: r.URL.Path, Remote: remoteHost(r), Status: status, Detail: detail})
 	}
 	send := func(value any) error {
@@ -166,55 +172,41 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	defer func() { s.mu.Lock(); s.users[u.Name]--; s.mu.Unlock() }()
 
-	cmd, shellUser, err := terminalCommand()
-	if err != nil {
-		record("terminal shell unavailable", 503)
-		_ = send(map[string]any{"type": "error", "message": "Server shell unavailable"})
-		return
-	}
-	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: hello.Cols, Rows: hello.Rows})
-	if err != nil {
-		record("terminal PTY unavailable", 503)
-		_ = send(map[string]any{"type": "error", "message": "Unable to start server terminal"})
-		return
-	}
-	// Cache the descriptor: File.Fd() can restore blocking mode. Nonblocking
-	// reads allow Close() to interrupt even if a detached child keeps its tty.
-	fd := int(ptmx.Fd())
-	if err := unix.SetNonblock(fd, true); err != nil {
-		_ = cmd.Process.Kill()
-		_ = ptmx.Close()
-		_ = cmd.Wait()
-		_ = send(map[string]any{"type": "error", "message": "Unable to initialize terminal IO"})
+	if err := s.checkTarget(r); err != nil {
+		record("terminal target unavailable", terminalTargetStatus(err))
+		_ = send(map[string]any{"type": "error", "message": err.Error()})
 		return
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	var session containers.TerminalSession
+	if id := r.PathValue("id"); id != "" {
+		session, err = s.containers.Open(ctx, id, hello.Cols, hello.Rows)
+	} else {
+		session, err = openHostTerminal(hello.Cols, hello.Rows)
+	}
+	if err != nil {
+		record("terminal shell unavailable", 503)
+		message := "Unable to start server terminal"
+		if r.PathValue("id") != "" {
+			message = "Unable to open container terminal. The container must be running and include /bin/sh."
+		}
+		_ = send(map[string]any{"type": "error", "message": message})
+		return
+	}
 	var once sync.Once
-	var ptyMu sync.Mutex
 	stop := func() {
 		once.Do(func() {
 			cancel()
-			ptyMu.Lock()
-			defer ptyMu.Unlock()
-			// Interactive programs use a separate foreground process group.
-			if fg, err := unix.IoctlGetInt(fd, unix.TIOCGPGRP); err == nil && fg > 0 {
-				_ = syscall.Kill(-fg, syscall.SIGKILL)
-			}
-			_ = cmd.Process.Kill()
-			_ = ptmx.Close()
+			_ = session.Close()
 			_ = conn.Close()
 		})
 	}
 	defer stop()
 	record("terminal opened", 101)
 	defer record("terminal closed", 200)
-	wait := make(chan struct{})
-	var exitErr error
-	go func() { exitErr = cmd.Wait(); close(wait) }()
-	// Reap even on disconnect; stop() terminates the shell before this wait.
-	defer func() { stop(); <-wait }()
-	host, _ := os.Hostname()
-	if send(map[string]any{"type": "ready", "user": shellUser, "host": host, "shell": cmd.Path}) != nil {
+	info := session.Info()
+	if send(map[string]any{"type": "ready", "user": info.User, "host": info.Host, "shell": info.Shell}) != nil {
 		return
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -223,7 +215,10 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	for range terminalWindow {
 		credits <- struct{}{}
 	}
+	var workers sync.WaitGroup
+	workers.Add(2)
 	go func() {
+		defer workers.Done()
 		defer stop()
 		for {
 			kind, data, err := conn.ReadMessage()
@@ -235,7 +230,7 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if kind == websocket.BinaryMessage {
-				if _, err := ptmx.Write(data); err != nil {
+				if _, err := session.Write(data); err != nil {
 					return
 				}
 				continue
@@ -249,13 +244,7 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 				if !validTerminalSize(msg.Cols, msg.Rows) {
 					return
 				}
-				ptyMu.Lock()
-				err := ctx.Err()
-				if err == nil {
-					err = unix.IoctlSetWinsize(fd, unix.TIOCSWINSZ, &unix.Winsize{Col: msg.Cols, Row: msg.Rows})
-				}
-				ptyMu.Unlock()
-				if err != nil {
+				if err := session.Resize(ctx, msg.Cols, msg.Rows); err != nil {
 					return
 				}
 			case "ack":
@@ -269,6 +258,7 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	go func() {
+		defer workers.Done()
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 		defer stop()
@@ -289,6 +279,9 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
+	// Drain auth/input workers before the session handler completes. Otherwise
+	// they can touch the identity store after Close() has returned.
+	defer func() { stop(); workers.Wait() }()
 	buffer := make([]byte, 8192)
 	for {
 		select {
@@ -296,7 +289,7 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case <-credits:
 		}
-		n, readErr := ptmx.Read(buffer)
+		n, readErr := session.Read(buffer)
 		if n > 0 {
 			_ = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if conn.WriteMessage(websocket.BinaryMessage, buffer[:n]) != nil {
@@ -304,20 +297,12 @@ func (s *terminalServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if readErr != nil {
-			// PTY EOF (EIO on Linux) follows shell exit; retain the exit code.
-			select {
-			case <-wait:
-				code := 0
-				if exitErr != nil {
+			if ctx.Err() == nil {
+				code, err := session.Wait(ctx)
+				if err != nil {
 					code = -1
-					var e *exec.ExitError
-					if errors.As(exitErr, &e) {
-						code = e.ExitCode()
-					}
 				}
 				_ = send(map[string]any{"type": "exit", "code": code})
-			case <-ctx.Done():
-			case <-time.After(time.Second):
 			}
 			return
 		}
@@ -345,4 +330,36 @@ func terminalCommand() (*exec.Cmd, string, error) {
 		}
 	}
 	return cmd, u.Username, nil
+}
+
+func (s *terminalServer) checkTarget(r *http.Request) error {
+	id := r.PathValue("id")
+	if id == "" {
+		return nil
+	}
+	if !containers.ValidID(id) || r.URL.RawQuery != "" {
+		return containers.ErrInvalidID
+	}
+	if s.containers == nil {
+		return containers.ErrTerminalUnavailable
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	err := s.containers.Check(ctx, id)
+	if err == nil || errors.Is(err, containers.ErrNotFound) || errors.Is(err, containers.ErrTerminalStopped) {
+		return err
+	}
+	return containers.ErrTerminalUnavailable
+}
+func terminalTargetStatus(err error) int {
+	switch {
+	case errors.Is(err, containers.ErrInvalidID):
+		return 400
+	case errors.Is(err, containers.ErrNotFound):
+		return 404
+	case errors.Is(err, containers.ErrTerminalStopped):
+		return 409
+	default:
+		return 503
+	}
 }

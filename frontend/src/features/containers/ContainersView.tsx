@@ -104,7 +104,7 @@ function CtxMenu({
       label: "Terminal",
       icon: <Terminal size={12} />,
       action: "terminal",
-      show: true,
+      show: canDelete && c.status === "running",
       danger: false,
     },
     {
@@ -320,12 +320,14 @@ function MobileContainerCard({
 
 export default function ContainersView({
   onLogs,
+  onTerminal,
   onDetail,
   addToast,
   onConfirm,
 }: {
   onDetail: (id: string) => void;
   onLogs: (id: string) => void;
+  onTerminal: (id: string, name: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -492,6 +494,10 @@ export default function ContainersView({
       onLogs(c.id);
       return;
     }
+    if (action === "terminal") {
+      if (canCreate && c.status === "running") onTerminal(c.id, c.name);
+      return;
+    }
     if (action === "start") {
       void executeContainerAction("start", c);
       return;
@@ -540,7 +546,6 @@ export default function ContainersView({
         restart: `Restarting ${c.name}…`,
         pause: `Pausing ${c.name}…`,
         logs: `Opening logs for ${c.name}`,
-        terminal: `Connecting to ${c.name}…`,
         inspect: `Inspecting ${c.name}`,
       };
       addToast(msgs[action] || action, "info");

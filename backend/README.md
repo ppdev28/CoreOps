@@ -63,6 +63,13 @@ See [backend module instructions](../docs/modules/backend.md), [API instructions
 
 ## Interactive terminal
 
+Container detail and context-menu Terminal use admin-only
+`GET /api/v1/containers/{id}/terminal` with the same protocol and shared limits.
+The adapter starts `/bin/sh -i` inside a running, unpaused container using its
+configured user. Closing disconnects the attachment; use `exit` to end the shell.
+Docker exec processes may continue after disconnect. No container stop or host
+PID signals are used to clean up an attachment. [Container terminal](../docs/modules/terminal.md).
+
 `GET /api/v1/terminal/session` upgrades to WebSocket, authenticates an admin in the first frame and starts a real PTY. The shell runs as the API service account, default `/bin/bash -l` in its home directory; set `COREOPS_TERMINAL_SHELL` to an absolute compatible shell path. It is host access with that account’s existing rights.
 
 Configure the exact external origin with `COREOPS_CORS_ORIGINS` when using HTTPS termination or a separate frontend. The proxy must forward WebSocket upgrades and allow long connections. Active sessions revalidate authentication every second and close on logout/expiry/shutdown. Limits: four PTYs per admin, 32 total connections, 32 KiB input frames and 64 KiB unacknowledged output. No automatic resume/replay; internal navigation preserves open shells. Existing `/terminal/exec` and `/terminal/complete` remain for compatibility.

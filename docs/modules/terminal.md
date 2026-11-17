@@ -1,5 +1,35 @@
 # Terminal interactiva
 
+## Terminal de contenedores — 2026-11-17
+
+El botón Terminal de inspect y el menú de contenedores abren una pestaña con el
+nombre del contenedor en el workspace existente. Sólo admin; inspect la desactiva
+si no está running. Las pestañas del host y contenedor conservan estado al navegar
+y comparten límites globales/por usuario, Origin exacto, auth inicial,
+revalidación de revocación, control de flujo y teclado responsive existentes.
+
+`GET /api/v1/containers/{id}/terminal`: sin upgrade comprueba capacidad/estado sin
+crear exec (Bearer admin, 400 ID/query inválido, 404 ausente, 409 parado/pausado,
+503 runtime no disponible); con upgrade usa el mismo protocolo WebSocket v1 y
+autentica antes de acceder a Docker. Audit de apertura/cierre/denegación con ID,
+sin entrada/salida/tokens. No se envía Bearer en URL ni comando desde el cliente.
+
+`internal/containers/terminal.go` define el puerto y la sesión independiente de SDK;
+`internal/adapters/docker/terminal.go` usa inspect/exec-create/attach/resize/inspect.
+Se ejecuta `/bin/sh -i` con TTY, usuario y directorio predeterminados del contenedor,
+sin privileged ni override de usuario ni entorno del proceso CoreOps. La imagen
+debe incluir `/bin/sh`; no se instala una shell ni se inicia el contenedor por
+abrir Terminal. La UI muestra errores si cambia el estado entre inspect y exec.
+La PTY host se encapsula en `terminal_host.go` y conserva su cierre de procesos.
+
+**Cerrar una pestaña de contenedor desconecta el attach. Docker exec no ofrece
+una operación de kill por exec ID: la shell/procesos pueden continuar dentro del
+contenedor. Usar `exit` para terminar la shell antes de cerrar.** El aviso de cierre
+lo explicita; no se detiene el contenedor ni se señalizan PIDs del host.
+La revocación corta el transporte y toda entrada posterior; no revierte comandos
+ya aceptados. No hay reattach ni reintento automático. SEC-02 legacy/03/04/06
+siguen abiertos.
+
 Implementada en `feature/terminal-redesign` (2026-11-13). Es una terminal remota Linux con PTY real; no ejecuta comandos en el Mac o teléfono del cliente ni instala una aplicación de escritorio.
 
 ## Responsabilidades

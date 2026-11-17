@@ -58,10 +58,11 @@ export interface ApplyUpdatesResponse {
 }
 export async function checkTerminalAvailability(
   signal?: AbortSignal,
+  containerId?: string,
 ): Promise<void> {
   try {
     const capability = await request<{ available: boolean; protocol: number }>(
-      "/terminal/session",
+      terminalEndpoint(containerId),
       { signal, cache: "no-store" },
     );
     if (capability.available !== true || capability.protocol !== 1)
@@ -69,7 +70,7 @@ export async function checkTerminalAvailability(
         "The API returned an incompatible terminal protocol. Update and restart the CoreOps backend.",
       );
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404)
+    if (!containerId && error instanceof ApiError && error.status === 404)
       throw new Error(
         "This API does not support interactive terminals. Rebuild and restart the CoreOps backend.",
       );
@@ -78,8 +79,20 @@ export async function checkTerminalAvailability(
 }
 
 // Authenticate inside the connection, never in a URL or browser history.
-export function openTerminalSession(cols: number, rows: number): WebSocket {
-  const url = new URL(`${getApiBase()}/terminal/session`, window.location.href);
+function terminalEndpoint(containerId?: string): string {
+  return containerId
+    ? `/containers/${encodeURIComponent(containerId)}/terminal`
+    : "/terminal/session";
+}
+export function openTerminalSession(
+  cols: number,
+  rows: number,
+  containerId?: string,
+): WebSocket {
+  const url = new URL(
+    `${getApiBase()}${terminalEndpoint(containerId)}`,
+    window.location.href,
+  );
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   const socket = new WebSocket(url);
   socket.binaryType = "arraybuffer";

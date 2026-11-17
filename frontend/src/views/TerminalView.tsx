@@ -28,7 +28,18 @@ import {
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
 
-type Pane = { id: number; title: string };
+export type ContainerTerminalRequest = {
+  requestId: number;
+  containerId: string;
+  name: string;
+};
+type Pane = {
+  id: number;
+  title: string;
+  containerId?: string;
+  containerName?: string;
+  ended?: boolean;
+};
 type Handle = {
   input: (data: string) => void;
   clear: () => void;
@@ -78,6 +89,7 @@ function TerminalPane({
   handles,
   onTitle,
   onInputFocus,
+  onEnded,
 }: {
   pane: Pane;
   active: boolean;
@@ -85,6 +97,7 @@ function TerminalPane({
   handles: React.RefObject<Map<number, Handle>>;
   onTitle: (id: number, title: string) => void;
   onInputFocus: (id: number, focused: boolean) => void;
+  onEnded: (id: number) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -175,7 +188,7 @@ function TerminalPane({
       textarea.addEventListener("focus", focusInput);
       textarea.addEventListener("blur", blurInput);
     }
-    const socket = openTerminalSession(term.cols, term.rows);
+    const socket = openTerminalSession(term.cols, term.rows, pane.containerId);
     const control = (data: object) => {
       if (socket.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify(data));
@@ -261,11 +274,13 @@ function TerminalPane({
     const resize = term.onResize(({ cols, rows }) => {
       if (live.current) control({ type: "resize", cols, rows });
     });
-    const title = term.onTitleChange((value) =>
-      onTitle(
-        pane.id,
-        value.replace(/[\x00-\x1f\x7f]/g, "").slice(0, 80) || "Shell",
-      ),
+    const title = term.onTitleChange(
+      (value) =>
+        !pane.containerId &&
+        onTitle(
+          pane.id,
+          value.replace(/[\x00-\x1f\x7f]/g, "").slice(0, 80) || "Shell",
+        ),
     );
     const timeout = window.setTimeout(() => {
       if (!live.current && !disposed && !ended) {
@@ -288,10 +303,13 @@ function TerminalPane({
           clearTimeout(timeout);
           live.current = true;
           setState("connected");
-          setDetail(`${message.user}@${message.host} · ${message.shell}`);
+          setDetail(
+            `${pane.containerName ? `${pane.containerName} · ` : ""}${message.user}@${message.host} · ${message.shell}`,
+          );
           control({ type: "resize", cols: term.cols, rows: term.rows });
           if (container.current?.offsetParent && !touchInput()) term.focus();
         } else if (message.type === "exit") {
+          onEnded(pane.id);
           ended = true;
           live.current = false;
           setState("exited");
@@ -299,6 +317,7 @@ function TerminalPane({
             `Shell exited with code ${message.code}. Open a new terminal to continue.`,
           );
         } else if (message.type === "error") {
+          onEnded(pane.id);
           ended = true;
           live.current = false;
           setState("error");
@@ -315,6 +334,7 @@ function TerminalPane({
     socket.onclose = (event) => {
       live.current = false;
       clearTimeout(timeout);
+      if (!disposed) onEnded(pane.id);
       if (!disposed && !ended) {
         setState("disconnected");
         term.options.cursorBlink = false;
@@ -351,7 +371,15 @@ function TerminalPane({
       clipboard.dispose();
       term.dispose();
     };
-  }, [pane.id, handles, onTitle, onInputFocus]);
+  }, [
+    pane.id,
+    pane.containerId,
+    pane.containerName,
+    onEnded,
+    handles,
+    onTitle,
+    onInputFocus,
+  ]);
   useEffect(() => {
     if (active && visible) {
       const frame = requestAnimationFrame(() => {
@@ -423,7 +451,11 @@ function TerminalPane({
         className="pty-emulator"
         data-terminal-input
         data-state={state}
-        aria-label="Server terminal"
+        aria-label={
+          pane.containerName
+            ? `Container terminal: ${pane.containerName}`
+            : "Server terminal"
+        }
       >
         <div className="pty-surface" ref={container} />
       </div>
@@ -456,12 +488,93 @@ function TerminalPane({
 }
 export default function TerminalView({
   visible = true,
+  containerRequest,
+  onRequestHandled,
 }: {
   visible?: boolean;
+  containerRequest?: ContainerTerminalRequest | null;
+  onRequestHandled?: () => void;
 }) {
-  const [panes, setPanes] = useState<Pane[]>([{ id: 1, title: "Shell 1" }]);
+  const [panes, setPanes] = useState<Pane[]>(() =>
+    containerRequest ? [] : [{ id: 1, title: "Shell 1" }],
+  );
   const [active, setActive] = useState(1);
   const counter = useRef(1);
+  const handledRequest = useRef(0);
+  const [requestError, setRequestError] = useState("");
+  const panesRef = useRef(panes);
+  panesRef.current = panes;
+  useEffect(() => {
+    if (
+      !containerRequest ||
+      handledRequest.current === containerRequest.requestId ||
+      getSession()?.user.role !== "admin"
+    )
+      return;
+    const controller = new AbortController();
+    setRequestError("");
+    const existing = panesRef.current.find(
+      (p) => p.containerId === containerRequest.containerId && !p.ended,
+    );
+    if (existing) {
+      setActive(existing.id);
+      handledRequest.current = containerRequest.requestId;
+      onRequestHandled?.();
+      return;
+    }
+    if (panesRef.current.length >= 4) {
+      setRequestError(
+        "Four terminals are already open. Close a tab and open the container terminal again.",
+      );
+      handledRequest.current = containerRequest.requestId;
+      onRequestHandled?.();
+      return;
+    }
+    void checkTerminalAvailability(
+      controller.signal,
+      containerRequest.containerId,
+    )
+      .then(() => {
+        if (controller.signal.aborted) return;
+        const id = ++counter.current;
+        setPanes((all) => [
+          ...all,
+          {
+            id,
+            title: containerRequest.name,
+            containerId: containerRequest.containerId,
+            containerName: containerRequest.name,
+          },
+        ]);
+        setActive(id);
+        handledRequest.current = containerRequest.requestId;
+        onRequestHandled?.();
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setRequestError(
+          error instanceof Error
+            ? error.message
+            : "Unable to open container terminal.",
+        );
+        handledRequest.current = containerRequest.requestId;
+        onRequestHandled?.();
+      });
+    return () => controller.abort();
+  }, [containerRequest, onRequestHandled]);
+  const onEnded = useRef((id: number) =>
+    setPanes((all) =>
+      all.map((pane) =>
+        pane.id === id && !pane.ended
+          ? {
+              ...pane,
+              ended: true,
+              title: pane.containerId ? `${pane.title} (ended)` : pane.title,
+            }
+          : pane,
+      ),
+    ),
+  ).current;
   const root = useRef<HTMLDivElement>(null);
   const handles = useRef(new Map<number, Handle>());
   const [pendingClose, setPendingClose] = useState<number | null>(null);
@@ -600,6 +713,7 @@ export default function TerminalView({
       </div>
     );
   const add = () => {
+    if (containerRequest || panes.length >= 4) return;
     const id = ++counter.current;
     setPanes((all) => [...all, { id, title: `Shell ${id}` }]);
     setActive(id);
@@ -712,6 +826,14 @@ export default function TerminalView({
         }
       }}
     >
+      {requestError && (
+        <div className="pty-close-prompt" role="alert">
+          <span>{requestError}</span>
+          <button type="button" onClick={() => setRequestError("")}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="pty-toolbar">
         <div
           className="pty-tabs"
@@ -753,7 +875,9 @@ export default function TerminalView({
           className="pty-new-terminal"
           aria-label="New terminal"
           title="New terminal (maximum four)"
-          disabled={panes.length >= 4 || availability !== "ready"}
+          disabled={
+            panes.length >= 4 || availability !== "ready" || !!containerRequest
+          }
           onClick={add}
         >
           <Plus size={17} />
@@ -786,12 +910,18 @@ export default function TerminalView({
       </div>
       {pendingClose !== null && (
         <div className="pty-close-prompt" role="alert">
-          <span>Close this shell and stop its foreground process?</span>
+          <span>
+            {panes.find((p) => p.id === pendingClose)?.containerId
+              ? "Disconnect this container terminal? Processes inside the container may continue. Use exit to end the shell first."
+              : "Close this shell and stop its foreground process?"}
+          </span>
           <button type="button" onClick={() => setPendingClose(null)}>
             Cancel
           </button>
           <button type="button" onClick={() => close(pendingClose)}>
-            Close shell
+            {panes.find((p) => p.id === pendingClose)?.containerId
+              ? "Disconnect terminal"
+              : "Close shell"}
           </button>
         </div>
       )}
@@ -831,6 +961,7 @@ export default function TerminalView({
             handles={handles}
             onTitle={onTitle}
             onInputFocus={onInputFocus}
+            onEnded={onEnded}
           />
         ))}
       {availability === "ready" && !panes.length && (

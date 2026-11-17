@@ -12,30 +12,35 @@ export async function mockDashboard(
     requests: [] as string[],
     runtimeErrors: [] as string[],
     terminalInputs: [] as string[],
+    terminalConnections: [] as string[],
     terminalMessages: [] as Array<Record<string, unknown>>,
   };
-  await page.routeWebSocket("**/api/v1/terminal/session", (socket) => {
-    socket.onMessage((message) => {
-      if (typeof message === "string") {
-        const data = JSON.parse(message);
-        control.terminalMessages.push(data);
-        if (data.type === "auth") {
-          socket.send(
-            JSON.stringify({
-              type: "ready",
-              user: "operator",
-              host: "homelab-server",
-              shell: "/bin/bash",
-            }),
-          );
-          socket.send(Buffer.from("operator@homelab-server:~$ "));
+  await page.routeWebSocket(
+    /\/api\/v1\/(?:terminal\/session|containers\/[^/]+\/terminal)$/,
+    (socket) => {
+      socket.onMessage((message) => {
+        if (typeof message === "string") {
+          const data = JSON.parse(message);
+          control.terminalMessages.push(data);
+          if (data.type === "auth") {
+            control.terminalConnections.push(socket.url());
+            socket.send(
+              JSON.stringify({
+                type: "ready",
+                user: "operator",
+                host: "homelab-server",
+                shell: "/bin/bash",
+              }),
+            );
+            socket.send(Buffer.from("operator@homelab-server:~$ "));
+          }
+        } else {
+          control.terminalInputs.push(message.toString());
+          socket.send(message);
         }
-      } else {
-        control.terminalInputs.push(message.toString());
-        socket.send(message);
-      }
-    });
-  });
+      });
+    },
+  );
   page.on("pageerror", (error) => control.runtimeErrors.push(error.message));
   await page.addInitScript(
     ({ role }) => {
@@ -110,7 +115,11 @@ export async function mockDashboard(
         json: { error: "Test fixture: capability unavailable" },
       });
     let body: unknown;
-    if (path === "/terminal/session") body = { available: true, protocol: 1 };
+    if (
+      path === "/terminal/session" ||
+      /^\/containers\/[^/]+\/terminal$/.test(path)
+    )
+      body = { available: true, protocol: 1 };
     else if (path === "/files/preview")
       body = {
         path: new URL(route.request().url()).searchParams.get("path"),

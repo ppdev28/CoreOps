@@ -15,6 +15,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { getContainerDetail, runContainerAction } from "./api";
+import { getSession } from "../../shared/platform/session";
 import type { ContainerDetailData } from "./model";
 import type { ConfirmDialog } from "../../lib/types";
 import type { ContainerAction } from "./api";
@@ -26,12 +27,14 @@ export default function ContainerDetail({
   containerId,
   onBack,
   onLogs,
+  onTerminal,
   addToast,
   onConfirm,
 }: {
   containerId: string;
   onBack: () => void;
   onLogs: (id: string) => void;
+  onTerminal: (id: string, name: string) => void;
   addToast: (m: string, t: any) => void;
   onConfirm: (d: ConfirmDialog) => void;
 }) {
@@ -205,15 +208,16 @@ export default function ContainerDetail({
           >
             Logs
           </Btn>
-          <Btn
-            variant="secondary"
-            icon={<Terminal size={11} />}
-            onClick={() =>
-              addToast(`Terminal for ${container.name} — coming next`, "info")
-            }
-          >
-            Terminal
-          </Btn>
+          {getSession()?.user.role === "admin" && (
+            <Btn
+              variant="secondary"
+              icon={<Terminal size={11} />}
+              disabled={state !== "running" || !!pending}
+              onClick={() => onTerminal(container.id, container.name)}
+            >
+              Terminal
+            </Btn>
+          )}
         </div>
       </div>
 

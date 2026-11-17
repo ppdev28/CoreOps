@@ -43,6 +43,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	}
 	mux := http.NewServeMux()
 	a.terminals = newTerminalServer(auth, audit)
+	if a.docker != nil {
+		a.terminals.containers = containers.NewTerminal(dockeradapter.NewTerminal(a.docker))
+	}
 	if a.containers == nil {
 		a.containers = containers.New(dockeradapter.NewContainers(a.docker))
 	}
@@ -109,6 +112,7 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/terminal/complete", RoleAdmin, a.terminalComplete)
 	// WebSockets authenticate in their first frame, never in the URL.
 	mux.HandleFunc("GET /api/v1/terminal/session", a.terminals.serveHTTP)
+	mux.HandleFunc("GET /api/v1/containers/{id}/terminal", a.terminals.serveHTTP)
 	handle("GET /api/v1/security", RoleOperator, a.security)
 	handle("POST /api/v1/security/sessions/{pid}/terminate", RoleAdmin, a.terminateSecuritySession)
 	handle("POST /api/v1/security/fix/{item}", RoleAdmin, a.fixSecurity)

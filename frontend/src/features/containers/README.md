@@ -1,5 +1,11 @@
 # Feature: contenedores
 
+Terminal (2026-11-17): inspect y menú reciben `onTerminal(id,name)` desde App.
+Admin y estado running en UI; el backend vuelve a validar rol/estado antes de exec.
+App compone una petición al workspace Terminal persistente sin importar sus
+componentes en la feature. Host y contenedor usan pestañas independientes.
+Contrato y límites: [Terminal](../../../../docs/modules/terminal.md).
+
 Entradas públicas: `index.ts` para API/tipos; `ContainersView.tsx` y `ContainerDetail.tsx` para composición lazy desde App. No exportar las pantallas por el barrel de API: una lectura de datos desde Dashboard no debe cargar sus componentes.
 
 - `api.ts`: lista, inspect, lifecycle, creación y eliminación mediante peticiones CoreOps, codificación de IDs y verificación del resultado de acciones. Usa `shared/api/client`, no `lib/api`.

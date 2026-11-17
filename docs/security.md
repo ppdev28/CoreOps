@@ -10,6 +10,19 @@ Fronteras: navegador/WebView → red/proxy TLS → HTTP/auth → capacidad → a
 
 ## Controles presentes
 
+### Visor y terminal de contenedor — 2026-11-17
+
+Visor admin con confinamiento por descriptor, versión antes/después, sólo regular
+sin enlace final, límites de bytes/concurrencia y exclusión de identidad/audit.
+JSON no-store y texto React/Blob de imágenes raster permitidas; no documentos
+activos. Lecturas auditadas sin contenido. La terminal Docker exige admin antes de
+inspect/exec y usa el transporte PTY existente con revocación/Origin/límites/audit.
+Shell fija, usuario de la imagen, sin elevación ni credenciales de CoreOps.
+Cerrar attach no garantiza terminar el exec; la UI lo explica y no utiliza kill
+de PID ni stop de contenedor para simular esa garantía. Ver [Files](modules/files.md)
+y [Terminal](modules/terminal.md). Los hallazgos abiertos mantienen su prioridad;
+no se amplía exposición de red ni permisos del host.
+
 Bind loopback por defecto; Bearer opaco de 32 bytes con hash en servidor; PBKDF2-SHA256 con salt; TTL; roles por ruta; body limitado en login/terminal/updates; timeouts HTTP y varios de operación; lista de orígenes CORS; validadores de algunas acciones; auditoría de mutaciones/rechazos; pruebas auth y parsers. No afirmar cobertura total a partir de estos controles.
 
 ## Hallazgos y criterios de cierre
