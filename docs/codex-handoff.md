@@ -1,5 +1,45 @@
 # Codex Handoff
 
+## Commits por funcionalidad — 2026-11-18
+
+- `2cf3edd` — fix(mobile): bind login sessions to the selected server
+- `b0aaf86` — feat(users): create persistent accounts from settings
+- `13d57c1` — feat(host): add audited power controls for web and Android
+
+Commits en `main`, sin push. Se exportó el índice de cada funcionalidad a un
+checkout temporal para comprobar que cada commit construye el frontend por
+sí solo; usuarios y energía también pasan sus pruebas Go focalizadas con race.
+El informe de validación y los límites de sudo/APK permanecen documentados.
+
+## Usuarios, móvil y energía — 2026-11-18
+
+Trabajado sobre `main`, inicialmente limpio, sin cambiar de rama. Reanudar desde
+la entrada nueva de [current-state](current-state.md) y las guías
+[identidad](modules/identity-audit.md), [móvil](modules/mobile.md),
+[energía](modules/host-power.md); no seguir las referencias históricas a develop.
+
+Implementados usuarios HTTP/UI sólo admin y centro de control admin con
+capacidades, hostname/boot ID, confirmación, revalidación y audit previo con fsync;
+el núcleo y adaptador están en `internal/hostpower` / `adapters/linuxpower`.
+Sin comandos de energía reales durante pruebas. API nueva activa en tmux `%0`,
+binario `/tmp/coreops-admin-runtime-rkf2or4_/coreops-api`, configuración/identidad y
+frontend `%1` conservados. Nuevas rutas sin auth dan 401 y health LAN da 200.
+
+Móvil: usar `http://192.168.1.128:5173`; el puerto 8082 sólo escucha en loopback.
+Servidor elegido prevalece sobre VITE default y token ligado al API. Android
+toolbar emite evento local para abrir el centro, sin lógica privilegiada nativa.
+Build web y cap sync Android completados; APK y dispositivo **pendientes** por
+falta de Java/SDK/adb conectado. No afirmar que la contraseña real suministrada se
+ha validado: se verificó conectividad y login con identidad temporal, sin copiar,
+guardar o modificar esa contraseña.
+
+Energía sigue deshabilitada por permisos del host. Helper/instalador revisables en
+deploy; activación pendiente por sudo interactivo local:
+`sudo sh ./deploy/install-power-helper.sh pepe`. Instalar no apaga ni reinicia.
+Después refrescar capacidades; no habilitar suspensión si el host no la soporta.
+126 escenarios UI correctos, Go race/vet/build correctos; últimos cambios Go
+comprobados con regresiones focalizadas. [Informe](administration-mobile-validation-2026-11-18.md).
+
 ## Commits por funcionalidad y alcance de Logs — 2026-11-17
 
 A petición del usuario, se registran todos los cambios pendientes en commits

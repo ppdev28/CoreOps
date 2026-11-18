@@ -1,5 +1,51 @@
 # Current State
 
+## Commits por funcionalidad — 2026-11-18
+
+- `2cf3edd` — fix(mobile): bind login sessions to the selected server
+- `b0aaf86` — feat(users): create persistent accounts from settings
+- `13d57c1` — feat(host): add audited power controls for web and Android
+
+Commits en `main`, sin push. Se exportó el índice de cada funcionalidad a un
+checkout temporal para comprobar que cada commit construye el frontend por
+sí solo; usuarios y energía también pasan sus pruebas Go focalizadas con race.
+El informe de validación y los límites de sudo/APK permanecen documentados.
+
+## Login móvil, creación de usuarios y energía — 2026-11-18
+
+Rama real confirmada: `main`; no se cambió de rama. El login móvil usaba el puerto
+8082, pero el API de tmux escucha en loopback. La dirección accesible en este
+entorno es `http://192.168.1.128:5173`, con CORS nativo a través del proxy. El
+servidor seleccionado ahora prevalece sobre el default de build, normaliza un
+sufijo `/api/v1` y vincula la sesión a su API; cambiar de servidor borra el token.
+
+Settings → Users permite listar/crear cuentas CoreOps sólo a admin, con nombre,
+password y rol (viewer por defecto). Mantiene el store persistente y revalida la
+sesión tras PBKDF2 bajo bloqueo; no crea usuarios Linux ni devuelve hashes.
+El menú superior de usuario incluye apagado/suspensión/reinicio: capacidades
+reales logind, confirmación escrita del hostname, identidad de arranque fresca,
+guard de autorización/auditoría previo al despacho y deduplicación temporal.
+Android añade acceso de cuenta en toolbar para abrir los mismos controles web.
+
+El servidor actual deniega energía sin autorización local. El helper restringido
+y su instalador están preparados, **no instalados**: requiere sudo interactivo
+(`sudo sh ./deploy/install-power-helper.sh pepe`), sin ejecutar ninguna orden de
+energía durante instalación o validación. Suspensión depende del host/hardware.
+Assets sincronizados con Android; no se compiló ni instaló APK por ausencia de
+Java/SDK y dispositivo adb. No confundir simulación web con prueba nativa.
+
+Validado: suite Go con race detector, vet/build y regresiones después del ajuste
+final; fronteras/formato/build web; 126/126 escenarios Playwright; XML/recursos y
+cap sync Android. API/identidad temporales verificaron login, creación y login de
+viewer, restricciones y login nativo simulado por LAN; cero órdenes de energía.
+Procesos/datos de prueba retirados. API de tmux actualizada al binario probado en
+`/tmp/coreops-admin-runtime-rkf2or4_/coreops-api`; hashes de users/sessions intactos
+y frontend conservado. Health LAN 200; nuevas rutas sin sesión 401. Las
+credenciales entregadas por el usuario no se guardaron ni cambiaron.
+
+Guías: [Identidad](modules/identity-audit.md), [Móvil](modules/mobile.md),
+[Energía](modules/host-power.md). [Evidencia y límites](administration-mobile-validation-2026-11-18.md).
+
 ## Commits por funcionalidad y alcance de Logs — 2026-11-17
 
 A petición del usuario, se registran todos los cambios pendientes en commits
@@ -278,7 +324,7 @@ The lifecycle workflow has also been manually validated against Docker on the Ub
 
 ## Mobile
 
-`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend directly using the server address entered on the login screen (stored locally; `VITE_API_BASE_URL` overrides it).
+`frontend/android` and `frontend/ios` are Capacitor projects. Android has a native Kotlin drawer/toolbar around the WebView (`MainActivity.kt`); iOS is the stock Capacitor project and has not been validated. The native build calls the backend using the server selected on the login screen (stored locally), which takes precedence over `VITE_API_BASE_URL` as of 2026-11-18. In tmux development, use the reachable Vite proxy on port 5173; the API on 8082 binds loopback.
 
 Android repository cleanup (2026-11-13): backed up all 36 untracked template files, removed 34 unused/conflicting template files and versioned two reviewed `.gitignore` files. Existing native source/resources remain unchanged. Web build and static XML/resource/ignore checks passed; native build could not run because Java and an Android SDK are unavailable here. See [mobile guide](modules/mobile.md) for scope and temporary backup location.
 
