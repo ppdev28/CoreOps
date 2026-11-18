@@ -109,11 +109,16 @@ export default function LoginView() {
               style={{ ...field, marginTop: 5 }}
               value={server}
               onChange={(e) => setServer(e.target.value)}
-              placeholder="http://100.x.y.z:8082"
+              placeholder="http://192.168.1.128:5173"
               inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"
             />
+            <span style={{ display: "block", marginTop: 6, lineHeight: 1.6 }}>
+              Use an address reachable from this device. Development: port 5173.
+              Direct API: port 8082 only when the server exposes it on the
+              network.
+            </span>
           </label>
         ) : (
           <button

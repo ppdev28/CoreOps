@@ -14,6 +14,39 @@ Validación de la limpieza: build web correcto; XML válido, sin recursos duplic
 
 ## Instrucciones
 
+### Login móvil — 2026-11-18
+
+En este entorno tmux, API en `127.0.0.1:8082` y Vite en `0.0.0.0:5173`.
+El móvil debe usar `http://192.168.1.128:5173` (o la dirección privada/Tailscale
+correspondiente); `http://192.168.1.128:8082` no alcanza un listener de loopback.
+Se comprobó health por LAN y CORS para `https://localhost` a través del proxy.
+No se amplió el bind ni CORS. Android ya permitía HTTP y mixed content; no se
+añadió un parche global de CapacitorHttp ni se cambió esa política.
+
+El servidor elegido en login prevalece sobre `VITE_API_BASE_URL`; se elimina
+un sufijo `/api/v1/` pegado en la dirección y se rechazan credenciales, query o
+fragmento. La sesión se liga al API absoluto mediante `apiBase`; cambiar de
+servidor o detectar una discrepancia borra el token local. Las sesiones antiguas
+se migran al API seleccionado al leerlas. Esto no sustituye Keychain/Keystore ni
+HTTPS. Los errores de red en 8082 explican el proxy de desarrollo.
+
+Reconstruir la app para incorporar los nuevos assets:
+
+```sh
+cd frontend
+pnpm build
+pnpm exec cap sync android
+pnpm exec cap open android
+# En Android Studio: conectar el móvil y Run.
+# Alternativa con Java 21 y SDK 36 configurados:
+cd android
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Pruebas web simulan plataforma/evento nativo; no equivalen a probar WebView o APK.
+En este servidor no hay Java/SDK configurados ni dispositivo adb conectado.
+
 - Mantener una interfaz de plataforma para configuración de servidor y sesión; implementar almacenamiento de credenciales con Keychain/Keystore, no localStorage. Evaluar dependencias antes de elegir plugin.
 - Android declara `usesCleartextTraffic="true"` y `allowBackup="true"`. Definir política release con HTTPS y exclusión de secretos de backup; cualquier excepción de desarrollo debe quedar acotada y documentada.
 - Asociar token al servidor de autenticación. Validar origen, navegación y puente WebView; no permitir que contenido remoto no confiable invoque funciones nativas.

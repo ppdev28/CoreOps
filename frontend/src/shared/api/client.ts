@@ -1,16 +1,10 @@
-import { getAuthToken, getServerUrl, setSession } from "../platform/session";
+import { getAuthToken, resolveApiBase, setSession } from "../platform/session";
 
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
-  /\/+$/,
-  "",
-);
 // Vite proxies /api to the Go backend in the browser. Capacitor has no Vite
 // proxy, so native builds (and anyone pointing the UI at another server) use the
-// server address saved on the login screen. VITE_API_BASE_URL overrides both.
+// server address saved on the login screen, before the build-time default.
 export function getApiBase(): string {
-  if (configuredApiBase) return configuredApiBase;
-  const server = getServerUrl();
-  return server ? `${server}/api/v1` : "/api/v1";
+  return resolveApiBase();
 }
 
 export class ApiError extends Error {
@@ -34,8 +28,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(url, { ...init, headers });
   } catch (error) {
+    if (init?.signal?.aborted) throw error;
     throw new Error(
-      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.`,
+      `Unable to reach the CoreOps API at ${apiBase}. Check the server address and network connection.${new URL(apiBase, window.location.href).port === "8082" ? " The development API may listen only on the server itself; use the server's :5173 development proxy or its configured HTTPS address." : ""}`,
     );
   }
 
