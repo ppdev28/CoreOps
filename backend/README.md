@@ -17,6 +17,8 @@ The default API address is `http://localhost:8082`.
 Admins can now list/create CoreOps accounts in Settings → Users through
 GET/POST `/api/v1/users`; creation defaults to viewer and uses the existing
 persistent identity store. Password changes/removal remain CLI operations.
+The user menu exposes an admin-only host power center. Its optional restricted
+OS helper and operational limits are documented in [host power](../docs/modules/host-power.md).
 The tmux development API binds loopback; mobile clients use the reachable Vite
 proxy on port 5173, as described in [mobile setup](../docs/modules/mobile.md).
 

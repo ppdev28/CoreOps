@@ -16,6 +16,7 @@ import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/sysstat"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
 	"github.com/ppdev28/CoreOps/backend/internal/monitoring"
 	"github.com/ppdev28/CoreOps/backend/internal/observability"
 	"github.com/ppdev28/CoreOps/backend/internal/security"
@@ -23,6 +24,7 @@ import (
 )
 
 type API struct {
+	power         *hostpower.Service
 	hostSecurity  *security.Service
 	updateTasks   *updateJobs
 	observability *observability.Service

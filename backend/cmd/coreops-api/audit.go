@@ -64,21 +64,43 @@ func NewAuditLog(dir string) *AuditLog {
 }
 
 func (l *AuditLog) Append(entry AuditEntry) {
+	if err := l.append(entry, false); err != nil {
+		slog.Error("write audit log", "error", err)
+	}
+}
+
+// AppendDurable records privileged power intent before dispatch. Failure blocks
+// dispatch; the ordinary response audit remains unchanged.
+func (l *AuditLog) AppendDurable(entry AuditEntry) error { return l.append(entry, true) }
+
+func (l *AuditLog) append(entry AuditEntry, durable bool) error {
 	line, err := json.Marshal(entry)
 	if err != nil {
-		return
+		return err
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	f, err := os.OpenFile(l.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
-		slog.Error("write audit log", "error", err)
-		return
+		return err
 	}
 	defer f.Close()
 	if _, err := f.Write(append(line, '\n')); err != nil {
-		slog.Error("write audit log", "error", err)
+		return err
 	}
+	if durable {
+		if err := f.Sync(); err != nil {
+			return err
+		}
+		// Also retain the directory entry if this was the first audit record.
+		dir, err := os.Open(filepath.Dir(l.path))
+		if err != nil {
+			return err
+		}
+		defer dir.Close()
+		return dir.Sync()
+	}
+	return nil
 }
 
 // Tail returns up to limit of the most recent entries, newest first.

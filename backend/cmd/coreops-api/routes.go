@@ -2,8 +2,10 @@ package main
 
 import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxpower"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
+	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
 	"github.com/ppdev28/CoreOps/backend/internal/security"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
@@ -42,6 +44,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 		a.compose = newComposeManager(filepath.Join(auth.dir, "compose"), a.docker)
 	}
 	mux := http.NewServeMux()
+	if a.power == nil {
+		a.power = hostpower.New(linuxpower.New())
+	}
 	a.terminals = newTerminalServer(auth, audit)
 	if a.docker != nil {
 		a.terminals.containers = containers.NewTerminal(dockeradapter.NewTerminal(a.docker))
@@ -63,6 +68,8 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("POST /api/v1/users", RoleAdmin, auth.createUserHandler)
 
 	handle("GET /api/v1/host", RoleViewer, a.host)
+	handle("GET /api/v1/host/power", RoleAdmin, a.powerStatus)
+	handle("POST /api/v1/host/power", RoleAdmin, a.powerAction(auth, audit))
 	handle("GET /api/v1/kubernetes/clusters", RoleViewer, kubeBounded(a.kubeClusters))
 	handle("POST /api/v1/kubernetes/clusters", RoleAdmin, kubeBounded(a.kubeConnect))
 	handle("DELETE /api/v1/kubernetes/clusters/{cluster}", RoleAdmin, kubeBounded(a.kubeDisconnect))

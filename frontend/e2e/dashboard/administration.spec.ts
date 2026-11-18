@@ -1,6 +1,20 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockDashboard } from "./fixtures";
 
+const power = {
+  hostname: "owned-test",
+  bootId: "boot-test",
+  mode: "helper",
+  actions: [
+    { id: "poweroff", available: true },
+    {
+      id: "suspend",
+      available: false,
+      reason: "Host does not support suspension.",
+    },
+    { id: "reboot", available: true },
+  ],
+};
 async function settings(page: Page) {
   if ((page.viewportSize()?.width || 1440) < 768)
     await page
@@ -127,3 +141,137 @@ for (const role of ["viewer", "operator"])
       page.getByRole("region", { name: "Host control center" }),
     ).toHaveCount(0);
   });
+for (const width of [320, 1440])
+  test(`power confirmation, cancel and single dispatch at ${width}px`, async ({
+    page,
+  }) => {
+    const control = await mockDashboard(page);
+    await page.setViewportSize({ width, height: 1050 });
+    let submitted: Record<string, string>[] = [];
+    await page.route("**/api/v1/host/power", (route) => {
+      if (route.request().method() === "POST") {
+        const input = route.request().postDataJSON();
+        submitted.push(input);
+        return route.fulfill({
+          status: 202,
+          json: {
+            accepted: true,
+            action: input.action,
+            requestId: input.requestId,
+          },
+        });
+      }
+      return route.fulfill({ json: power });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "User menu", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Suspend", exact: true }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "Restart", exact: true }).click();
+    let dialog = page.getByRole("dialog", {
+      name: "Restart owned-test?",
+      exact: true,
+    });
+    await expect(
+      dialog.getByRole("button", { name: "Restart server", exact: true }),
+    ).toBeDisabled();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(submitted).toEqual([]);
+    await page.getByRole("button", { name: "Restart", exact: true }).click();
+    dialog = page.getByRole("dialog", {
+      name: "Restart owned-test?",
+      exact: true,
+    });
+    await dialog
+      .getByLabel("Confirm server name", { exact: true })
+      .fill("owned-test");
+    await dialog
+      .getByRole("button", { name: "Restart server", exact: true })
+      .click();
+    await expect(page.getByRole("status")).toContainText("Request accepted.");
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0]).toMatchObject({
+      action: "reboot",
+      hostname: "owned-test",
+      bootId: "boot-test",
+    });
+    expect(submitted[0].requestId).toMatch(/^[a-f0-9]{32}$/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(control.runtimeErrors).toEqual([]);
+  });
+test("uncertain power failure makes no automatic retry", async ({ page }) => {
+  await mockDashboard(page);
+  let count = 0;
+  await page.route("**/api/v1/host/power", (route) => {
+    if (route.request().method() === "POST") {
+      count++;
+      return route.abort("failed");
+    }
+    return route.fulfill({ json: power });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "User menu", exact: true }).click();
+  await page.getByRole("button", { name: "Shut down", exact: true }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Shut down owned-test?",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Confirm server name", { exact: true })
+    .fill("owned-test");
+  await dialog
+    .getByRole("button", { name: "Shut down server", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText("No automatic retry");
+  await expect(
+    dialog.getByRole("button", { name: "Shut down server", exact: true }),
+  ).toHaveCount(0);
+  expect(count).toBe(1);
+});
+test("native toolbar event opens the control center with the web header hidden", async ({
+  page,
+}) => {
+  await mockDashboard(page);
+  await page.addInitScript(() => {
+    (window as any).CapacitorCustomPlatform = { name: "android" };
+  });
+  await page.route("**/api/v1/host/power", (route) =>
+    route.fulfill({ json: power }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "User menu", exact: true }),
+  ).toHaveCount(0);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("coreops-control-center")),
+  );
+  const dialog = page.getByRole("dialog", {
+    name: "Test Operator",
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole("button", { name: "Restart", exact: true }),
+  ).toBeEnabled();
+  await dialog.getByRole("button", { name: "Restart", exact: true }).click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Restart owned-test?",
+    exact: true,
+  });
+  await expect(
+    confirmation.getByRole("button", { name: "Restart server", exact: true }),
+  ).toBeDisabled();
+  await confirmation
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Close control center", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+});

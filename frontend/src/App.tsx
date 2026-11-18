@@ -15,6 +15,7 @@ import LoginView from "./views/LoginView";
 import type { View, ToastType, ConfirmDialog, Toast } from "./lib/types";
 import { ToastStack, ConfirmDialogModal } from "./components/ui";
 import { Sidebar, Header, CommandPalette } from "./components/shell";
+import { NativeControlCenter } from "./components/PowerControls";
 
 // Views are loaded on demand so the first paint does not ship every screen.
 const lazyView = <C extends ComponentType<any>>(
@@ -224,6 +225,7 @@ function AppShell({ user }: { user: AuthUser }) {
   const shell = { addToast, onConfirm: requestConfirm };
   return (
     <>
+      {isNative && <NativeControlCenter />}
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}.anim-slide-down{animation:slideDown 140ms ease}.anim-toast-in{animation:toastIn 160ms ease}.pulse{animation:pulse 2s infinite}.cmd-backdrop{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding-top:72px;animation:fadeIn 100ms ease}.toast-stack{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:1001;pointer-events:none}@media(max-width:900px){.sidebar-desktop{display:none!important}.mobile-menu-btn{display:flex!important}.dash-metrics{grid-template-columns:repeat(2,1fr)!important}.dash-charts{grid-template-columns:1fr!important}.dash-bottom{grid-template-columns:1fr!important}.host-stats{grid-template-columns:1fr!important}.host-grid{grid-template-columns:1fr!important}}`}</style>
       <div
         className="app-workspace"

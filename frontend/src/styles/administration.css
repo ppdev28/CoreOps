@@ -31,7 +31,8 @@
   overflow-wrap: anywhere;
 }
 .admin-panel button,
-.admin-dialog button {
+.admin-dialog button,
+.power-controls button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -46,7 +47,8 @@
   cursor: pointer;
 }
 .admin-panel button:disabled,
-.admin-dialog button:disabled {
+.admin-dialog button:disabled,
+.power-controls button:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -123,14 +125,53 @@
   flex-wrap: wrap;
 }
 .admin-panel [role="alert"],
-.admin-dialog [role="alert"] {
+.admin-dialog [role="alert"],
+.power-controls [role="alert"] {
   color: var(--coreops-red);
   overflow-wrap: anywhere;
 }
+.admin-dialog button.admin-danger {
+  color: var(--coreops-red);
+  border-color: var(--coreops-red);
+}
 .admin-dialog :focus-visible,
-.admin-panel :focus-visible {
+.admin-panel :focus-visible,
+.power-controls :focus-visible {
   outline: 2px solid var(--coreops-accent);
   outline-offset: 2px;
+}
+.power-controls {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--coreops-border);
+  font-size: 12px;
+}
+.power-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.power-controls .power-heading button {
+  min-height: 32px;
+  padding: 5px;
+}
+.power-controls small {
+  display: block;
+  color: var(--coreops-textDim);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.power-controls .power-action {
+  width: 100%;
+  justify-content: flex-start;
+  margin-bottom: 5px;
+  min-height: 44px;
+}
+.native-control-center > header {
+  margin-bottom: 16px;
 }
 @media (max-width: 600px) {
   .admin-dialog {

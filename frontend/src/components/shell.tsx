@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import PowerControls from "./PowerControls";
 import {
   LayoutDashboard,
   Box,
@@ -622,7 +623,10 @@ export function Header({
               position: "absolute",
               top: 42,
               right: 0,
-              width: 190,
+              width: 280,
+              maxWidth: "calc(100vw - 24px)",
+              maxHeight: "calc(100dvh - 90px)",
+              overflowY: "auto",
               zIndex: 200,
               background: T.overlay,
               border: `1px solid ${T.borderStrong}`,
@@ -642,6 +646,7 @@ export function Header({
               </div>
               <div style={{ fontSize: 11, color: T.textDim }}>{user.role}</div>
             </div>
+            <PowerControls />
             <button
               onClick={() => void logout()}
               style={{

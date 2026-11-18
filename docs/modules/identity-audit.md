@@ -18,15 +18,18 @@ mismo bloqueo de identidad, después del hash y antes de persistir, conservando
 la convivencia CLI/servidor. Ante fallo incierto, refrescar la lista antes de
 reintentar. Cambio de contraseña, rol y borrado siguen por CLI.
 
-Tests HTTP/persistencia y auditoría en `administration_test.go`; UI en
-`administration.spec.ts`.
+El centro de energía añade registro previo con fsync que bloquea despacho si
+falla, además del registro HTTP posterior. Esto se limita a esta capacidad;
+no implica una política general de auditoría transaccional o inmutable. Ver
+[energía](host-power.md). Tests HTTP/persistencia y auditoría en
+`administration_test.go`; UI en `administration.spec.ts`.
 
 - Mantener el bloqueo de archivo y recarga en cada operación; un mutex de proceso no basta. No borrar/reemplazar `.identity.lock` durante la ejecución. Todos los procesos deben usar la versión actual y un filesystem local con flock/rename/fsync; no ejecutar simultáneamente binarios anteriores.
 - Preservar formatos o diseñar migración y recuperación; nunca perder usuarios o aceptar sesiones revocadas por fallo de disco.
 - Probar creación/cambio/borrado con servidor activo, reinicio, escrituras fallidas y concurrencia. Revalidar identidad al completar un login concurrente con revocación.
 - Mantener mínimos roles explícitos por ruta y denegación por defecto; ocultar botones en UI no autoriza operaciones.
 - Acotar intentos globales/por origen, concurrencia PBKDF2 y tamaño de mapas; el límite actual por IP+usuario no basta ante muchos nombres diferentes. Sólo confiar en cabeceras de proxy si su emisor está configurado como confiable.
-- El audit actual escribe después de la acción y sólo informa errores en logs. Definir política para fallos, rotación, retención, redacción y protección frente a modificación. No afirmar que sea un registro inmutable.
+- El audit ordinario escribe después de la acción y sólo informa errores en logs; energía exige además intención previa persistida. Definir política general para fallos, rotación, retención, redacción y protección frente a modificación. No afirmar que sea un registro inmutable.
 - El comando de terminal se registra parcialmente en claro: puede contener secretos. Diseñar política sin almacenar tokens/contraseñas y sin perder atribución del acto administrativo.
 
 ## Validación

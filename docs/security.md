@@ -10,6 +10,20 @@ Fronteras: navegador/WebView → red/proxy TLS → HTTP/auth → capacidad → a
 
 ## Controles presentes
 
+### Usuarios HTTP, sesión móvil y energía — 2026-11-18
+
+GET/POST users sólo admin, JSON limitado, passwords persistidos por el store
+existente y revalidación bajo bloqueo tras PBKDF2; respuestas/auditoría sin
+credenciales. Sesión cliente ligada al servidor, que prevalece sobre defaults de
+build; HTTP/localStorage/backup nativo siguen pendientes de política release.
+Energía sólo admin, objetivo hostname/boot ID fresco, capacidades logind,
+confirmación escrita, argv fijo, helper opcional con sudoers exacto, intención
+auditada con fsync antes del despacho y deduplicación temporal en memoria.
+No force, comandos arbitrarios ni pruebas reales de apagado. La instalación
+privilegiada del helper requiere un administrador local; no se amplía el bind.
+Ver [identidad](modules/identity-audit.md), [móvil](modules/mobile.md) y
+[energía](modules/host-power.md). Esto no cierra el resto de SEC-03/04/05/06.
+
 ### Visor y terminal de contenedor — 2026-11-17
 
 Visor admin con confinamiento por descriptor, versión antes/después, sólo regular

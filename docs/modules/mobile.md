@@ -14,7 +14,7 @@ Validación de la limpieza: build web correcto; XML válido, sin recursos duplic
 
 ## Instrucciones
 
-### Login móvil — 2026-11-18
+### Login y barra nativa — 2026-11-18
 
 En este entorno tmux, API en `127.0.0.1:8082` y Vite en `0.0.0.0:5173`.
 El móvil debe usar `http://192.168.1.128:5173` (o la dirección privada/Tailscale
@@ -30,7 +30,9 @@ servidor o detectar una discrepancia borra el token local. Las sesiones antiguas
 se migran al API seleccionado al leerlas. Esto no sustituye Keychain/Keystore ni
 HTTPS. Los errores de red en 8082 explican el proxy de desarrollo.
 
-Reconstruir la app para incorporar los nuevos assets:
+El icono de cuenta arriba a la derecha en Android abre el centro de control web
+mediante un evento local; contiene las acciones admin y cierre de sesión.
+Reconstruir la app para incorporar Kotlin/recursos y los nuevos assets:
 
 ```sh
 cd frontend

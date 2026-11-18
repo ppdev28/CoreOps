@@ -5,6 +5,8 @@ import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebSettings
@@ -132,6 +134,18 @@ class MainActivity : BridgeActivity() {
             navigationIcon = ResourcesCompat.getDrawable(resources, R.drawable.ic_menu, theme)
             setNavigationOnClickListener {
                 drawerLayout.openDrawer(GravityCompat.START)
+            }
+            menu.add(Menu.NONE, 10001, Menu.NONE, "User control center").apply {
+                setIcon(R.drawable.ic_account)
+                setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            }
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == 10001) {
+                    webView.evaluateJavascript(
+                        "window.dispatchEvent(new Event('coreops-control-center'))", null
+                    )
+                    true
+                } else false
             }
         }
 
