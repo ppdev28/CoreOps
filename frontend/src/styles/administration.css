@@ -1,0 +1,148 @@
+.admin-panel {
+  padding: 20px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 20px;
+  background: var(--coreops-raised);
+  color: var(--coreops-text);
+  min-width: 0;
+}
+.admin-panel p,
+.admin-dialog p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--coreops-textSub);
+}
+.admin-panel-heading,
+.admin-dialog header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.admin-panel h3,
+.admin-dialog h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.admin-panel button,
+.admin-dialog button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 12px;
+  background: var(--coreops-raised);
+  color: var(--coreops-text);
+  font: inherit;
+  cursor: pointer;
+}
+.admin-panel button:disabled,
+.admin-dialog button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.admin-users {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.admin-users li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 12px;
+  border-top: 1px solid var(--coreops-border);
+  overflow-wrap: anywhere;
+}
+.admin-users li strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.admin-users span {
+  color: var(--coreops-textDim);
+  font-size: 12px;
+}
+.admin-dialog {
+  width: min(480px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 22px;
+  border: 1px solid var(--coreops-borderStrong);
+  border-radius: 20px;
+  background: var(--coreops-raised);
+  color: var(--coreops-text);
+  overflow: auto;
+}
+.admin-dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+.admin-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.admin-dialog header {
+  margin: 0;
+}
+.admin-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+.admin-dialog input,
+.admin-dialog select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  min-height: 44px;
+  font: inherit;
+  color: var(--coreops-text);
+  background: var(--coreops-bg);
+  border: 1px solid var(--coreops-border);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+.admin-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.admin-panel [role="alert"],
+.admin-dialog [role="alert"] {
+  color: var(--coreops-red);
+  overflow-wrap: anywhere;
+}
+.admin-dialog :focus-visible,
+.admin-panel :focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .admin-dialog {
+    padding: 16px;
+  }
+  .admin-panel {
+    padding: 16px;
+  }
+  .admin-panel button {
+    min-height: 44px;
+  }
+  .admin-panel-heading > button:first-of-type {
+    flex: 1;
+  }
+}

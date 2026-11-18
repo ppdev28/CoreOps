@@ -5,6 +5,7 @@ Este módulo describe la frontera entre clientes y backend. **No es otro servido
 - `openapi.json`: contrato OpenAPI 3.0.3 inicial de health, login/logout/me y list/inspect/start/stop/restart de contenedores.
 - `typescript/containers.ts`: DTOs de contenedores consumidos por el adaptador frontend. Son tipos de wire, sin componentes ni ejecución. Se mantienen manualmente junto al contrato; no se ha introducido un generador ni otro package manager/runtime.
 - Resto de `/api/v1`: implementado pero aún fuera de este contrato parcial. La terminal mantiene su [protocolo WebSocket](../docs/modules/terminal.md).
+- Desde 2026-11-18, GET/POST `/api/v1/users` son sólo admin, con contrato y límites descritos en [identidad](../docs/modules/identity-audit.md). Sus handlers tienen pruebas HTTP; todavía no se incorporan al OpenAPI parcial.
 
 ## Cambios
 

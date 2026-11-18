@@ -59,6 +59,8 @@ const (
 )
 
 var (
+	errUserExists         = errors.New("user already exists")
+	errUserCreationDenied = errors.New("administrator session is no longer valid")
 	errInvalidCredentials = errors.New("invalid username or password")
 	errTooManyAttempts    = errors.New("too many failed attempts, try again later")
 )
@@ -195,6 +197,9 @@ func validatePassword(password string) error {
 }
 
 func (s *AuthStore) AddUser(name string, role Role, password string) error {
+	return s.addUser(name, role, password, "")
+}
+func (s *AuthStore) addUser(name string, role Role, password, actorKey string) error {
 	if !validUserName(name) {
 		return errors.New("user name must be 1-32 characters: letters, digits, '.', '_' or '-'")
 	}
@@ -213,8 +218,15 @@ func (s *AuthStore) AddUser(name string, role Role, password string) error {
 		return err
 	}
 	defer unlock()
+	if actorKey != "" {
+		session, ok := s.sessions[actorKey]
+		actor, exists := s.users[session.User]
+		if !ok || !exists || !s.now().Before(session.Expires) || actor.Role != RoleAdmin {
+			return errUserCreationDenied
+		}
+	}
 	if _, exists := s.users[name]; exists {
-		return fmt.Errorf("user %q already exists", name)
+		return fmt.Errorf("%w: %s", errUserExists, name)
 	}
 	s.users[name] = User{Name: name, Role: role, PasswordHash: hash, CreatedAt: s.now().UTC()}
 	return s.save(usersFileName, s.users)

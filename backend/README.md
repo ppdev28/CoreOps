@@ -14,6 +14,12 @@ go run ./cmd/coreops-api
 
 The default API address is `http://localhost:8082`.
 
+Admins can now list/create CoreOps accounts in Settings → Users through
+GET/POST `/api/v1/users`; creation defaults to viewer and uses the existing
+persistent identity store. Password changes/removal remain CLI operations.
+The tmux development API binds loopback; mobile clients use the reachable Vite
+proxy on port 5173, as described in [mobile setup](../docs/modules/mobile.md).
+
 Useful endpoints:
 
 - `GET /api/v1/health`

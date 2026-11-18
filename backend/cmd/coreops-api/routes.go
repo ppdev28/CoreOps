@@ -59,6 +59,8 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", auth.loginHandler)
 	handle("POST /api/v1/auth/logout", RoleViewer, auth.logoutHandler)
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
+	handle("GET /api/v1/users", RoleAdmin, auth.usersHandler)
+	handle("POST /api/v1/users", RoleAdmin, auth.createUserHandler)
 
 	handle("GET /api/v1/host", RoleViewer, a.host)
 	handle("GET /api/v1/kubernetes/clusters", RoleViewer, kubeBounded(a.kubeClusters))

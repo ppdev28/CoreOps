@@ -8,6 +8,19 @@ Persistencia JSON en `COREOPS_DATA_DIR`, con permisos 0700/0600, temporal único
 
 ## Instrucciones
 
+Desde 2026-11-18, Settings → Users permite a un admin listar/crear cuentas CoreOps
+(no usuarios Linux), mediante GET/POST `/api/v1/users`. El rol predeterminado es
+viewer; admin/operator/viewer son explícitos. Sólo se devuelve nombre/rol, nunca
+hashes ni passwords. POST usa JSON estricto de 8 KiB, nombre de 1–32 caracteres,
+password de 10–1024 bytes y máximo dos cálculos PBKDF2 simultáneos para creación
+HTTP. Duplicados devuelven 409. La sesión admin se vuelve a verificar bajo el
+mismo bloqueo de identidad, después del hash y antes de persistir, conservando
+la convivencia CLI/servidor. Ante fallo incierto, refrescar la lista antes de
+reintentar. Cambio de contraseña, rol y borrado siguen por CLI.
+
+Tests HTTP/persistencia y auditoría en `administration_test.go`; UI en
+`administration.spec.ts`.
+
 - Mantener el bloqueo de archivo y recarga en cada operación; un mutex de proceso no basta. No borrar/reemplazar `.identity.lock` durante la ejecución. Todos los procesos deben usar la versión actual y un filesystem local con flock/rename/fsync; no ejecutar simultáneamente binarios anteriores.
 - Preservar formatos o diseñar migración y recuperación; nunca perder usuarios o aceptar sesiones revocadas por fallo de disco.
 - Probar creación/cambio/borrado con servidor activo, reinicio, escrituras fallidas y concurrencia. Revalidar identidad al completar un login concurrente con revocación.

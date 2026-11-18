@@ -1,4 +1,6 @@
 import { useState } from "react";
+import UserManagement from "../components/UserManagement";
+import { getSession } from "../lib/auth";
 import { T } from "../lib/tokens";
 import { ACCENT_PRESETS, resolveAppearance } from "../lib/appearance";
 import { logout } from "../lib/api";
@@ -12,6 +14,7 @@ import {
   ShieldCheck,
   Database,
   Gauge,
+  Users,
 } from "lucide-react";
 import {
   DEFAULT_WEB_SETTINGS,
@@ -23,6 +26,11 @@ import {
 } from "../lib/webSettings";
 
 const SECTIONS = [
+  {
+    id: "Users",
+    icon: <Users size={14} />,
+    description: "CoreOps accounts and roles",
+  },
   {
     id: "General",
     icon: <Gauge size={14} />,
@@ -189,6 +197,7 @@ export default function SettingsView({
   };
 
   const renderSection = () => {
+    if (active === "Users") return <UserManagement />;
     if (active === "General")
       return (
         <Card>
@@ -485,7 +494,10 @@ export default function SettingsView({
           className="settings-sections"
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
-          {SECTIONS.map((section) => (
+          {SECTIONS.filter(
+            (section) =>
+              section.id !== "Users" || getSession()?.user.role === "admin",
+          ).map((section) => (
             <button
               key={section.id}
               aria-current={active === section.id ? "page" : undefined}
@@ -559,18 +571,22 @@ export default function SettingsView({
               {active}
             </h2>
             <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>
-              Configure how CoreOps behaves in this browser.
+              {active === "Users"
+                ? "Manage access to this CoreOps server."
+                : "Configure how CoreOps behaves in this browser."}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 7 }}>
-            <Btn variant="secondary" size="xs" onClick={reset}>
-              <RotateCcw size={11} /> Reset
-            </Btn>
-            <Btn variant="primary" size="xs" onClick={save} disabled={saved}>
-              {saved ? <Check size={11} /> : null}
-              {saved ? "Saved" : "Save changes"}
-            </Btn>
-          </div>
+          {active !== "Users" && (
+            <div style={{ display: "flex", gap: 7 }}>
+              <Btn variant="secondary" size="xs" onClick={reset}>
+                <RotateCcw size={11} /> Reset
+              </Btn>
+              <Btn variant="primary" size="xs" onClick={save} disabled={saved}>
+                {saved ? <Check size={11} /> : null}
+                {saved ? "Saved" : "Save changes"}
+              </Btn>
+            </div>
+          )}
         </div>
         {renderSection()}
       </div>
