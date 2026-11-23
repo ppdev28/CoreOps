@@ -1,5 +1,16 @@
 # Actualizaciones del sistema
 
+## Preferencia de lectura de consola — 2026-11-22
+
+La cabecera de Last update operation incluye A−/A+ y tamaño actual. Cambia sólo
+la fuente de la salida, entre 10 y 24 px (12 por defecto). Se guarda como
+`updatesOutputFontSize` en `coreops-web-settings`, conservando el resto de
+preferencias y sobreviviendo navegación/recarga. Un valor inválido vuelve al
+default; un fallo de almacenamiento conserva el zoom de la vista y muestra el
+problema. Reset local settings restablece también este tamaño. No afecta al tamaño
+de tablas, xterm, trabajo APT, polling ni resultado. `usability.spec.ts` cubre
+persistencia y diseño a 320/1440 px sin ejecutar actualizaciones del host.
+
 ## Qué se corrigió
 
 La implementación síncrona ejecutaba `apt-get` como el usuario del servicio y
