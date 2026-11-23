@@ -1,5 +1,32 @@
 # Current State
 
+## Prerelease Android publicada — 2026-11-23
+
+[CoreOps Android v0.1.0](https://github.com/ppdev28/CoreOps/releases/tag/android-v0.1.0) publicada como prerelease pública.
+Tag `android-v0.1.0` → commit `07ca5a2328502267aaec946c5c547969fcd99af5`; sólo se empujó la etiqueta,
+main remoto continúa en `85b45d5` y no se activó el deploy legacy del servidor.
+
+APK universal firmada 0.1.0/versionCode 1, min API 24, target 36, 6.785.115 bytes.
+SHA-256 APK: `7a331eef9952c1efd21dde96945b24271551abdba888b7f3bb992706605b57bd`.
+Certificado SHA-256: `1bed357222b6aeb0e96601c46a35a2927e92b788f1df6204ced8fc0344c214bb`.
+Adjuntos: APK, SHA256SUMS, certificado público PEM, build-info.json e informe.
+Cinco digests de GitHub contrastados con los artefactos locales.
+
+Build desde export limpio del commit: build/formato/fronteras web, cap sync,
+assembleRelease/lintRelease (0 errores/12 avisos), apksigner v2/RSA-3072 y zipalign
+correctos. Los 86 assets coinciden con dist. Manifest y flags instalados confirman
+sin debugging/backup. Instalación, arranque, login/drawer revisados visualmente en
+emulador Android 16 aislado, ya apagado. No se reutilizan credenciales reales;
+la APK debug/datos del Redmi se conservan. No equivale a probar login contra API
+real en release ni a una matriz de dispositivos. Pruebas Terminal previas: 26/26.
+
+Clave privada y properties: `~/.config/coreops/android-signing/`; copia local
+protegida: `/Volumes/Develop/android-data/CoreOps-signing-backup/`. Archivos 0600,
+directorios 0700. No adjuntarlos a GitHub; conservarlos para firmar actualizaciones.
+Artefactos públicos locales en `dist/releases/android-v0.1.0/` (raíz, ignorado).
+Las firmas release/debug difieren: no se desinstala debug ni se borran sus datos.
+Backend reciente externo requerido; HTTP/LAN/SEC-03 siguen documentados.
+
 ## Primera APK Android de release — 2026-11-23
 
 Preparación de `android-v0.1.0` (0.1.0, versionCode 1), como prerelease pública

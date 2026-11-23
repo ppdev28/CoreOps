@@ -14,6 +14,13 @@ Validación de la limpieza: build web correcto; XML válido, sin recursos duplic
 
 ## APK de release firmada
 
+Primera publicación: [android-v0.1.0](https://github.com/ppdev28/CoreOps/releases/tag/android-v0.1.0), commit
+`07ca5a2328502267aaec946c5c547969fcd99af5`. APK universal min API 24/target 36, sin debugging ni backup;
+verificada con apksigner/zipalign y arranque/login/drawer visuales en emulador aislado.
+LintRelease: 0 errores, 12 avisos de mantenimiento. SHA-256 y certificado público
+adjuntos; claves/properties fuera de Git con backup local protegido. No se tocó
+main remoto ni el debug instalado del Redmi. [Evidencia](../current-state.md).
+
 `assembleRelease`/`bundleRelease` requieren firma explícita; no se genera una
 APK unsigned ni se reutiliza la clave debug. El build lee por defecto
 `~/.config/coreops/android-signing/release.properties`, o la ruta indicada en
