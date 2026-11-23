@@ -14,6 +14,7 @@ export interface WebSettings {
   sound: boolean;
   shortcuts: boolean;
   confirmDestructive: boolean;
+  updatesOutputFontSize: number;
 }
 export const DEFAULT_WEB_SETTINGS: WebSettings = {
   theme: "dark",
@@ -26,6 +27,7 @@ export const DEFAULT_WEB_SETTINGS: WebSettings = {
   sound: false,
   shortcuts: true,
   confirmDestructive: true,
+  updatesOutputFontSize: 12,
 };
 export function loadWebSettings(): WebSettings {
   if (typeof window === "undefined") return DEFAULT_WEB_SETTINGS;
@@ -50,6 +52,12 @@ export function loadWebSettings(): WebSettings {
       refreshSeconds: [5, 10, 30, 60].includes(refreshSeconds)
         ? refreshSeconds
         : DEFAULT_WEB_SETTINGS.refreshSeconds,
+      updatesOutputFontSize:
+        Number.isInteger(raw.updatesOutputFontSize) &&
+        Number(raw.updatesOutputFontSize) >= 10 &&
+        Number(raw.updatesOutputFontSize) <= 24
+          ? Number(raw.updatesOutputFontSize)
+          : DEFAULT_WEB_SETTINGS.updatesOutputFontSize,
     };
   } catch {
     return DEFAULT_WEB_SETTINGS;

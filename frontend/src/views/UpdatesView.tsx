@@ -10,6 +10,11 @@ import {
 import { T } from "../lib/tokens";
 import { getSession } from "../lib/auth";
 import {
+  loadWebSettings,
+  saveWebSettings,
+  subscribeWebSettings,
+} from "../lib/webSettings";
+import {
   applyUpdates,
   getUpdates,
   refreshUpdates,
@@ -149,6 +154,29 @@ export default function UpdatesView({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [output, setOutput] = useState("");
+  const [outputFontSize, setOutputFontSize] = useState(
+    () => loadWebSettings().updatesOutputFontSize,
+  );
+  const [preferenceError, setPreferenceError] = useState("");
+  useEffect(
+    () =>
+      subscribeWebSettings((settings) =>
+        setOutputFontSize(settings.updatesOutputFontSize),
+      ),
+    [],
+  );
+  const resizeOutput = (delta: number) => {
+    const next = Math.max(10, Math.min(24, outputFontSize + delta));
+    setOutputFontSize(next);
+    try {
+      saveWebSettings({ ...loadWebSettings(), updatesOutputFontSize: next });
+      setPreferenceError("");
+    } catch {
+      setPreferenceError(
+        "Font size changed for this view, but browser preferences could not be saved.",
+      );
+    }
+  };
 
   const load = useCallback(async () => {
     setError("");
@@ -614,27 +642,72 @@ export default function UpdatesView({
             <CardHeader
               title="Last update operation"
               action={
-                <button
-                  onClick={() => setOutput("")}
+                <div
                   style={{
-                    background: "none",
-                    border: 0,
-                    color: T.textDim,
-                    cursor: "pointer",
-                    fontSize: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
                   }}
                 >
-                  Clear
-                </button>
+                  <button
+                    className="update-output-font-button"
+                    type="button"
+                    aria-label="Decrease update output font size"
+                    title="Decrease font size"
+                    disabled={outputFontSize <= 10}
+                    onClick={() => resizeOutput(-1)}
+                  >
+                    A−
+                  </button>
+                  <span
+                    style={{ color: T.textDim, fontSize: 11 }}
+                    aria-label="Update output font size"
+                  >
+                    {outputFontSize}px
+                  </span>
+                  <button
+                    className="update-output-font-button"
+                    type="button"
+                    aria-label="Increase update output font size"
+                    title="Increase font size"
+                    disabled={outputFontSize >= 24}
+                    onClick={() => resizeOutput(1)}
+                  >
+                    A+
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOutput("")}
+                    style={{
+                      background: "none",
+                      border: 0,
+                      color: T.textDim,
+                      cursor: "pointer",
+                      fontSize: 10,
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
               }
             />
+            {preferenceError && (
+              <p
+                role="alert"
+                style={{ padding: "8px 14px", color: T.yellow, fontSize: 12 }}
+              >
+                {preferenceError}
+              </p>
+            )}
             <pre
+              aria-label="Update operation output"
               style={{
                 margin: 0,
                 padding: "12px 14px",
                 maxHeight: 240,
                 overflow: "auto",
-                fontSize: 10,
+                fontSize: outputFontSize,
                 lineHeight: 1.5,
                 color: T.textSub,
                 fontFamily: "JetBrains Mono,monospace",
@@ -650,7 +723,7 @@ export default function UpdatesView({
           </Card>
         </div>
       )}
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`.update-output-font-button{min-width:36px;min-height:36px;padding:6px;border:1px solid ${T.border};border-radius:8px;background:${T.raised};color:${T.textSub};cursor:pointer;font-weight:600}.update-output-font-button:disabled{opacity:.4;cursor:default}@media(max-width:600px){.update-output-font-button{min-width:44px;min-height:44px}}@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   );
 }

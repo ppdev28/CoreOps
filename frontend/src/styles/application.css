@@ -1,4 +1,4 @@
-/* Shared flat material and intrinsic layouts for the entire application. */
+/* Shared surfaces and intrinsic layouts for the entire application. */
 @font-face {
   font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
   src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
@@ -7,7 +7,7 @@
 .app-workspace .coreops-main { min-width: 0; overflow-x: hidden; scrollbar-gutter: stable; }
 .app-workspace .coreops-main > .coreops-screen { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; width: 100% !important; max-width: none !important; padding: 0 !important; }
 .app-workspace .coreops-screen > div:not(.termx-root):not(.pty-terminal) { width: 100%; min-width: 0; max-width: 1700px; margin: 0 auto; }
-.app-workspace .coreops-card, .app-workspace [data-surface="panel"] { background: var(--coreops-raised); border-color: var(--coreops-border); border-radius: 24px !important; box-shadow: none !important; min-width: 0; }
+.app-workspace .coreops-card, .app-workspace [data-surface="panel"] { background: var(--coreops-raised); border-color: var(--coreops-border); border-radius: 24px !important; box-shadow: var(--coreops-card-elevation) !important; min-width: 0; }
 .app-workspace [data-surface="nested"], .app-workspace .native-network-card, .app-workspace .native-code-block { border-radius: 18px !important; box-shadow: none; }
 .app-workspace .coreops-button, .app-workspace .coreops-quick-action, .app-workspace .screen-filter-pill { border-radius: 999px !important; box-shadow: none !important; min-height: 34px; }
 .app-workspace .coreops-button:hover:not(:disabled), .app-workspace .coreops-quick-action:hover:not(:disabled) { border-color: var(--coreops-accent) !important; }

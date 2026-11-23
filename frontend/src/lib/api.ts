@@ -226,8 +226,12 @@ export async function createComposeProject(
   return result;
 }
 
-export async function getApplications(): Promise<AppService[]> {
-  const applications = await request<ApiApplication[]>("/applications");
+export async function getApplications(
+  signal?: AbortSignal,
+): Promise<AppService[]> {
+  const applications = await request<ApiApplication[]>("/applications", {
+    signal,
+  });
   return applications.map(toApplication);
 }
 export async function runApplicationAction(

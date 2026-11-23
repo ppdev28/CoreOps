@@ -10,6 +10,7 @@ import {
 import { T } from "../lib/tokens";
 import { getNetwork } from "../lib/api";
 import type { NetworkOverview } from "../lib/types";
+import ListeningPorts from "../components/ListeningPorts";
 import { Card, Btn, Th, Td } from "../components/ui";
 
 function bytes(value: number) {
@@ -331,80 +332,7 @@ export default function NetworkView() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader title="Listening ports" />
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  minWidth: 650,
-                }}
-              >
-                <thead>
-                  <tr style={{ background: T.bg }}>
-                    <Th mono>Port</Th>
-                    <Th>Proto</Th>
-                    <Th>Process</Th>
-                    <Th>Container</Th>
-                    <Th mono>Address</Th>
-                    <Th>State</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !data
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <tr key={i}>
-                          <Td mono>
-                            <span className="skeleton" />
-                          </Td>
-                          <Td>
-                            <span className="skeleton" />
-                          </Td>
-                          <Td>
-                            <span className="skeleton" />
-                          </Td>
-                          <Td>
-                            <span className="skeleton" />
-                          </Td>
-                          <Td mono>
-                            <span className="skeleton" />
-                          </Td>
-                          <Td>
-                            <span className="skeleton" />
-                          </Td>
-                        </tr>
-                      ))
-                    : data?.ports.map((p, i) => (
-                        <tr key={`${p.proto}-${p.port}-${i}`}>
-                          <Td mono>
-                            <span style={{ fontWeight: 700, color: T.accent }}>
-                              {p.port}
-                            </span>
-                          </Td>
-                          <Td dim>{p.proto}</Td>
-                          <Td dim>{p.process}</Td>
-                          <Td dim>{p.container}</Td>
-                          <Td mono dim>
-                            {p.address}
-                          </Td>
-                          <Td>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: T.green,
-                              }}
-                            >
-                              {p.state}
-                            </span>
-                          </Td>
-                        </tr>
-                      ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <ListeningPorts ports={data?.ports} loading={loading || refreshing} />
         </div>
 
         <Card>

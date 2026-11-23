@@ -15,6 +15,10 @@ import type {
   ToastType,
 } from "../lib/types";
 import "../styles/security.css";
+import SecurityAudit from "../components/SecurityAudit";
+import SecurityPosture from "../components/SecurityPosture";
+import SecurityJournal from "../components/SecurityJournal";
+import SecurityVulnerabilities from "../components/SecurityVulnerabilities";
 
 function date(value: string) {
   const parsed = new Date(value);
@@ -455,46 +459,13 @@ export default function SecurityView({
               )}
             </div>
           </Card>
-          <Card>
-            <CardHeader title="Recent security events" />
-            <div className="security-items">
-              {sourceMessage(data, "events") && (
-                <p role="status" className="security-warning">
-                  {sourceMessage(data, "events")}
-                </p>
-              )}
-              {data.events.length ? (
-                data.events.map((event, i) => (
-                  <article
-                    className="security-event"
-                    key={`${event.timestamp}-${i}`}
-                  >
-                    <time dateTime={event.timestamp}>
-                      {date(event.timestamp)}
-                    </time>
-                    <span
-                      style={{
-                        color:
-                          event.type === "error"
-                            ? T.red
-                            : event.type === "success"
-                              ? T.green
-                              : T.textDim,
-                      }}
-                    >
-                      {event.type}
-                    </span>
-                    <p>{event.message}</p>
-                  </article>
-                ))
-              ) : !sourceMessage(data, "events") ? (
-                <p>
-                  No events returned by the SSH/fail2ban system journal. This is
-                  not a complete host security audit.
-                </p>
-              ) : null}
-            </div>
-          </Card>
+          <SecurityPosture />
+          <SecurityJournal
+            legacyWarning={sourceMessage(data, "events")}
+            onConfirm={onConfirm}
+          />
+          <SecurityVulnerabilities onConfirm={onConfirm} />
+          <SecurityAudit />
         </>
       )}
     </div>
