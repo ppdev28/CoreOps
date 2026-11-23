@@ -144,3 +144,100 @@
     width: 100%;
   }
 }
+
+.application-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(110px, 1fr));
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+.application-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--coreops-textDim);
+  font-size: 11px;
+  min-width: 0;
+}
+.application-filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: var(--coreops-raised);
+  color: var(--coreops-textSub);
+  font: inherit;
+  font-size: 12px;
+}
+.application-category-filters {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.application-category-filters button,
+.application-filter-summary button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 9px;
+  padding: 6px 10px;
+  background: var(--coreops-raised);
+  color: var(--coreops-textSub);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.application-category-filters button[aria-pressed="true"] {
+  background: var(--coreops-primary);
+  border-color: var(--coreops-primary);
+  color: var(--coreops-onAccent);
+}
+.application-category-filters button span {
+  font-size: 10px;
+  opacity: 0.75;
+}
+.application-filter-summary {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--coreops-textDim);
+  font-size: 12px;
+}
+.application-metadata-warning {
+  padding: 12px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 8px;
+  color: var(--coreops-textDim);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+@media (max-width: 1100px) {
+  .application-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .application-filters > .coreops-input {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 600px) {
+  .application-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .application-filters select,
+  .application-category-filters button,
+  .application-filter-summary button {
+    min-height: 44px;
+  }
+  .application-filters > .coreops-input {
+    max-width: none;
+  }
+}

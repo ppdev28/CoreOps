@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,6 +19,8 @@ import { T } from "../lib/tokens";
 import { getSession } from "../lib/auth";
 import type { ConfirmDialog } from "../lib/types";
 import ApplicationContainers from "../components/ApplicationContainers";
+import ApplicationIcon from "../components/ApplicationIcon";
+import { getContainers, type Container } from "../features/containers";
 import "../styles/applications.css";
 import type { AppService } from "../lib/types";
 import {
@@ -53,55 +56,23 @@ const normalize = (value: string) =>
     .toLowerCase()
     .trim();
 
-function AppIcon({ app, size = 40 }: { app: AppService; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const fallback =
-    app.category === "Database"
-      ? "◉"
-      : app.category === "Monitoring"
-        ? "◌"
-        : app.category === "Security"
-          ? "◇"
-          : app.category === "Media"
-            ? "◈"
-            : app.category === "Development"
-              ? "⌘"
-              : app.category === "Storage"
-                ? "□"
-                : app.category === "Automation"
-                  ? "⚙"
-                  : "◆";
-  const isImage = /^https?:\/\//i.test(app.icon) && !failed;
+function AppIcon({
+  app,
+  size = 40,
+  image = "",
+}: {
+  app: AppService;
+  size?: number;
+  image?: string;
+}) {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: Math.round(size * 0.22),
-        background: T.bg,
-        border: `1px solid ${T.border}`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        overflow: "hidden",
-      }}
-    >
-      {isImage ? (
-        <img
-          src={app.icon}
-          alt=""
-          width={Math.round(size * 0.58)}
-          height={Math.round(size * 0.58)}
-          onError={() => setFailed(true)}
-          style={{ objectFit: "contain", display: "block" }}
-        />
-      ) : (
-        <span style={{ fontSize: Math.round(size * 0.52), lineHeight: 1 }}>
-          {app.icon || fallback}
-        </span>
-      )}
-    </div>
+    <ApplicationIcon
+      name={app.name}
+      category={app.category}
+      icon={app.icon}
+      image={image}
+      size={size}
+    />
   );
 }
 
@@ -120,6 +91,12 @@ export default function ApplicationsView({
 }) {
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("All");
+  const [status, setStatus] = useState("all");
+  const [composition, setComposition] = useState("all");
+  const [order, setOrder] = useState("name");
+  const [inventory, setInventory] = useState<Container[]>([]);
+  const [metadataError, setMetadataError] = useState("");
+  const pendingLoad = useRef<AbortController | null>(null);
   const [apps, setApps] = useState<AppService[]>([]);
   const [selected, setSelected] = useState<AppService | null>(null);
   const [loading, setLoading] = useState(true);
@@ -134,10 +111,28 @@ export default function ApplicationsView({
   );
 
   const load = useCallback(async (initial = false) => {
+    pendingLoad.current?.abort();
+    const controller = new AbortController();
+    pendingLoad.current = controller;
     initial ? setLoading(true) : setRefreshing(true);
     try {
-      const next = await getApplications();
+      const [appResult, containerResult] = await Promise.allSettled([
+        getApplications(controller.signal),
+        getContainers(controller.signal),
+      ]);
+      if (controller.signal.aborted) return;
+      if (appResult.status === "rejected") throw appResult.reason;
+      const next = appResult.value;
       setApps(next);
+      if (containerResult.status === "fulfilled") {
+        setInventory(containerResult.value);
+        setMetadataError("");
+      } else {
+        setInventory([]);
+        setMetadataError(
+          "Container metadata unavailable. Search currently covers application fields only.",
+        );
+      }
       setSelected((previous) =>
         previous
           ? (next.find((app) => app.id === previous.id) ?? previous)
@@ -146,41 +141,100 @@ export default function ApplicationsView({
       setRevision((value) => value + 1);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load applications");
+      if (!controller.signal.aborted)
+        setError(
+          e instanceof Error ? e.message : "Unable to load applications",
+        );
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
   useEffect(() => {
     void load(true);
+    return () => pendingLoad.current?.abort();
   }, [load]);
   useEffect(() => {
     setActionError("");
   }, [selected?.id]);
 
   const categories = useMemo(() => {
-    const dynamic = apps.map((a) => a.category).filter(Boolean);
-    return Array.from(new Set([...CATS, ...dynamic]));
-  }, [apps]);
+    const present = new Set(apps.map((a) => a.category || "Other"));
+    if (cat !== "All") present.add(cat);
+    return [
+      "All",
+      ...CATS.filter((c) => c !== "All" && present.has(c)),
+      ...Array.from(present)
+        .filter((c) => !CATS.includes(c))
+        .sort(),
+    ];
+  }, [apps, cat]);
+  const members = useMemo(() => {
+    const byId = new Map(
+      inventory.map((container) => [container.id, container]),
+    );
+    return new Map(
+      apps.map((app) => [
+        app.id,
+        (app.containerIds || []).flatMap((id) =>
+          byId.get(id) ? [byId.get(id)!] : [],
+        ),
+      ]),
+    );
+  }, [apps, inventory]);
   const query = normalize(search);
-  const filteredInstalled = useMemo(
-    () =>
-      apps.filter((app) => {
-        const matchesCategory = cat === "All" || app.category === cat;
-        if (!matchesCategory) return false;
-        if (!query) return true;
-        return [
-          app.name,
-          app.description,
-          app.category,
-          app.version,
-          app.status,
-          app.id,
-        ].some((value) => normalize(value).includes(query));
-      }),
-    [apps, cat, query],
-  );
+  const filteredInstalled = useMemo(() => {
+    const rows = apps.filter((app) => {
+      if (cat !== "All" && (app.category || "Other") !== cat) return false;
+      if (status !== "all" && app.status !== status) return false;
+      if (composition === "single" && app.containers !== 1) return false;
+      if (composition === "multi" && app.containers <= 1) return false;
+      const fields = [
+        app.name,
+        app.description,
+        app.category,
+        app.version,
+        app.status,
+        app.id,
+        ...(app.containerIds || []),
+        ...(members.get(app.id) || []).flatMap((c) => [
+          c.name,
+          c.image,
+          c.ports,
+          c.net,
+        ]),
+      ].map(normalize);
+      return query
+        .split(/\s+/)
+        .filter(Boolean)
+        .every((term) => fields.some((field) => field.includes(term)));
+    });
+    return rows.sort((a, b) => {
+      const name = a.name.localeCompare(b.name, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      if (order === "name-desc") return -name;
+      if (order === "containers") return b.containers - a.containers || name;
+      if (order === "status") return a.status.localeCompare(b.status) || name;
+      return name;
+    });
+  }, [apps, cat, status, composition, order, query, members]);
+  const resetFilters = () => {
+    setSearch("");
+    setCat("All");
+    setStatus("all");
+    setComposition("all");
+    setOrder("name");
+  };
+  const hasFilters =
+    !!search ||
+    cat !== "All" ||
+    status !== "all" ||
+    composition !== "all" ||
+    order !== "name";
 
   async function actionApp(app: AppService, verb: ApplicationAction) {
     if (action || !canOperate) return;
@@ -253,7 +307,13 @@ export default function ApplicationsView({
             className="application-identity"
             style={{ display: "flex", gap: 14, alignItems: "center" }}
           >
-            <AppIcon app={selected} size={52} />
+            <AppIcon
+              app={selected}
+              size={52}
+              image={(members.get(selected.id) || [])
+                .map((c) => `${c.name} ${c.image}`)
+                .join(" ")}
+            />
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: T.text }}>
                 {selected.name}
@@ -472,45 +532,105 @@ export default function ApplicationsView({
           Refresh
         </Btn>
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          marginBottom: 16,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
+      <section className="application-filters" aria-label="Application filters">
         <Input
           value={search}
           onChange={setSearch}
-          placeholder="Search applications…"
-          icon={<Search size={12} />}
-          style={{ maxWidth: 300 }}
+          placeholder="Search apps, containers, images…"
+          icon={<Search size={14} />}
         />
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <label>
+          Status
+          <select
+            aria-label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="all">All statuses</option>
+            {Array.from(
+              new Set([
+                "running",
+                "stopped",
+                "paused",
+                "restarting",
+                "exited",
+                ...apps.map((a) => a.status),
+              ]),
+            )
+              .sort()
+              .map((value) => (
+                <option key={value} value={value}>
+                  {value === "restarting"
+                    ? "Partial / restarting"
+                    : value[0].toUpperCase() + value.slice(1)}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Members
+          <select
+            aria-label="Members"
+            value={composition}
+            onChange={(e) => setComposition(e.target.value)}
+          >
+            <option value="all">Any number</option>
+            <option value="single">One container</option>
+            <option value="multi">Multiple containers</option>
+          </select>
+        </label>
+        <label>
+          Sort applications
+          <select
+            aria-label="Sort applications"
+            value={order}
+            onChange={(e) => setOrder(e.target.value)}
+          >
+            <option value="name">Name A–Z</option>
+            <option value="name-desc">Name Z–A</option>
+            <option value="containers">Most containers</option>
+            <option value="status">Status</option>
+          </select>
+        </label>
+        <div
+          className="application-category-filters"
+          role="group"
+          aria-label="Application category"
+        >
           {categories.map((c) => (
             <button
-              className="screen-filter-pill"
+              type="button"
               key={c}
+              aria-label={c}
+              aria-pressed={cat === c}
+              className="screen-filter-pill"
               onClick={() => setCat(c)}
-              style={{
-                padding: "4px 10px",
-                background: cat === c ? T.primary : T.raised,
-                border: `1px solid ${cat === c ? T.primary : T.border}`,
-                borderRadius: 5,
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 500,
-                color: cat === c ? T.onAccent : T.textSub,
-                fontFamily: "Inter,sans-serif",
-              }}
             >
               {c}
+              <span>
+                {c === "All"
+                  ? apps.length
+                  : apps.filter((a) => (a.category || "Other") === c).length}
+              </span>
             </button>
           ))}
         </div>
-      </div>
+        <div className="application-filter-summary">
+          <span role="status">
+            {filteredInstalled.length} of {apps.length} applications
+          </span>
+          {hasFilters && (
+            <button type="button" onClick={resetFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+      </section>
+      {metadataError && (
+        <p className="application-metadata-warning" role="status">
+          {metadataError}
+        </p>
+      )}
       {error && (
         <div style={{ marginBottom: 12 }}>
           <ErrorState
@@ -566,7 +686,12 @@ export default function ApplicationsView({
                   (e.currentTarget.style.borderColor = T.border)
                 }
               >
-                <AppIcon app={app} />
+                <AppIcon
+                  app={app}
+                  image={(members.get(app.id) || [])
+                    .map((c) => `${c.name} ${c.image}`)
+                    .join(" ")}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -636,7 +761,6 @@ export default function ApplicationsView({
                     size="xs"
                     variant="ghost"
                     icon={<ExternalLink size={10} />}
-                    onClick={() => setSelected(app)}
                   >
                     Open
                   </Btn>

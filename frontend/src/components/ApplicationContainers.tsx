@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw } from "lucide-react";
+import ApplicationIcon from "./ApplicationIcon";
 import { getContainers, type Container } from "../features/containers";
 import { getSession } from "../lib/auth";
 import { Card, CardHeader, StatusBadge } from "./ui";
@@ -85,7 +86,11 @@ export default function ApplicationContainers({
                     {container ? (
                       <>
                         <div className="application-container-heading">
-                          <Box size={18} />
+                          <ApplicationIcon
+                            name={container.name}
+                            image={container.image}
+                            size={32}
+                          />
                           <strong>{container.name}</strong>
                           <StatusBadge status={container.status} />
                         </div>

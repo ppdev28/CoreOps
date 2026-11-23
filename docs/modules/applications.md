@@ -1,5 +1,34 @@
 # Applications y detalle de sus contenedores
 
+## Filtros e iconos — 2026-11-22
+
+Applications combina búsqueda por palabras (incluye imagen/nombre/puertos/red de
+miembros por ID), categoría con contadores, estado y número de miembros; orden por
+nombre, estado o cantidad. Clear filters restaura los valores iniciales. Sólo se
+muestran categorías presentes, incluidas las personalizadas; un filtro activo que
+se queda sin resultados sigue visible con contador cero. Fallar `/containers`
+no oculta `/applications`: avisa de que la búsqueda sólo cubre campos de apps.
+Refresh cancela lecturas anteriores y reconcilia ambos inventarios; la pertenencia
+sigue procediendo exclusivamente de IDs explícitos, nunca de nombres parecidos.
+
+`ApplicationIcon.tsx` se reutiliza en lista, detalle y miembros. Los logos comunes
+se distribuyen como assets locales, también en el bundle de Capacitor; Simple
+Icons conocido se resuelve localmente, sin depender del CDN. Logos inferidos sólo
+afectan presentación, nunca pertenencia/estado/categoría. Una URL personalizada
+válida conserva prioridad y no envía referrer; al fallar usa un logo local conocido
+o Lucide por categoría. La URL no se muestra como texto y cambiar la fuente puede
+recuperar un icono fallido. El fondo claro de los assets conserva logos oscuros
+legibles. No hay proxy de imágenes ni solicitudes de URLs desde el backend.
+
+40 imágenes SVG/PNG seleccionadas de
+[dashboard-icons](https://github.com/homarr-labs/dashboard-icons), revisión fijada
+en `frontend/src/assets/application-icons/NOTICE`; licencia Apache-2.0 incluida.
+Las copias de LICENSE/NOTICE en `frontend/public/licenses/dashboard-icons` se
+incluyen también en dist/APK. Los nombres/logos siguen perteneciendo a sus titulares. Nuevos logos requieren
+revisar origen/licencia y SVG sin script, foreignObject o recursos externos.
+Las apps desconocidas conservan una reserva genérica; no se promete logo de todas
+las imágenes Docker. Validación en `usability.spec.ts` y el inspector existente.
+
 `backend/cmd/coreops-api/applications.go` agrupa el inventario real por
 `com.docker.compose.project`; los contenedores independientes aparecen como apps
 de un miembro. `/applications` publica los IDs explícitos. No se infiere pertenencia
