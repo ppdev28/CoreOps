@@ -12,8 +12,9 @@ import (
 )
 
 type Service struct {
-	source Source
-	slots  chan struct{}
+	source   Source
+	slots    chan struct{}
+	mutation sync.Mutex
 }
 
 func New(source Source) *Service { return &Service{source: source, slots: make(chan struct{}, 2)} }
@@ -114,10 +115,10 @@ func (s *Service) Overview(ctx context.Context) (Overview, error) {
 	}
 	auto := AutoUpdates(answers["apt-policy"].text, answers["upgrade-timer"].text, answers["apt-policy"].err, answers["upgrade-timer"].err)
 	if auto.OK == nil {
-		o.Capabilities["autoUpdates"] = Capability{Reason: "Effective APT policy and timer state must be readable before changes"}
+		o.Capabilities["autoUpdates"] = Capability{Reason: auto.Detail}
 	} else if !*auto.OK {
 		policy, known := APTPolicy(answers["apt-policy"].text)
-		if !known || !policy {
+		if !known || !policy || !SecurityOrigins(answers["apt-policy"].text) {
 			o.Capabilities["autoUpdates"] = Capability{Reason: "Configure APT periodic policy on the host first; enabling the timer alone is insufficient"}
 		}
 	}
@@ -155,7 +156,7 @@ func (s *Service) Overview(ctx context.Context) (Overview, error) {
 				continue
 			}
 			o.Events = append(o.Events, Event{Timestamp: time.UnixMicro(us).UTC().Format(time.RFC3339Nano), Type: Classify(row.Message), Message: row.Message})
-			if len(o.Events) == 120 {
+			if len(o.Events) == 200 {
 				break
 			}
 		}
@@ -165,7 +166,14 @@ func (s *Service) Overview(ctx context.Context) (Overview, error) {
 	}
 	return o, nil
 }
-func (s *Service) Terminate(ctx context.Context, pid int, id string) (Session, error) {
+func (s *Service) Terminate(ctx context.Context, pid int, id string, authorize MutationGuard) (Session, error) {
+	if authorize == nil {
+		return Session{}, ErrPermission
+	}
+	if !s.mutation.TryLock() {
+		return Session{}, ErrConflict
+	}
+	defer s.mutation.Unlock()
 	if pid <= 1 || pid > 4194304 || len(id) != 64 {
 		return Session{}, ErrInvalid
 	}
@@ -186,30 +194,43 @@ func (s *Service) Terminate(ctx context.Context, pid int, id string) (Session, e
 		if !session.Verified || !session.CanTerminate {
 			return session, fmt.Errorf("%w: %s", ErrPermission, session.TerminationReason)
 		}
-		return session, s.source.Signal(ctx, session)
+		if err := ctx.Err(); err != nil {
+			return session, err
+		}
+		return session, authorize(func() error { return s.source.Signal(ctx, session) })
 	}
 	return Session{}, ErrNotFound
 }
-func (s *Service) EnableAutoUpdates(ctx context.Context) error {
+func (s *Service) EnableAutoUpdates(ctx context.Context, authorize MutationGuard) error {
+	if authorize == nil {
+		return ErrPermission
+	}
+	if !s.mutation.TryLock() {
+		return ErrConflict
+	}
+	defer s.mutation.Unlock()
 	config, ce := s.source.Probe(ctx, "apt-policy")
 	timer, te := s.source.Probe(ctx, "upgrade-timer")
 	before := AutoUpdates(config, timer, ce, te)
 	if before.OK != nil && *before.OK {
-		return nil
+		return authorize(func() error { return nil })
 	}
 	if ce != nil || te != nil {
 		return ErrUnavailable
 	}
 	// Enabling the timer alone cannot fix disabled or unreadable APT periodic policy.
 	policy, known := APTPolicy(config)
-	if !known || !policy {
+	if !known || !policy || !SecurityOrigins(config) {
 		return fmt.Errorf("%w: configure effective APT periodic updates before enabling the timer", ErrConflict)
 	}
 	cap := s.source.CanEnableAutoUpdates(ctx)
 	if !cap.Available {
 		return fmt.Errorf("%w: %s", ErrPermission, cap.Reason)
 	}
-	if e := s.source.EnableAutoUpdates(ctx); e != nil {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if e := authorize(func() error { return s.source.EnableAutoUpdates(ctx) }); e != nil {
 		return e
 	}
 	config, ce = s.source.Probe(ctx, "apt-policy")

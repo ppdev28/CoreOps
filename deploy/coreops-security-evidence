@@ -1,0 +1,120 @@
+#!/usr/bin/python3 -I
+"""Read-only, bounded evidence. No arbitrary argv, jail names or shell input."""
+import concurrent.futures
+import ipaddress
+import json
+import os
+import re
+import selectors
+import subprocess
+import sys
+import time
+
+ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C", "LC_ALL": "C"}
+DEADLINE = time.monotonic() + 3
+JAIL = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")
+
+def call(*args):
+    remaining = min(0.8, DEADLINE - time.monotonic())
+    if remaining <= 0:
+        raise TimeoutError("evidence deadline")
+    process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=ENV)
+    data = bytearray()
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ)
+    until = time.monotonic() + remaining
+    try:
+        while True:
+            if time.monotonic() >= until:
+                raise TimeoutError("evidence deadline")
+            if not selector.select(max(0, until - time.monotonic())):
+                raise TimeoutError("evidence deadline")
+            chunk = os.read(process.stdout.fileno(), 8192)
+            if not chunk:
+                break
+            data.extend(chunk)
+            if len(data) > 65536:
+                raise ValueError("output limit")
+        process.wait(timeout=max(0.01, until - time.monotonic()))
+        if process.returncode:
+            raise ValueError("query failed")
+        return data.decode("utf-8", "replace").strip()
+    finally:
+        selector.close()
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=1)
+        process.stdout.close()
+
+def jail_details(name):
+    result = {"name": name, "logPaths": [], "journalMatch": "", "actions": "", "failRegexCount": 0, "maxRetry": 0, "findTime": 0, "banTime": 0, "currentlyBanned": 0, "totalBanned": 0, "status": {"state": "ok"}}
+    try:
+        status = call("/usr/bin/fail2ban-client", "status", name)
+        for field, label in (("currentlyBanned", "Currently banned:"), ("totalBanned", "Total banned:")):
+            match = re.search(re.escape(label) + r"\s*(\d+)", status)
+            if match:
+                result[field] = int(match.group(1))
+        for field, option in (("maxRetry", "maxretry"), ("findTime", "findtime"), ("banTime", "bantime")):
+            result[field] = int(call("/usr/bin/fail2ban-client", "get", name, option))
+        result["actions"] = call("/usr/bin/fail2ban-client", "get", name, "actions")[:2048]
+        regex = call("/usr/bin/fail2ban-client", "get", name, "failregex")
+        result["failRegexCount"] = len(re.findall(r"\[\d+\]\s*:", regex))
+        if not result["failRegexCount"] and regex not in ("", "[]", "None") and not regex.rstrip().endswith(":"):
+            result["failRegexCount"] = 1
+        # Backends can legitimately support only one of these sources.
+        errors = 0
+        try:
+            paths = call("/usr/bin/fail2ban-client", "get", name, "logpath")[:2048]
+            result["logPaths"] = [] if paths in ("", "[]", "None") else [paths]
+        except Exception:
+            errors += 1
+        try:
+            result["journalMatch"] = call("/usr/bin/fail2ban-client", "get", name, "journalmatch")[:2048]
+        except Exception:
+            errors += 1
+        if result["journalMatch"] in ("[]", "None"):
+            result["journalMatch"] = ""
+        if result["actions"] in ("[]", "None"):
+            result["actions"] = ""
+        if errors == 2 or not result["failRegexCount"] or not result["actions"] or not (result["logPaths"] or result["journalMatch"]):
+            result["status"] = {"state": "partial", "detail": "A log source, filter or action is missing or unverified"}
+    except Exception:
+        result["status"] = {"state": "partial", "detail": "Some jail evidence could not be read; enforcement is unverified"}
+    return result
+
+def main():
+    if os.geteuid() != 0 or len(sys.argv) != 2:
+        return 77
+    if sys.argv[1] == "fail2ban-details":
+        status = call("/usr/bin/fail2ban-client", "status")
+        line = re.search(r"Jail list:\s*([^\n]*)", status)
+        names = [name.strip() for name in (line.group(1).split(",") if line else []) if name.strip()]
+        if not all(JAIL.fullmatch(name) for name in names):
+            return 64
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            result = list(pool.map(jail_details, names[:8]))
+        print(json.dumps({"jails": result, "truncated": len(names) > 8}))
+        return 0
+    if sys.argv[1] == "sshd-context":
+        data = sys.stdin.buffer.read(2049)
+        if len(data) > 2048:
+            return 64
+        value = json.loads(data)
+        if type(value) is not dict or set(value) != {"user", "address", "host"}:
+            return 64
+        user, address, host = value["user"], value["address"], value["host"]
+        if not isinstance(user, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]{0,31}\$?", user):
+            return 64
+        ipaddress.ip_address(address)
+        if not isinstance(host, str) or host and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.:-]{0,252}", host):
+            return 64
+        print(call("/usr/sbin/sshd", "-T", "-C", "user=" + user + ",addr=" + address + ",host=" + (host or address)))
+        return 0
+    return 64
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception:
+        print("Restricted Security evidence unavailable", file=sys.stderr)
+        sys.exit(1)

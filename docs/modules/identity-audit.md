@@ -35,3 +35,21 @@ no implica una política general de auditoría transaccional o inmutable. Ver
 ## Validación
 
 Mantener `auth_test.go` y ampliar los escenarios anteriores antes de mover persistencia. CLI y servicio deben usar el mismo directorio y usuario de servicio. Detener binarios anteriores al actualizar; véase [desarrollo](../development.md). `auth_persistence_test.go` cubre CLI en proceso separado, password/borrado con servidor activo, login concurrente con cambio de password, sesiones simultáneas, almacenamiento fallido y JSON corrupto. La PTY comprueba revocación externa en `terminal_session_test.go`.
+
+## Intenciones Security y auditoría retenida — 2026-11-22
+
+Cierre SSH/activación de timer se ejecutan dentro de un MutationGuard que adquiere
+el flock de identidad después de resolver evidencia, relee actor/rol/expiración,
+guarda intención durable y mantiene el bloqueo durante el efecto acotado. Logout
+y cambios CLI/HTTP se ordenan antes/después, no a mitad del guard. No cambia
+users.json, sessions.json, formato de hashes o cifrado de contraseñas de Terminal.
+
+Audit ahora coordina escritores con `.audit.lock` permanente, secuencia y cadena
+SHA-256 de DTOs serializados, actual + tres archivos de 8 MiB y verificación admin
+GET `/api/v1/audit/integrity`. Intenciones durables comprueban la cadena retenida
+antes de escribir; corrupción/permiso/IO impiden despacho Security. No ejecutar
+escritores antiguos que añadan registros sin hash a una cadena ya iniciada.
+Legacy queda explícitamente sin cobertura criptográfica histórica. La rotación
+es acotada, no retención infinita; root/cuenta API pueden rehacer la cadena y se
+requiere un destino externo para garantías independientes. Logs/Files preservan
+el límite admin para archivos rotados, aliases y lock. [Guía](host-security.md).

@@ -194,7 +194,7 @@ func (f *FileExplorer) privateTerminalFile(relative string, info os.FileInfo) bo
 	if f.privateDir == "" {
 		return false
 	}
-	for _, name := range []string{terminalPasswordFile, terminalPasswordKeyFile} {
+	for _, name := range []string{terminalPasswordFile, terminalPasswordKeyFile, "security-monitor.json", ".audit.lock", "audit.log.1", "audit.log.2", "audit.log.3"} {
 		if info != nil {
 			if live, err := os.Stat(filepath.Join(f.privateDir, name)); err == nil && os.SameFile(info, live) {
 				return true

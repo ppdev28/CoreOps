@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/moby/moby/client"
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/securityscan"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/sysstat"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
 	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
@@ -25,21 +28,23 @@ import (
 )
 
 type API struct {
-	tailscale     *tailscale.Service
-	power         *hostpower.Service
-	hostSecurity  *security.Service
-	updateTasks   *updateJobs
-	observability *observability.Service
-	telemetry     *telemetry.HTTP
-	history       *monitoring.History
-	containers    *containers.Service
-	kube          *kubeManager
-	compose       *composeManager
-	logRoot       string
-	auditLogPath  string
-	docker        *client.Client
-	terminals     *terminalServer
-	files         *FileExplorer
+	tailscale       *tailscale.Service
+	power           *hostpower.Service
+	hostSecurity    *security.Service
+	securityMonitor *security.Monitor
+	securityScans   *security.ScanJobs
+	updateTasks     *updateJobs
+	observability   *observability.Service
+	telemetry       *telemetry.HTTP
+	history         *monitoring.History
+	containers      *containers.Service
+	kube            *kubeManager
+	compose         *composeManager
+	logRoot         string
+	auditLogPath    string
+	docker          *client.Client
+	terminals       *terminalServer
+	files           *FileExplorer
 }
 
 func main() {
@@ -85,6 +90,11 @@ func main() {
 	api.history = monitoring.NewHistory(sysstat.NewReader(envString("COREOPS_SYSSTAT_DIR", "/var/log/sysstat")))
 	api.observability = observabilityService
 	api.telemetry = telemetry.New(metricsToken)
+	securitySource := linuxsecurity.New()
+	api.hostSecurity = security.New(securitySource)
+	api.securityMonitor = security.NewMonitor(securitySource, linuxsecurity.CheckpointFile{Dir: dataDir})
+	go api.securityMonitor.Run(ctx)
+	api.securityScans = security.NewScanJobs(ctx, &securityscan.Trivy{Binary: envString("COREOPS_TRIVY_PATH", ""), Cache: envString("COREOPS_TRIVY_CACHE", filepath.Join(dataDir, "trivy-cache")), Docker: docker})
 	audit := NewAuditLog(dataDir)
 	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
 	host := envString("COREOPS_HOST", "127.0.0.1")

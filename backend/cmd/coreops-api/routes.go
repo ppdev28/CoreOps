@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxpower"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
@@ -13,6 +14,7 @@ import (
 	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 // routes builds the API router. Every route except health and login requires
@@ -50,6 +52,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	}
 	if a.tailscale == nil {
 		a.tailscale = tailscale.New(tailscalelocal.New())
+	}
+	if a.securityScans == nil {
+		a.securityScans = security.NewScanJobs(context.Background(), security.NoScanner())
 	}
 	mux := http.NewServeMux()
 	if a.power == nil {
@@ -137,12 +142,27 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("GET /api/v1/terminal/session", a.terminals.serveHTTP)
 	mux.HandleFunc("GET /api/v1/containers/{id}/terminal", a.terminals.serveHTTP)
 	handle("GET /api/v1/security", RoleOperator, a.security)
-	handle("POST /api/v1/security/sessions/{pid}/terminate", RoleAdmin, a.terminateSecuritySession)
-	handle("POST /api/v1/security/fix/{item}", RoleAdmin, a.fixSecurity)
+	handle("GET /api/v1/security/posture", RoleOperator, securityEvidence(a.securityPosture))
+	handle("GET /api/v1/security/ssh-policy", RoleOperator, securityEvidence(a.securitySSHPolicy))
+	handle("GET /api/v1/security/events", RoleOperator, securityEvidence(a.securityEvents))
+	handle("GET /api/v1/security/scans/capabilities", RoleOperator, securityEvidence(a.securityScanCapabilities))
+	handle("GET /api/v1/security/scans", RoleOperator, a.securityScanJobs)
+	handle("POST /api/v1/security/scans", RoleAdmin, a.startSecurityScan(auth, audit))
+	handle("GET /api/v1/security/monitor", RoleOperator, a.securityMonitorStatus)
+	handle("POST /api/v1/security/monitor/reset", RoleAdmin, a.resetSecurityMonitor(auth, audit))
+	handle("POST /api/v1/security/sessions/{pid}/terminate", RoleAdmin, a.terminateSecuritySession(auth, audit))
+	handle("POST /api/v1/security/fix/{item}", RoleAdmin, a.fixSecurity(auth, audit))
 	handle("GET /api/v1/updates", RoleViewer, a.updates)
 	handle("GET /api/v1/updates/jobs/{id}", RoleAdmin, a.updateJob)
 	handle("POST /api/v1/updates/refresh", RoleAdmin, a.refreshUpdates)
 	handle("POST /api/v1/updates/apply", RoleAdmin, a.applyUpdates)
 	handle("GET /api/v1/audit", RoleAdmin, audit.handler)
-	return a.telemetry.Wrap(mux)
+	handle("GET /api/v1/audit/integrity", RoleAdmin, audit.integrityHandler)
+	return a.telemetry.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/security" || strings.HasPrefix(r.URL.Path, "/api/v1/security/") {
+			w.Header().Set("Cache-Control", "no-store, private")
+			w.Header().Set("Pragma", "no-cache")
+		}
+		mux.ServeHTTP(w, r)
+	}))
 }

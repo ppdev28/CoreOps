@@ -48,6 +48,10 @@ type Rule struct {
 	Comment string `json:"comment,omitempty"`
 }
 type Event struct {
+	ID        string `json:"id,omitempty"`
+	Cursor    string `json:"cursor,omitempty"`
+	Source    string `json:"source,omitempty"`
+	Truncated bool   `json:"truncated,omitempty"`
 	Timestamp string `json:"timestamp"`
 	Type      string `json:"type"`
 	Message   string `json:"message"`
@@ -63,6 +67,10 @@ type Overview struct {
 	Sources         map[string]SourceStatus `json:"sources"`
 	Capabilities    map[string]Capability   `json:"capabilities"`
 }
+
+// MutationGuard serializes authorization/revocation with the bounded host effect.
+type MutationGuard func(func() error) error
+
 type Source interface {
 	Probe(context.Context, string) (string, error)
 	Sessions(context.Context) ([]Session, SourceStatus, error)

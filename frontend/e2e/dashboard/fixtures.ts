@@ -356,6 +356,68 @@ export async function mockDashboard(
           state: "running",
         },
       ];
+    else if (path === "/security/posture")
+      body = {
+        apt: {
+          installed: null,
+          origins: [],
+          exclusions: [],
+          lastRun: "",
+          lastResult: "",
+          rebootRequired: null,
+        },
+        jails: [],
+        jailsTruncated: false,
+        chains: [],
+        sensors: [],
+        sources: {
+          "apt-health": {
+            state: "unavailable",
+            detail: "Detailed APT evidence unavailable in this fixture",
+          },
+          "fail2ban-details": { state: "unavailable" },
+          nft: { state: "unavailable" },
+        },
+      };
+    else if (path === "/security/events")
+      body = {
+        events: [
+          {
+            id: "fixture-ssh-event",
+            cursor: "s=fixture-event",
+            timestamp: new Date().toISOString(),
+            type: "info",
+            message: "SSH session opened",
+            source: "ssh.service",
+          },
+        ],
+        signals: [],
+        oldestCursor: "s=fixture-event",
+        newestCursor: "s=fixture-event",
+        hasMore: false,
+        source: { state: "ok" },
+        updatedAt: new Date().toISOString(),
+      };
+    else if (path === "/security/monitor")
+      body = {
+        state: "ok",
+        detail: "Fixture journal evidence",
+        lastCollected: new Date().toISOString(),
+        coverageSince: new Date().toISOString(),
+        backlog: false,
+        retainedEvents: 0,
+        signals: [],
+      };
+    else if (path === "/security/scans/capabilities")
+      body = {
+        available: false,
+        reason: "No scanner configured in this fixture",
+        hostname: "fixture-host",
+        bootId: "fixture-boot",
+        version: "",
+        targets: [{ id: "host", label: "Host OS packages", kind: "host" }],
+      };
+    else if (path === "/security/scans") body = [];
     else if (path === "/security")
       body = {
         updatedAt: new Date().toISOString(),

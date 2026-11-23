@@ -119,7 +119,7 @@ func TestOwnedSSHSessionLifecycle(t *testing.T) {
 	if found.Terminal != "notty" || found.User != u.Username || !found.Verified || !found.CanTerminate {
 		t.Fatalf("SSH identity/permissions: %+v", found)
 	}
-	if _, e := core.New(source).Terminate(ctx, found.PID, found.ID); e != nil {
+	if _, e := core.New(source).Terminate(ctx, found.PID, found.ID, func(next func() error) error { return next() }); e != nil {
 		t.Fatal(e)
 	}
 	closed := false

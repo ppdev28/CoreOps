@@ -4,6 +4,7 @@ package linuxsecurity
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,10 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/helperpath"
 	core "github.com/ppdev28/CoreOps/backend/internal/security"
 )
 
-const helper = "/usr/local/libexec/coreops-security"
+var helper = helperpath.Path("coreops-security")
 
 type Source struct{}
 
@@ -37,9 +39,15 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return n, nil
 }
 func run(ctx context.Context, name string, args ...string) (string, error) {
+	return runInput(ctx, nil, name, args...)
+}
+func runInput(ctx context.Context, input []byte, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, name, args...)
+	if input != nil {
+		cmd.Stdin = bytes.NewReader(input)
+	}
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C"}
 	var stdout, stderr limitedBuffer
 	cmd.Stdout = &stdout
@@ -62,7 +70,7 @@ func run(ctx context.Context, name string, args ...string) (string, error) {
 		if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
 			state = "unavailable"
 		}
-		if strings.Contains(low, "permission denied") || strings.Contains(low, "need to be root") || strings.Contains(low, "not permitted") || strings.Contains(low, "password is required") {
+		if strings.Contains(low, "permission denied") || strings.Contains(low, "need to be root") || strings.Contains(low, "not permitted") || strings.Contains(low, "password is required") || strings.Contains(low, "interactive authentication is required") || strings.Contains(low, "a terminal is required") {
 			state = "permission_denied"
 		}
 		return "", &core.SourceError{State: state, Detail: fmt.Sprintf("%s: %s (%v)", name, detail, err)}
@@ -100,11 +108,32 @@ func (s *Source) Probe(ctx context.Context, op string) (string, error) {
 		args = []string{"-H", "-lntu"}
 	case "events":
 		name = "/usr/bin/journalctl"
-		args = []string{"--no-pager", "--output=json", "--reverse", "--lines=120", "--unit=ssh.service", "--unit=sshd.service", "--unit=ssh.socket", "--unit=fail2ban.service"}
+		args = journalArgs(core.EventQuery{Category: "all", Direction: "older", Limit: 200})
 	default:
 		return "", core.ErrInvalid
 	}
 	out, err := run(ctx, name, args...)
+	if op == "apt-policy" && err == nil {
+		data, e := readSmall("/etc/os-release")
+		if e != nil {
+			return "", &core.SourceError{State: "unavailable", Detail: "Distribution identity could not be read"}
+		}
+		values := map[string]string{}
+		for _, line := range strings.Split(string(data), "\n") {
+			key, value, ok := strings.Cut(line, "=")
+			if ok {
+				values[key] = strings.Trim(value, "\"'")
+			}
+		}
+		code := values["VERSION_CODENAME"]
+		if code == "" {
+			code = values["UBUNTU_CODENAME"]
+		}
+		id, _ := json.Marshal(values["ID"])
+		codename, _ := json.Marshal(code)
+		out += "\nCoreOps::OS::ID " + string(id) + ";\nCoreOps::OS::Codename " + string(codename) + ";\n"
+	}
+
 	if err != nil && core.Status(err).State == "permission_denied" && (op == "ufw" || op == "sshd" || op == "fail2ban") && trustedHelper() {
 		return run(ctx, "/usr/bin/sudo", "-n", "--", helper, op)
 	}

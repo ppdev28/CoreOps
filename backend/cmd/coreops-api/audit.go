@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"golang.org/x/sys/unix"
 	"io"
 	"log/slog"
 	"net/http"
@@ -24,15 +26,18 @@ const (
 
 // AuditEntry is one line of the append-only JSONL audit log.
 type AuditEntry struct {
-	Time       time.Time `json:"time"`
-	User       string    `json:"user,omitempty"`
-	Role       Role      `json:"role,omitempty"`
-	Method     string    `json:"method"`
-	Path       string    `json:"path"`
-	Status     int       `json:"status"`
-	Remote     string    `json:"remote"`
-	Detail     string    `json:"detail,omitempty"`
-	DurationMS int64     `json:"durationMs"`
+	Sequence     uint64    `json:"sequence,omitempty"`
+	PreviousHash string    `json:"previousHash,omitempty"`
+	Hash         string    `json:"hash,omitempty"`
+	Time         time.Time `json:"time"`
+	User         string    `json:"user,omitempty"`
+	Role         Role      `json:"role,omitempty"`
+	Method       string    `json:"method"`
+	Path         string    `json:"path"`
+	Status       int       `json:"status"`
+	Remote       string    `json:"remote"`
+	Detail       string    `json:"detail,omitempty"`
+	DurationMS   int64     `json:"durationMs"`
 }
 
 // auditEntry is the mutable record handlers and the auth layer fill in while a
@@ -55,8 +60,9 @@ func setAuditDetail(r *http.Request, detail string) {
 }
 
 type AuditLog struct {
-	mu   sync.Mutex
-	path string
+	mu       sync.Mutex
+	path     string
+	maxBytes int
 }
 
 func NewAuditLog(dir string) *AuditLog {
@@ -74,25 +80,56 @@ func (l *AuditLog) Append(entry AuditEntry) {
 func (l *AuditLog) AppendDurable(entry AuditEntry) error { return l.append(entry, true) }
 
 func (l *AuditLog) append(entry AuditEntry, durable bool) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	unlock, err := l.fileLock()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if durable {
+		if _, err = l.verifyLocked(); err != nil {
+			return err
+		}
+	}
+	previous, err := l.lastRecord()
+	if err != nil {
+		return err
+	}
+	if len(entry.Path) > 1024 {
+		entry.Path = entry.Path[:1024]
+	}
+	if len(entry.Detail) > 2048 {
+		entry.Detail = entry.Detail[:2048]
+	}
+	if len(entry.Remote) > 256 {
+		entry.Remote = entry.Remote[:256]
+	}
+	entry.Sequence = previous.Sequence + 1
+	entry.PreviousHash = previous.Hash
+	entry.Hash = auditDigest(entry)
 	line, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	f, err := os.OpenFile(l.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if len(line) > 16382 {
+		return errors.New("audit record is too large")
+	}
+	if err = l.rotate(len(line) + 1); err != nil {
+		return err
+	}
+	f, err := secureAuditFile(l.path, unix.O_APPEND|unix.O_CREAT|unix.O_WRONLY)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if _, err := f.Write(append(line, '\n')); err != nil {
+	if _, err = f.Write(append(line, '\n')); err != nil {
 		return err
 	}
 	if durable {
-		if err := f.Sync(); err != nil {
+		if err = f.Sync(); err != nil {
 			return err
 		}
-		// Also retain the directory entry if this was the first audit record.
 		dir, err := os.Open(filepath.Dir(l.path))
 		if err != nil {
 			return err

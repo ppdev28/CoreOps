@@ -183,6 +183,10 @@ export interface FirewallRule {
   comment?: string;
 }
 export interface SecurityEvent {
+  id?: string;
+  cursor?: string;
+  source?: string;
+  truncated?: boolean;
   timestamp: string;
   type: string;
   message: string;

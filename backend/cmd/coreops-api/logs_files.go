@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -91,12 +92,16 @@ func (a *API) isCoreOpsAudit(file *os.File) bool {
 	if a.auditLogPath == "" {
 		return false
 	}
-	private, err := os.Stat(a.auditLogPath)
+	info, err := file.Stat()
 	if err != nil {
 		return false
 	}
-	info, err := file.Stat()
-	return err == nil && os.SameFile(info, private)
+	for _, name := range []string{a.auditLogPath, a.auditLogPath + ".1", a.auditLogPath + ".2", a.auditLogPath + ".3", filepath.Join(filepath.Dir(a.auditLogPath), ".audit.lock")} {
+		if private, err := os.Stat(name); err == nil && os.SameFile(info, private) {
+			return true
+		}
+	}
+	return false
 }
 func (a *API) logSources(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
