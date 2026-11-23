@@ -1,160 +1,215 @@
 # Codex Handoff
 
-## Prerelease Android publicada — 2026-11-23
+## Entregas registradas en Git — 2026-11-23
 
-[CoreOps Android v0.1.0](https://github.com/ppdev28/CoreOps/releases/tag/android-v0.1.0) publicada como prerelease pública.
-Tag `android-v0.1.0` → commit `07ca5a2328502267aaec946c5c547969fcd99af5`; sólo se empujó la etiqueta,
-main remoto continúa en `85b45d5` y no se activó el deploy legacy del servidor.
+El trabajo pendiente desde `5f2d7f4` se ha consolidado en 12 commits por
+funcionalidad en develop, incluida documentación compartida. No quedan entregas
+anteriores por comitear; las menciones «sin commit» de las entradas históricas
+reflejan el momento de su validación. Consultar `git log --oneline 5f2d7f4..HEAD`.
+No se ha hecho push ni cambiado el runtime durante esta consolidación.
 
-APK universal firmada 0.1.0/versionCode 1, min API 24, target 36, 6.785.115 bytes.
-SHA-256 APK: `7a331eef9952c1efd21dde96945b24271551abdba888b7f3bb992706605b57bd`.
-Certificado SHA-256: `1bed357222b6aeb0e96601c46a35a2927e92b788f1df6204ced8fc0344c214bb`.
-Adjuntos: APK, SHA256SUMS, certificado público PEM, build-info.json e informe.
-Cinco digests de GitHub contrastados con los artefactos locales.
+Los contenidos funcionales/pruebas son los ya validados; se verificó además la
+compilación Go de los cinco índices intermedios con cambios de composición.
+Mantener las instrucciones operativas de Services que siguen: los commits no
+sustituyen la activación local del paquete/capacidad con sudo. Los artefactos
+.deb, binarios y datos de identidad siguen fuera de Git.
 
-Build desde export limpio del commit: build/formato/fronteras web, cap sync,
-assembleRelease/lintRelease (0 errores/12 avisos), apksigner v2/RSA-3072 y zipalign
-correctos. Los 86 assets coinciden con dist. Manifest y flags instalados confirman
-sin debugging/backup. Instalación, arranque, login/drawer revisados visualmente en
-emulador Android 16 aislado, ya apagado. No se reutilizan credenciales reales;
-la APK debug/datos del Redmi se conservan. No equivale a probar login contra API
-real en release ni a una matriz de dispositivos. Pruebas Terminal previas: 26/26.
+## Services y permiso del servicio dedicado — 2026-11-23
 
-Clave privada y properties: `~/.config/coreops/android-signing/`; copia local
-protegida: `/Volumes/Develop/android-data/CoreOps-signing-backup/`. Archivos 0600,
-directorios 0700. No adjuntarlos a GitHub; conservarlos para firmar actualizaciones.
-Artefactos públicos locales en `dist/releases/android-v0.1.0/` (raíz, ignorado).
-Las firmas release/debug difieren: no se desinstala debug ni se borran sus datos.
-Backend reciente externo requerido; HTTP/LAN/SEC-03 siguen documentados.
+Continuar develop y preservar cambios previos. Leer [Services](modules/services.md)
+y [validación](services-permissions-validation-2026-11-23.md). Start/stop/restart
+ya no invocan systemctl directamente: helper root fijo check/apply por stdin,
+capacidad services explícita, archivos/alias canónicos confiables, protecciones
+CoreOps/energía, rol operator/admin fresco bajo flock e intención durable previa.
+La UI deshabilita si falta permiso y muestra errores incluso sin notificaciones.
+`--add services` une con la política previa; `--enable` sigue reemplazándola.
 
-## Primera APK Android de release — 2026-11-23
+Paquete amd64 final `dist/packages/coreops_0.1.0~dev20261123.1_amd64.deb`. Instalar
+como pepe por SSH independiente: `python3 scripts/install-system.py --package dist/packages/coreops_0.1.0~dev20261123.1_amd64.deb --add services`.
+No migrar identidad de nuevo, no instalar helpers /usr/local para el paquete y
+no actualizar desde su propia Terminal. Sudo local es interactivo, activación
+pendiente. Instalado actual **0.1.0~dev20261123**, usuario coreops, servicio activo;
+las notas antiguas de no instalado/versión22 son históricas. No tocar ALSA u otras
+unidades del usuario para validar; sólo se leyó metadata ALSA active/exited.
 
-Preparación de `android-v0.1.0` (0.1.0, versionCode 1), como prerelease pública
-sólo del cliente Android. Se configura firma release obligatoria, sin fallback
-unsigned/debug, y manifest release sin debugging ni backup Android. El usuario
-autoriza una nueva identidad de firma: keystore/properties privados 0600 fuera
-del checkout y copia local protegida. No versionar ni adjuntar claves/passwords.
+Go race/vet/build y 36 Python, web formato/fronteras/build y 22 UI correctos;
+paquete inspeccionado y test root en contenedor con sudo/API reales y systemctl
+simulado: unión permisos, identidad intacta, éxito/despachos/rechazos correctos.
+No es validación de acciones de systemd PID 1 host. Sin commit/push/APK.
 
-La compilación se realiza desde un export limpio del commit de release, sin
-incorporar los documentos ajenos ni el espacio previo en MainActivity. Incluye
-la web actual, llave Terminal, iconos redondeados y flechas/Enter corregidos.
-No se cambia el backend ni el servicio del servidor. HTTP/LAN se conserva para
-compatibilidad; HTTPS y almacén seguro nativo siguen pendientes (SEC-03).
+## Jerarquía de UI — 2026-11-23
 
-Publicación mediante etiqueta Android y assets (APK, SHA256SUMS, certificado
-público e información de build). No push a main: el workflow legacy puede
-desplegar/resetear el checkout del servidor. API GitHub mediante gh ya autenticado,
-sin extraer tokens del equipo remoto. [Firma y proceso](modules/mobile.md).
+Continuar develop, preservar todo lo anterior. Leer [visual](ui-style.md) e
+[informe](ui-hierarchy-validation-2026-11-23.md). Tipografía existente Inter Variable
+con escala/peso claros, mono técnico, CardHeader h2 compartido, tonos/divisores y
+sombra discreta. Dashboard y ContainerDetail mejorados; hierarchy.css es la capa
+compartida/inspect y dashboard.css mantiene su composición. No reponer reglas
+que igualen títulos/captions ni recolorear fuentes/estados con paletas fijas.
 
-## Commits de móvil y sincronización web — 2026-11-23
+Formato/fronteras/build correctos; 25 UI (todas las vistas/ocho tamaños/roles/
+temas/terminal) y revisión visual de 15 vistas por fase, más 30 casos largos de
+cinco pestañas/320–1920px. Capturas privadas en /tmp/coreops-hierarchy-review.
+No nuevos tests que reflejen CSS ni cambios backend/API/infraestructura.
 
-Registrado en `main`, sin cambiar de rama ni hacer push:
+El usuario ya instaló coreops.service: 0.1.0~dev20261122, usuario/grupo coreops,
+8082 activo. Las notas previas de instalación pendiente son históricas. Vite 5173
+también sigue activo y recibe los cambios fuente. Actualizar assets empaquetados
+con APT desde SSH independiente; no repetir migración ni usar Terminal de CoreOps
+para actualizar su propia unit. Sudo interactivo necesario en esta sesión.
+Sin commit/push/publicación ni APK.
+Nuevo artefacto UI: dist/packages/coreops_0.1.0~dev20261123_amd64.deb. verify-deb y
+Chromium/API empaquetada con datos reales de sólo lectura correctos 320/1440px,
+identidad temporal retirada. Falta apt install de ese archivo por sudo local;
+no pedir otra migración ni alterar usuarios/sesiones para probar apariencia.
 
-- `920e269` — identidad nativa/iconos redondeados, launcher y generador/licencias.
-- `c7cbd38` — frontend actual del servidor y llave de contraseñas de Terminal.
-- `9e548d6` — flechas siempre visibles y Enter separado.
+## Servicio y APT — 2026-11-22
 
-La documentación de estas entregas y su validación se registra en un commit
-separado. No se incluyen APKs, dist, assets generados por Capacitor, secretos ni
-binarios Go. Permanecen fuera los documentos previos sin seguimiento del usuario
-(`docs/README.md`, `docs/archive/`, `docs/review-2026-10.md`, `docs/roadmap.md`) y el
-espacio previo en `class  MainActivity`. Build web/Android, lint y las 26 pruebas
-focalizadas ya se verificaron antes de registrar los cambios; no hubo nuevas
-modificaciones de runtime durante la separación de commits.
+Continuar develop, conservar cambios previos. Leer [instalación](installation.md)
+y [validación](system-install-validation-2026-11-22.md). Paquete amd64/arm64 listo en
+dist/packages (ignorado), instalador un comando como usuario normal, setup root
+con migración por PID/secretos/policy/rollback. El servicio usa coreops dedicado,
+/usr/bin/coreops-api, /usr/share/coreops/web y /var/lib/coreops; no Vite/tmux/Node.
+Helpers empaquetados seleccionados al compilar, desarrollo sigue /usr/local.
 
-## Flechas y Enter de Terminal móvil — 2026-11-23
+**Host todavía en runtime anterior**: instalación/migración necesita sudo local.
+No reutilizar password CoreOps ni usar Docker para instalar en el host. Ejecutar
+primero --dry-run; migración cierra terminales/trabajos. Una copia ya importada no
+se sobrescribe con otro import. Respaldos/env de recuperación son root privados.
+APT propio firmado elegido; generador/cliente preparados pero sin dominio, clave
+de producción, licencia declarada ni publicación. No inventar una URL APT funcional.
 
-Se reproduce el recorte de flechas en 320/390 px: el grupo direccional estaba
-mezclado con Esc/Tab/Ctrl dentro de una tira desplazable junto a Enter. Las cuatro
-flechas pasan a un grupo fijo con iconos Lucide y Enter conserva una celda propia.
-Hasta 600 px hay dos filas: teclado/atajos arriba, flechas/Enter abajo. En anchos
-mayores se mantiene una fila. Áreas táctiles de al menos 44 px y mismo protocolo,
-foco, permisos y comportamiento de contraseñas.
+CI ahora valida main/develop; packages.yml artifacts PR/manual. Se retiró deploy
+SSH/reset-hard legacy. Go race/vet/build, 26 Python, paquetes, APT firmado y ciclo
+dpkg/identidad correctos; root setup real en contenedor con systemctl simulado y
+web/API real Chromium 320/1440. No systemd PID 1 real en host, TLS, arm64 físico,
+APK, downgrade histórico, workflow remoto, commit o push.
 
-`terminal-responsive.spec.ts` comprueba visibilidad completa inicial de las cuatro
-flechas, hit testing para detectar controles tapados, separación de Enter y bytes
-izquierda/derecha. Falló antes del ajuste en ambos móviles; después se ejecutan
-las regresiones de Terminal/contraseñas/contenedores y se reconstruye/sincroniza
-la APK Android. Preservar la sincronización web y los iconos de entregas previas;
-no sobreescribir Terminal desde el snapshot antiguo del servidor.
+## Restart del centro de control — 2026-11-22
 
-Validado: 26/26 escenarios focalizados de Terminal (incluidos contenedores,
-contraseñas, teclado/foco/orientación y ocho tamaños), build/fronteras/formato web,
-cap sync Android, assembleDebug y lintDebug (0 errores, 14 avisos de mantenimiento;
-además flatDir/configuration-on-demand y NO_COLOR/FORCE_COLOR del runner).
-Los 86 assets se verifican idénticos en dist, copia Capacitor y APK. Instalada con
--r en el Redmi, datos conservados. Comprobación visual y bounds nativos de las
-cuatro flechas separadas de Enter, con teclado Android cerrado y abierto.
-Sin comandos ni operaciones de contraseñas reales. Capturas privadas bajo
-`/tmp/coreops-arrows-fixed-*` y pruebas en `/tmp/coreops-terminal-arrows-verified`.
-No build iOS ni cambios en el servidor; preservar el resto del trabajo pendiente.
+Mantener develop y cambios anteriores. `deploy/coreops-power` sustituye systemctl
+check-inhibitors=yes (también bloqueaba sesiones SSH del usuario al ejecutar como
+root) por métodos logind WithFlags/flag 1, manteniendo inhibidores sin force/skip
+ni fallback. Pruebas Python privadas no ejecutan infraestructura real. La versión
+instalada sigue siendo la anterior: falta que un administrador ejecute
+`sudo sh deploy/install-power-helper.sh pepe`. No requiere reiniciar API ni build
+web/APK. Ver [energía](modules/host-power.md); no validar reiniciando el host.
+Pruebas: 5 Python, Go race core/adaptador y handlers focalizados, 6 UI, shell y
+diff check correctos. Sin commit/push. La causa se dedujo del comando instalado,
+sesiones/capacidades reales, rechazos auditados y código oficial de systemd; no se
+repitió el reboot real para capturar stderr.
 
-## Sincronización del frontend web en Android — 2026-11-23
+## Security aplicado — 2026-11-22
 
-La primera APK de iconos se construyó/sincronizó correctamente, pero desde el
-frontend antiguo del Mac: faltaba la llave de contraseñas de Terminal y otras
-mejoras del checkout del servidor. Se importa una instantánea explícita del
-frontend actual de `~/proyectos/CoreOps` en `ppserver` (`develop`, incluidos sus
-cambios pendientes) a este checkout `main`, sin cambiar ramas ni tocar el remoto.
-Se conservan los iconos nativos redondeados. A petición del usuario se retira el
-logo de la toolbar Android; permanece en drawer y launcher.
+Runtime actual `%0`: `/tmp/coreops-security-runtime-1ayzi8m_/coreops-api`, Go 1.26.11,
+SHA probado; entorno/identidad/frontend conservados, scanner habilitado y health
+proxy 200. Nuevas rutas sin sesión 401.
 
-Sincronizados código/assets/licencias/pruebas web y package/lockfile: llave de
-Terminal, Applications/logos, Network/puertos, Security, Settings/Tailscale,
-Updates y jerarquía visual. CLI Capacitor 8.6.2 con instalación frozen-lockfile.
-El contrato `api/typescript` no cambia. No se copia backend: las capacidades
-recientes requieren la API actual del servidor; el Go local sigue en su versión
-anterior y no debe declararse compatible por haber compilado la APK.
+Continuar en develop, preservar toda la entrega anterior aceptada sin commit.
+Leer [guía actual](modules/host-security.md), [validación](security-hardening-validation-2026-11-22.md)
+y [registro](security.md). Las notas anteriores de revisión describen fallos que
+esta entrega corrige: guard bajo identidad, audit durable/rotación/hash local,
+no-store, evidencia/contexto, journal continuo paginado y jobs CVE reales.
 
-Se ejecuta build antes de cap sync Android y se comprueba igualdad byte a byte
-de los 85 assets entre `dist` y el proyecto Android, incluida la llave compilada.
-Copias previas y snapshot de origen bajo `/tmp/coreops-*-20261123*`, fuera de Git.
-Guías: [Móvil](modules/mobile.md), [Terminal](modules/terminal.md),
-[Frontend](modules/frontend.md). No commit/push ni reinicio/cambios del servidor.
+Go mínimo 1.26.11/x/sys 0.44.0 y lock npm parcheados; scans locales limpios y nuevo
+workflow. Go race/vet/build y regresiones, 13 Python, web formato/fronteras/build;
+UI 160/163 + 3/3 retry con ERR_NETWORK_CHANGED confirmado. No interpretar retry
+como una ejecución inicial perfecta. Scans reales host (1.594 paquetes) e imagen
+local (71); no se mutó Docker/paquetes/servicios/SSH/Tailscale.
 
-Validación final: pnpm install --frozen-lockfile, build, fronteras, formato y
-cap sync Android correctos. AssembleDebug/lintDebug correctos (0 errores,
-13 avisos de mantenimiento; además flatDir/configuration-on-demand). Los 85
-assets de dist coinciden byte a byte tanto en Capacitor como dentro del APK.
-APK instalada con -r conservando datos. Redmi real: Dashboard actualizado,
-logo ausente de toolbar, llave y gestión de contraseña existentes visibles;
-se abrió/cerró el diálogo sin revelar, pegar, reemplazar ni borrar el secreto.
-La shell vacía creada para esta comprobación se cierra sin ejecutar comandos.
+Root sigue pendiente: actualizar helper Security, activar sensores y perfil SSH
+pepe con los comandos concretos del módulo. No usar Docker para eludir sudo ni
+password CoreOps para sudo. Perfil SSH rechaza Match no revisados, valida clave
+pública/config y programa rollback 5 min; verificar login cliente antes de keep.
+Hay reinicio pendiente; no se ejecutó power ni se borraron kernels antiguos.
+Trivy listo en /home/pepe/.coreops-tools/trivy y cache ~/.cache/coreops-trivy.
 
-Playwright: 162/163 en la suite completa, incluidos los seis casos de passwords.
-El único fallo fue esperar Settings en navegación tablet-portrait; dos
-repeticiones aisladas pasaron (2/2), sin causa confirmada. No describirlo como
-163/163 en primera ejecución. Avisos adicionales NO_COLOR/FORCE_COLOR y gráficos
-de tamaño cero en vistas ocultas. Capturas privadas /tmp/coreops-sync-*.png y
-repetición /tmp/coreops-tablet-sync-recheck. Sin build/dispositivo iOS.
+El monitor guarda security-monitor.json privado: no borrarlo para ocultar huecos.
+Correlación/resultados de jobs son del proceso; journal es la historia retenida.
+Audit ahora usa .audit.lock + hash/secuencia y cuatro archivos acotados: nunca
+mezclar escritores antiguos ni afirmar protección frente a root/API comprometido.
+Ver ruta del runtime final en informe. Sin cap sync/APK/commit/push.
 
-## Identidad visual nativa — 2026-11-23
+## Filtros desktop y auditoría del slice Security — 2026-11-22
 
-Trabajo en `main` del Mac, sin cambiar de rama ni sincronizar el checkout
-`develop` del servidor, que contiene trabajo posterior pendiente. Se conserva
-el cambio previo de espacio en la declaración de `MainActivity` y los documentos
-sin seguimiento del usuario.
+Continuar en develop y preservar cambios previos aceptados sin commit. Sólo CSS
+Network desde 1024 px; móvil/tablet hasta 768 px verificados con PNG idénticos.
+16/16 escenarios focalizados Network/Security, build/formato/fronteras web y
+regresiones Go con race correctos. Ensayo SSH propio de loopback correcto; no se
+señalizó una sesión del usuario. API/Vite de validación y credenciales temporales
+retirados; frontend habitual sirve el CSS y el API activo no se reinició.
 
-Android usa la identidad grafito/blanca del favicon web en drawer, toolbar,
-launcher adaptativo/legacy y recursos raster; añade icono monocromo Android 13.
-Los 16 símbolos de navegación y los dos de toolbar se derivan de Lucide, con
-trazo 2, extremos/uniones redondeados y la misma semántica de la web (incluidos
-Radar para Observability y Activity para Monitoring). El icono iOS 1024 se
-regenera opaco desde la misma fuente. No se modifican API, roles ni navegación.
+Leer [revisión](network-desktop-security-review-2026-11-22.md), [Security](modules/host-security.md)
+y [registro](security.md). Hallazgos no corregidos: actor revocado durante consulta
+Security aún puede despachar (SEC-13), fallo de audit no bloquea (SEC-06), journal
+sin tailscaled/kernel y postura APT/fail2ban/UFW parcial. Reproducciones falsas por
+overlay Go están fuera del checkout; no añadirlas como tests que normalicen esos
+comportamientos inseguros. Al corregirlos escribir regresiones que exijan denegar.
 
-`frontend/scripts/sync-native-icons.mjs` regenera vectores/densidades desde
-`public/favicon.svg` y Lucide instalado; requiere Chromium de Playwright.
-Licencias ISC/MIT conservadas y empaquetadas con Android. Ver [Móvil](modules/mobile.md).
+API actual sigue compilada con Go 1.26.8; govulncheck v1.10.0 source/symbol reportó
+16 IDs, 13 con traza, con HTTP/2/TLS/Windows a triar. JSON exit 0 no significa
+limpio. pnpm audit: cuatro transitivos dev, uno high/tres moderate. SEC-14 requiere
+slice propio de parches/CI/rebuild; esta tarea pidió revisión, no modificar SSH,
+firewall, APT o dependencias. No confundir los dos avisos de política global SSH
+observados con una intrusión confirmada ni emitir certificado de seguridad.
 
-Validado: build/formato/fronteras web, cap sync Android, assembleDebug y lintDebug
-(0 errores, 13 avisos: dependencias, recursos sin uso, bitmap legacy, convenciones
-Kotlin/toolbar y textos no traducidos; además flatDir/configuration-on-demand).
-APK debug instalada con `adb install -r` en Redmi Note 8 Pro Android, conservando
-los datos. Revisión visual real del drawer y toolbar; se corrigieron recorte del
-logo y separación del título. Icono iOS verificado RGB 1024 sin canal alpha,
-sin compilar iOS ni validar en dispositivo. APK previa en
-`/tmp/coreops-before-icon-update.apk` y capturas en `/tmp/coreops-icons-*.png`;
-son artefactos temporales, fuera de Git. No commit/push ni cambios en el servidor.
+## Tailscale y Settings móvil — 2026-11-22
+
+API activa en tmux `%0`: `/tmp/coreops-tailscale-runtime-_2hh1cds/coreops-api`,
+binario probado verificado por SHA-256. Entorno, usuarios/sesiones y frontend
+conservados; health proxy 200 y Tailscale sin sesión 401.
+
+Reanudar en `develop`; conservar la entrega anterior aceptada sin commit. Leer
+[estado](current-state.md), [Tailscale](modules/tailscale.md) e
+[informe](tailscale-settings-validation-2026-11-22.md). Se añaden núcleo
+`internal/tailscale`, adaptador Unix `adapters/tailscalelocal`, handlers admin,
+componente Settings, helper Python opcional e instalador con sudoers exacto.
+No tratar el helper como instalado: lectura real funciona, escritura da 403.
+Una persona con sudo local puede ejecutar
+`sudo sh deploy/install-tailscale-helper.sh pepe` y refrescar. No es una solicitud
+para alterar la VPN; nunca validar desconectando el host real, cuya SSH usa
+Tailscale. Login/preferencias/mutaciones se probaron con fakes; estado y UI con
+socket real de sólo lectura y cuenta CoreOps temporal, ya retirada.
+
+Responsive de las ocho secciones cubierto a 320–1440 px y Android simulado.
+Go race/vet/build y web formato/fronteras/build correctos; helper 5/5. UI 153/154
+iniciales + 1/1 repetido tras ERR_NETWORK_CHANGED confirmado en traza; 14/14
+nuevos correctos. Sin cambios nativos ni APK. Incidencias del servidor de tests y
+runtime final están en el informe. No usar la contraseña real suministrada anteriormente,
+no regenerar usuarios/sesiones/claves, no instalar permisos mediante Docker ni
+hacer commit/push sin nueva petición.
+
+## Mejoras de operación — 2026-11-22
+
+Reanudar en la rama real `develop` (comprobada, originalmente limpia); no cambiar
+a main por las notas antiguas. Nueva entrega pendiente de commit/push: filtros e
+iconos locales Applications, tabla Network agrupable con atribución por protocolo/
+IP, contraseña cifrada de Terminal con pegado sin Enter y A−/A+ persistente Updates.
+Leer [estado](current-state.md) y [validación](usability-validation-2026-11-22.md).
+
+API nueva activa en tmux `%0`, binario
+`/tmp/coreops-nov22-runtime-d9jkt3ft/coreops-api`. Se conservaron entorno, identidad
+y frontend `%1`; health 5173 y rutas nuevas verificadas. No se usó ni se cambió la
+contraseña real suministrada en conversaciones previas. El almacén de contraseñas
+se crea sólo al guardar, no al arrancar/consultar metadata. No borrar ni regenerar
+su clave si ya hay registros: falla cerrado y requiere recuperación deliberada.
+Ver [Terminal](modules/terminal.md), [Files](modules/files.md) y security.md.
+
+Los tests de UI nuevos son `usability.spec.ts` y `terminal-passwords.spec.ts`;
+fixtures generales sólo devuelven saved:false para el estado de contraseña. Go
+añade `network_ports_test.go` y `terminal_passwords_test.go`. Suite Go con race y
+vet/build correctos; web formato/fronteras/build; 135/139 UI iniciales más 4/4
+repeticiones por ERR_NETWORK_CHANGED de Chromium confirmado en trazas; 8/8 de
+filtros/fuente tras el último ajuste, con una regresión adicional (140 casos
+cubiertos). No ocultar
+este límite como una ejecución completa sin incidencias. Integración real de sólo
+lectura y PTY temporal correcta; recursos de validación ya cerrados/eliminados.
+
+No se recompiló/sincronizó Android ni se aplicaron paquetes, reglas de firewall,
+contenedores o permisos del host. El cifrado es del almacén del servidor, no un
+Keystore ni una bóveda de extremo a extremo. Para el móvil se requiere reconstruir
+el frontend, cap sync Android y APK en su toolchain. No introducir secretos o los
+assets generados en Git; los 40 SVG/PNG fuente y sus LICENSE/NOTICE sí son parte
+de esta entrega.
 
 ## Commits por funcionalidad — 2026-11-18
 

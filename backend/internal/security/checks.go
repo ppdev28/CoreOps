@@ -79,9 +79,17 @@ func AutoUpdates(config, timer string, configErr, timerErr error) Check {
 		c.Detail = "Unrecognized APT::Periodic::Enable value; check effective APT policy"
 		return c
 	}
+	if Value(config, "CoreOps::OS::ID") == "" || Value(config, "CoreOps::OS::Codename") == "" {
+		c.Detail = "Distribution identity is unavailable; security origins cannot be verified"
+		return c
+	}
+	if exclusions := APTList(config, "Unattended-Upgrade::Package-Blacklist"); len(exclusions) > 0 {
+		c.Detail = fmt.Sprintf("%d package exclusion patterns require review; full security update coverage is not verified", len(exclusions))
+		return c
+	}
 	enabled := props["UnitFileState"] == "enabled" // enabled-runtime does not persist across boots.
 
-	return MakeCheck(c.ID, c.Label, fmt.Sprintf("Effective APT periodic policy enabled=%t; upgrade timer active=%s, persistent=%s. A running unattended-upgrades service alone does not schedule upgrades.", apt, props["ActiveState"], props["UnitFileState"]), Bool(apt && enabled && props["ActiveState"] == "active"))
+	return MakeCheck(c.ID, c.Label, fmt.Sprintf("Effective APT periodic policy enabled=%t; upgrade timer active=%s, persistent=%s. Security origins must also be configured. A running unattended-upgrades service alone does not schedule upgrades.", apt, props["ActiveState"], props["UnitFileState"]), Bool(apt && SecurityOrigins(config) && enabled && props["ActiveState"] == "active"))
 }
 
 // APTPolicy checks effective periodic configuration; it does not infer timer state.

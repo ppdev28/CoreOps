@@ -67,7 +67,7 @@ func TestSSHPolicyAndAPTChecks(t *testing.T) {
 	if key.OK != nil {
 		t.Fatal("incomplete ssh config marked known")
 	}
-	apt := "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";"
+	apt := "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nCoreOps::OS::ID \"ubuntu\";\nCoreOps::OS::Codename \"resolute\";\nUnattended-Upgrade::Allowed-Origins:: \"Ubuntu:resolute-security\";"
 	timer := "LoadState=loaded\nActiveState=active\nUnitFileState=enabled"
 	c := AutoUpdates(apt, timer, nil, nil)
 	if c.OK == nil || !*c.OK {
@@ -95,7 +95,7 @@ func TestOnlyFreshVerifiedSessionCanBeSignalled(t *testing.T) {
 		id   string
 		want error
 	}{{1, id, ErrInvalid}, {2026, id, ErrNotFound}, {12345, strings.Repeat("b", 64), ErrConflict}, {12345, "", ErrInvalid}} {
-		if _, err := s.Terminate(context.Background(), tc.pid, tc.id); !errors.Is(err, tc.want) {
+		if _, err := s.Terminate(context.Background(), tc.pid, tc.id, func(next func() error) error { return next() }); !errors.Is(err, tc.want) {
 			t.Fatal(tc, err)
 		}
 	}
@@ -103,39 +103,39 @@ func TestOnlyFreshVerifiedSessionCanBeSignalled(t *testing.T) {
 		t.Fatal("signal on rejected request")
 	}
 	f.sessions[0].Verified = false
-	if _, e := s.Terminate(context.Background(), 12345, id); !errors.Is(e, ErrPermission) {
+	if _, e := s.Terminate(context.Background(), 12345, id, func(next func() error) error { return next() }); !errors.Is(e, ErrPermission) {
 		t.Fatal(e)
 	}
 	f.sessions[0].Verified = true
 	f.sessions[0].CanTerminate = false
-	if _, e := s.Terminate(context.Background(), 12345, id); !errors.Is(e, ErrPermission) {
+	if _, e := s.Terminate(context.Background(), 12345, id, func(next func() error) error { return next() }); !errors.Is(e, ErrPermission) {
 		t.Fatal(e)
 	}
 	f.sessions[0].CanTerminate = true
 	f.state.State = "unavailable"
-	if _, e := s.Terminate(context.Background(), 12345, id); !errors.Is(e, ErrUnavailable) {
+	if _, e := s.Terminate(context.Background(), 12345, id, func(next func() error) error { return next() }); !errors.Is(e, ErrUnavailable) {
 		t.Fatal(e)
 	}
 	f.state.State = "ok"
-	if _, e := s.Terminate(context.Background(), 12345, id); e != nil || f.signalled != 12345 {
+	if _, e := s.Terminate(context.Background(), 12345, id, func(next func() error) error { return next() }); e != nil || f.signalled != 12345 {
 		t.Fatal(e)
 	}
 }
 func TestAutoUpdatesReadbackAndLeastPrivilege(t *testing.T) {
-	f := &fixture{probes: map[string]string{"apt-policy": "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";", "upgrade-timer": "LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled"}}
+	f := &fixture{probes: map[string]string{"apt-policy": "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nCoreOps::OS::ID \"ubuntu\";\nCoreOps::OS::Codename \"resolute\";\nUnattended-Upgrade::Allowed-Origins:: \"Ubuntu:resolute-security\";", "upgrade-timer": "LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled"}}
 	s := New(f)
-	if e := s.EnableAutoUpdates(context.Background()); !errors.Is(e, ErrPermission) || f.enabled != 0 {
+	if e := s.EnableAutoUpdates(context.Background(), func(next func() error) error { return next() }); !errors.Is(e, ErrPermission) || f.enabled != 0 {
 		t.Fatal(e)
 	}
 	f.cap.Available = true
-	if e := s.EnableAutoUpdates(context.Background()); e != nil || f.enabled != 1 {
+	if e := s.EnableAutoUpdates(context.Background(), func(next func() error) error { return next() }); e != nil || f.enabled != 1 {
 		t.Fatal(e)
 	}
-	if e := s.EnableAutoUpdates(context.Background()); e != nil || f.enabled != 1 {
+	if e := s.EnableAutoUpdates(context.Background(), func(next func() error) error { return next() }); e != nil || f.enabled != 1 {
 		t.Fatal("idempotent state was mutated", e)
 	}
 	f.probes["apt-policy"] = "APT::Periodic::Enable \"0\";"
-	if e := s.EnableAutoUpdates(context.Background()); !errors.Is(e, ErrConflict) || f.enabled != 1 {
+	if e := s.EnableAutoUpdates(context.Background(), func(next func() error) error { return next() }); !errors.Is(e, ErrConflict) || f.enabled != 1 {
 		t.Fatal(e)
 	}
 }
@@ -162,7 +162,7 @@ func TestMalformedJournalRecordsAreReported(t *testing.T) {
 	}
 }
 func TestAPTFalsyGlobalPolicy(t *testing.T) {
-	apt := "APT::Periodic::Enable \"false\";\nAPT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";"
+	apt := "APT::Periodic::Enable \"false\";\nAPT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nCoreOps::OS::ID \"ubuntu\";\nCoreOps::OS::Codename \"resolute\";\nUnattended-Upgrade::Allowed-Origins:: \"Ubuntu:resolute-security\";"
 	c := AutoUpdates(apt, "LoadState=loaded\nActiveState=active\nUnitFileState=enabled", nil, nil)
 	if c.OK == nil || *c.OK {
 		t.Fatal(c)

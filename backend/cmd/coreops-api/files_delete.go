@@ -67,6 +67,10 @@ func (f *FileExplorer) remove(dataDir string) http.HandlerFunc {
 			writeError(w, 400, errors.New("only regular files can be deleted; folders, symbolic links and devices are excluded"))
 			return
 		}
+		if f.privateTerminalFile(relative, info) {
+			writeError(w, 403, errors.New("terminal password storage cannot be deleted through Files"))
+			return
+		}
 		if req.Version != fileVersion(info) {
 			writeError(w, 409, errors.New("file changed since it was listed; refresh and review it before deleting"))
 			return

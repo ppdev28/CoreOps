@@ -1,5 +1,11 @@
 # Explorador de archivos
 
+Desde 2026-11-22, Files protege además `terminal-passwords.json` y
+`.terminal-passwords.key` del directorio de datos: no permite preview,
+download-ticket o borrado por ruta directa/hard link, ni upload a esos nombres
+en el directorio privado. No cambia el acceso a archivos ordinarios del mismo
+nombre fuera de él ni la autoridad de la shell admin. Ver [Terminal](terminal.md).
+
 Admin exclusivo, configuración `COREOPS_FILES_ROOT` y permisos de la cuenta del
 servicio. Backend en `files*.go`, cliente `lib/files.ts`, vista persistente
 `FileExplorerView.tsx`; [contrato original](../../backend/README.md#file-explorer).

@@ -64,6 +64,10 @@ func (f *FileExplorer) preview(dataDir string) http.HandlerFunc {
 			writeError(w, 400, errors.New("only regular files can be previewed"))
 			return
 		}
+		if f.privateTerminalFile(relative, info) {
+			writeError(w, 403, errors.New("terminal password storage cannot be previewed"))
+			return
+		}
 		for _, name := range []string{usersFileName, sessionsFileName, ".identity.lock", auditFileName} {
 			if protected, e := os.Stat(filepath.Join(dataDir, name)); e == nil && os.SameFile(info, protected) {
 				writeError(w, 403, errors.New("CoreOps identity and audit files cannot be previewed"))

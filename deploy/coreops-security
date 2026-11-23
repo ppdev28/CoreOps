@@ -8,6 +8,8 @@ case "$1" in
   ufw) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/sbin/ufw status verbose ;;
   sshd) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/sbin/sshd -T ;;
   fail2ban) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/bin/fail2ban-client status ;;
+  fail2ban-details|sshd-context) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/local/libexec/coreops-security-evidence "$1" ;;
+  nft) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/sbin/nft --json list ruleset ;;
   enable-auto-updates) exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C /usr/bin/systemctl enable --now apt-daily-upgrade.timer ;;
   *) echo 'Unknown security helper operation' >&2; exit 64 ;;
 esac

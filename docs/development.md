@@ -172,11 +172,20 @@ Use focused commits. Do not squash/rebase/force-push existing work unless explic
 
 ## Continuous integration and deployment
 
-`.github/workflows/ci-cd.yml` validates (tests, build, frontend format check) and deploys `main`.
+`.github/workflows/ci-cd.yml` validates main/develop. The legacy SSH/reset-hard
+deployment was removed. `packages.yml` builds inspected amd64/arm64 artifacts on
+PR/manual runs; signing and publication remain separate.
 
-`deploy/coreops.service` is a systemd unit for running the API on the Ubuntu host (the API manages Docker, systemd, apt and UFW of the machine it runs on, so it is deployed as a host service rather than as a container). Create the first user with `coreops-api user add` as the service user, using the same `COREOPS_DATA_DIR` and the updated CLI/server binaries. Stop older binaries before upgrading.
+`deploy/coreops.service` uses packaged /usr/bin/coreops-api, bundled web assets,
+dedicated coreops account and persistent state. Production does not need Vite,
+Node or tmux. `python3 scripts/install-system.py --dry-run --migrate-running`
+previews migration. Installation needs interactive sudo, stops the source API and
+closes terminals/jobs. Read [installation](installation.md) before running it.
 
-The checked-in workflow and unit disagree on the installed binary path; see [operations](modules/operations.md). Do not assume the workflow deploys the new binary or web assets.
+Package checks: `python3 -B -m unittest scripts/test_packaging.py`, build-deb.py,
+verify-deb.py and test-apt-repository.py. These do not install host services or edit
+host APT config. Container root setup tests simulate systemctl and require an
+isolated PID namespace; never use host PID/root mounts. See [operations](modules/operations.md).
 
 ## Documentation-only validation
 
@@ -184,8 +193,13 @@ Check local Markdown links, referenced paths, `git diff --check` and scope. Runt
 
 ## Browser UI checks
 
-`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (64 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
-`cd frontend && pnpm test:ui` runs the application Playwright fixture suite (23 tests). It visits all navigation destinations and container inspection in eight phone/tablet/laptop/desktop formats, waits for real content after lazy loading, and checks runtime errors/overflow, theme/accent persistence, System and Dashboard states.
+`cd frontend && pnpm test:ui` runs the application Playwright fixture suite
+(163 scenarios observed on 2026-11-22; count evolves with features). It exercises
+navigation, fixtures, actions, roles, themes and responsive layouts. Use CI=true
+for a full run to give the runner its own Vite rather than reusing an orphan.
+`test:dashboard` invokes the same suite for compatibility. Capture/diagnose module
+load ERR_NETWORK_CHANGED from traces before retrying a failed case; don't hide
+product failures by raising timeouts.
 
 Install Chromium using `pnpm exec playwright install chromium`, or set `COREOPS_CHROMIUM_PATH` to an existing executable. The suite launches a loopback Vite server on port 5176 and intercepts every API request, including terminal WebSocket traffic. Screenshots/traces are ignored build artifacts. `test:dashboard` invokes the same suite for compatibility. See [UI guide](ui-style.md). Browser fixture tests do not replace live API or physical device testing.
 
@@ -230,3 +244,20 @@ its arrow can expand in that interval. CSS no longer forces the narrow width.
 Dashboard Create container reuses the admin container/Compose dialog and refreshes
 real inventory. Files deletion and Updates contracts are in
 [Files](modules/files.md) and [Updates](modules/updates.md).
+
+
+## Security validation and tools — 2026-11-22
+
+Backend go.mod requires Go >=1.26.11; setup-go uses that file. Run
+`./scripts/security-check.sh` to check reachable Go advisories and all npm/dev
+advisories (moderate+); `.github/workflows/security.yml` runs on PR, main/develop,
+weekly and manual trigger. Normal govulncheck output/exit is intentional: JSON
+mode can return 0 while reporting findings. Pin fixes and re-run build/tests;
+never dismiss a runtime error as a scanner false positive without triage.
+
+Read [Security](modules/host-security.md) before changing its monitor, guards,
+helpers or CVE jobs. `deploy/install-security-scanner.py` installs pinned Trivy as
+the API user outside Git; configure its two env vars. Root helper/sensor/SSH
+profiles are separate manual workflows; don't use Docker to bypass sudo or test
+by changing an existing SSH session, firewall, image or package. Keep generated
+binaries, caches, reports/screenshots and any credentials outside Git.

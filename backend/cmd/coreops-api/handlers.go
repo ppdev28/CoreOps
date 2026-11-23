@@ -86,29 +86,20 @@ func (a *API) virtualMachineAction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, VirtualMachineActionResponse{OK: true, Name: name, Action: action})
 }
 func (a *API) listServices(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	services, err := collectServices(r.Context())
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)
 		return
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := a.serviceControl.Check(ctx); err != nil {
+		for i := range services {
+			services[i].Management = &ServiceManagement{Reason: err.Error()}
+		}
+	}
 	writeJSON(w, http.StatusOK, services)
-}
-func (a *API) startService(w http.ResponseWriter, r *http.Request) { a.serviceAction(w, r, "start") }
-func (a *API) stopService(w http.ResponseWriter, r *http.Request)  { a.serviceAction(w, r, "stop") }
-func (a *API) restartService(w http.ResponseWriter, r *http.Request) {
-	a.serviceAction(w, r, "restart")
-}
-func (a *API) serviceAction(w http.ResponseWriter, r *http.Request, action string) {
-	name := r.PathValue("name")
-	if !systemdUnitPattern.MatchString(name) {
-		writeJSON(w, http.StatusBadRequest, ErrorResponse{Error: "invalid systemd service name"})
-		return
-	}
-	if err := serviceAction(r.Context(), name, action); err != nil {
-		writeError(w, http.StatusBadGateway, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "name": name, "action": action})
 }
 func (a *API) storage(w http.ResponseWriter, r *http.Request) {
 	overview, err := collectStorage(r.Context(), a.docker)

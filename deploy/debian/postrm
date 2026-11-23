@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ]; then
+    deb-systemd-helper mask coreops.service >/dev/null
+fi
+if [ "$1" = purge ]; then
+    deb-systemd-helper purge coreops.service >/dev/null
+    deb-systemd-helper unmask coreops.service >/dev/null
+    # Secrets need deliberate backup/removal; never erase them automatically.
+    rm -f /etc/sudoers.d/coreops-service /etc/coreops/configured
+    echo 'CoreOps state/backups/credentials retained; dpkg removes packaged conffiles on purge.'
+fi
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+fi

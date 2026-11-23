@@ -13,6 +13,8 @@ This keeps local calls, straightforward deployments and reviewable changes while
 Primera extracción implementada en `refactor/modular-foundation`, desde `develop` limpio, base `b4d64db`:
 
 - `api/`: OpenAPI inicial health/auth/contenedores y DTOs TypeScript de contenedores. Sin proceso, framework o generador propio.
+- Security ampliado (2026-11-22): `internal/security` posee puertos de postura/journal/scanner/checkpoint y MutationGuard; `linuxsecurity` recoge y persiste evidencia/cursor, `securityscan` ejecuta Trivy de forma acotada. El cmd mantiene HTTP, identidad/audit y composición del monitor/jobs. No hay infraestructura en React ni un servicio CVE público nuevo. [Guía](modules/host-security.md).
+- Tailscale (2026-11-22): `internal/tailscale` define DTOs, precondiciones y flujo; `adapters/tailscalelocal` implementa el puerto con HTTP Unix fijo y helper opcional restringido. `cmd/coreops-api/tailscale.go` conserva HTTP, sesión admin y audit durable previo al despacho. Sin SDK, API cloud, proxy arbitrario ni infraestructura en el navegador. Ver [guía](modules/tailscale.md).
 - `backend/internal/containers`: casos de uso, modelos propios y puerto `Runtime`; sin HTTP/Moby. `internal/adapters/docker` implementa ese puerto y captura metadata inspect en valores JSON propios. `internal/transport/httpapi` posee handlers/DTOs de contenedores y helpers JSON.
 - `cmd/coreops-api/main.go` compone esos módulos. `routes.go` sigue aplicando mínimos roles antes de sus handlers; identidad, audit, terminal y demás capacidades permanecen en `package main`. Otras capacidades aún usan Moby directamente. No se declara una extracción global completada.
 - `frontend/src/features/containers`: cliente, mapeo, modelos y pantallas lazy. `shared/api` posee transporte HTTP, `shared/platform` la única sesión existente, `shared/ui` estados comunes. `lib/api.ts`, `lib/auth.ts` y `lib/types.ts` quedan como fachadas de compatibilidad y para capacidades no migradas. `App.tsx` mantiene navegación/composición.
@@ -72,6 +74,21 @@ Create a directory only when moving real code into it. Avoid layers per trivial 
 Go `internal` restricts consumers outside the backend tree, not sibling imports. The first slice now includes AST import checks for the extracted capability/transport and frontend shared/features. Expand these checks as new modules become real; they are not proof that legacy code is decoupled.
 
 ## Contract and operations
+
+System packaging (2026-11-22) keeps one Go process: optional COREOPS_WEB_DIR serves
+the built client through os.Root alongside the existing API. API/metrics never fall
+back to HTML. Vite/Node are unnecessary at runtime; TLS is a deployment concern.
+Build-time helperpath selects packaged /usr/libexec/coreops versus existing
+/usr/local/libexec, without environment/request-selected executables. Setup and
+APT signing are deployment tools, not privileged browser endpoints.
+[Installation](installation.md), [operations](modules/operations.md).
+
+Terminal passwords (2026-11-22) deliberately reuse the legacy identity store and
+its cross-process lock for ownership/revocation and bounded encrypted persistence.
+The browser keeps only saved-state metadata; retrieval is an explicit admin POST
+before xterm paste. This is not a new generic secrets service or an extracted
+identity module. Network filtering stays client-side over the existing socket
+DTO; Linux/Docker attribution remains in Go. See the module guides for limits.
 
 Container Terminal (2026-11-17) adds the separate `containers.TerminalRuntime`
 port and SDK-free TTY session interface, implemented in `adapters/docker`.

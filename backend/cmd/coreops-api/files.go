@@ -29,14 +29,15 @@ const maxDirectoryEntries = 50000
 // FileExplorer owns a descriptor-based root. os.Root keeps path resolution inside
 // this directory even when another process changes directories or symlinks.
 type FileExplorer struct {
-	root      *os.Root
-	rootPath  string
-	maxUpload int64
-	timeout   time.Duration
-	mu        sync.Mutex
-	tickets   map[string]fileTicket
-	stop      chan struct{}
-	previews  chan struct{}
+	root       *os.Root
+	rootPath   string
+	maxUpload  int64
+	timeout    time.Duration
+	mu         sync.Mutex
+	tickets    map[string]fileTicket
+	stop       chan struct{}
+	previews   chan struct{}
+	privateDir string
 }
 type fileTicket struct {
 	file    *os.File
@@ -261,6 +262,10 @@ func (f *FileExplorer) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAuditDetail(r, "upload "+logicalPath(path.Join(relative, name)))
+	if f.privateTerminalFile(path.Join(relative, name), nil) {
+		writeError(w, 403, errors.New("terminal password storage cannot be changed through Files"))
+		return
+	}
 	if r.ContentLength > f.maxUpload {
 		writeError(w, 413, errors.New("file exceeds the upload size limit"))
 		return
@@ -361,6 +366,11 @@ func (f *FileExplorer) downloadTicket(w http.ResponseWriter, r *http.Request) {
 	if !info.Mode().IsRegular() {
 		file.Close()
 		writeError(w, 400, errors.New("only regular files can be downloaded"))
+		return
+	}
+	if f.privateTerminalFile(relative, info) {
+		file.Close()
+		writeError(w, 403, errors.New("terminal password storage cannot be downloaded"))
 		return
 	}
 	token := randomFileToken()

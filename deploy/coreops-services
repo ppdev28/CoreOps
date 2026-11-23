@@ -1,0 +1,145 @@
+#!/usr/bin/python3 -I
+"""Restricted system service broker: fixed check/apply argv, bounded JSON stdin."""
+import json
+import os
+from pathlib import Path
+import re
+import select
+import selectors
+import shlex
+import stat
+import subprocess
+import sys
+import time
+
+ENV = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LANG': 'C', 'LC_ALL': 'C'}
+UNIT = re.compile(r'[A-Za-z0-9_][A-Za-z0-9@_.:-]*\.service\Z')
+PROTECTED = {'coreops.service', *('systemd-' + operation + '.service' for operation in (
+    'reboot', 'poweroff', 'halt', 'kexec', 'soft-reboot', 'exit', 'suspend',
+    'hibernate', 'hybrid-sleep', 'suspend-then-hibernate', 'sleep'))}
+DEADLINE = time.monotonic() + 8
+
+
+class Rejected(Exception):
+    def __init__(self, code, message):
+        self.code, self.message = code, message
+
+
+def valid_unit(unit):
+    return isinstance(unit, str) and len(unit) <= 255 and bool(UNIT.fullmatch(unit))
+
+
+def call(args, seconds):
+    if time.monotonic() >= DEADLINE: raise TimeoutError('service helper deadline')
+    process = subprocess.Popen(['/usr/bin/systemctl', '--no-ask-password', '--no-pager', *args],
+        env=ENV, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = bytearray()
+    selector = selectors.DefaultSelector(); selector.register(process.stdout, selectors.EVENT_READ)
+    until = min(DEADLINE, time.monotonic() + seconds)
+    try:
+        while selector.get_map():
+            remaining = until - time.monotonic()
+            if remaining <= 0: raise TimeoutError('systemctl deadline')
+            for key, _ in selector.select(remaining):
+                chunk = os.read(key.fd, 4096)
+                if not chunk: selector.unregister(key.fileobj)
+                else:
+                    output.extend(chunk)
+                    if len(output) > 8192: raise ValueError('systemctl output limit')
+        return process.wait(timeout=max(.01, until - time.monotonic())), output.decode(errors='replace').strip()
+    finally:
+        selector.close(); process.stdout.close()
+        if process.poll() is None: process.kill(); process.wait()
+
+
+def trusted_file(path):
+    path = Path(path)
+    if not path.is_absolute(): return False
+    try:
+        # Check the spelling supplied by the manager as well as its resolved
+        # target: an untrusted symlink/parent must not borrow a trusted target.
+        for entry in [path, *path.parents]:
+            info = entry.lstat()
+            if info.st_uid != 0: return False
+            if not stat.S_ISLNK(info.st_mode) and info.st_mode & 0o022: return False
+        path = path.resolve(strict=True)
+        for entry in [path, *path.parents]:
+            info = entry.stat()
+            if info.st_uid != 0 or info.st_mode & 0o022: return False
+            if entry == path and not stat.S_ISREG(info.st_mode): return False
+            if entry != path and not stat.S_ISDIR(info.st_mode): return False
+        return True
+    except (OSError, ValueError): return False
+
+
+def checked_unit(unit):
+    properties = 'Id,LoadState,FragmentPath,SourcePath,DropInPaths,Transient'
+    code, text = call(['show', '--property=' + properties, '--', unit], 2)
+    if code: raise Rejected('unavailable', 'Systemd could not verify the requested service')
+    values = dict(line.split('=', 1) for line in text.splitlines() if '=' in line)
+    canonical = values.get('Id', '')
+    if values.get('LoadState') == 'not-found': raise Rejected('not_found', 'Service not found')
+    if not valid_unit(canonical) or values.get('LoadState') != 'loaded':
+        raise Rejected('protected', 'Only loaded, persistent system services can be managed')
+    if canonical in PROTECTED or unit in PROTECTED:
+        raise Rejected('protected', 'Manage CoreOps from independent SSH and host power from the control center')
+    if values.get('Transient') != 'no': raise Rejected('protected', 'Transient services are not managed by this helper')
+    paths = [values.get('FragmentPath', '')]
+    if values.get('SourcePath'): paths.append(values['SourcePath'])
+    paths.extend(shlex.split(values.get('DropInPaths', '')))
+    if not all(trusted_file(path) for path in paths):
+        raise Rejected('protected', 'Service files and drop-ins must be root-owned and not writable by other users')
+    return canonical
+
+
+def read_request():
+    data = bytearray(); until = min(DEADLINE, time.monotonic() + 1)
+    while True:
+        remaining = until - time.monotonic()
+        if remaining <= 0 or not select.select([sys.stdin.buffer], [], [], remaining)[0]:
+            raise Rejected('invalid', 'Service request input deadline exceeded')
+        chunk = os.read(sys.stdin.fileno(), 2049 - len(data))
+        if not chunk: break
+        data.extend(chunk)
+        if len(data) > 2048: raise Rejected('invalid', 'Service request too large')
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result: raise ValueError('duplicate key')
+            result[key] = value
+        return result
+    try: value = json.loads(data, object_pairs_hook=unique)
+    except (ValueError, UnicodeError): raise Rejected('invalid', 'Invalid service request')
+    if type(value) is not dict or set(value) != {'unit', 'action'}:
+        raise Rejected('invalid', 'Service request must contain unit and action only')
+    if not valid_unit(value['unit']) or value['action'] not in ('start', 'stop', 'restart'):
+        raise Rejected('invalid', 'Invalid service or operation')
+    return value
+
+
+def main():
+    if os.geteuid() != 0: raise Rejected('permission', 'Restricted Services helper requires root')
+    if len(sys.argv) != 2 or sys.argv[1] not in ('check', 'apply'):
+        raise Rejected('invalid', 'Only fixed check/apply helper operations are accepted')
+    if sys.argv[1] == 'check': return {'ready': True}
+    request = read_request()
+    if request['unit'] in PROTECTED: raise Rejected('protected', 'This service is managed through its dedicated control path')
+    canonical = checked_unit(request['unit'])
+    try: code, output = call([request['action'], '--', canonical], 5)
+    except (OSError, TimeoutError, ValueError, subprocess.TimeoutExpired):
+        raise Rejected('uncertain', 'Service outcome is unconfirmed; refresh and inspect the unit before another request')
+    if code:
+        raise Rejected('failed', (output or 'Systemd rejected the operation')[:1200])
+    return {'unit': request['unit'], 'action': request['action'], 'canonicalUnit': canonical}
+
+
+if __name__ == '__main__':
+    try:
+        result = main()
+        print(json.dumps({'protocol': 1, 'ok': True, **result}))
+    except Rejected as error:
+        print(json.dumps({'protocol': 1, 'ok': False, 'code': error.code, 'error': error.message}))
+        sys.exit(1)
+    except Exception:
+        print(json.dumps({'protocol': 1, 'ok': False, 'code': 'unavailable', 'error': 'Restricted service evidence unavailable; no retry was made'}))
+        sys.exit(1)

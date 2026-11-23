@@ -11,9 +11,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/helperpath"
 )
 
-const updateHelper = "/usr/local/libexec/coreops-packages"
+var updateHelper = helperpath.Path("coreops-packages")
 
 type aptRunner struct{}
 

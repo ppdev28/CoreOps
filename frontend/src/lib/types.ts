@@ -63,6 +63,7 @@ export interface SystemService {
   cpu: string;
   memory: string;
   uptime: string;
+  management?: { available: boolean; reason?: string };
 }
 export interface StorageDisk {
   device: string;

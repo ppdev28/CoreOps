@@ -1,6 +1,6 @@
 module github.com/ppdev28/CoreOps/backend
 
-go 1.24.0
+go 1.26.11
 
 require (
 	github.com/containerd/errdefs v1.0.0
@@ -11,7 +11,7 @@ require (
 	github.com/moby/moby/api v1.52.0
 	github.com/moby/moby/client v0.1.0
 	github.com/prometheus/client_golang v1.23.2
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.44.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

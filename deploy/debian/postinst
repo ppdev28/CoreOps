@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    if ! getent passwd coreops >/dev/null; then
+        adduser --system --group --home /var/lib/coreops --no-create-home --shell /usr/sbin/nologin coreops
+    fi
+    # Never repurpose an existing human or privileged account with this name.
+    [ "$(id -u coreops)" -ne 0 ]
+    [ "$(id -u coreops)" -lt 1000 ]
+    [ "$(getent passwd coreops | cut -d: -f6)" = /var/lib/coreops ]
+    [ "$(getent passwd coreops | cut -d: -f7)" = /usr/sbin/nologin ]
+    [ "$(id -gn coreops)" = coreops ]
+    [ ! -L /var/lib/coreops ] && [ ! -L /var/cache/coreops ]
+    install -d -o coreops -g coreops -m 0700 /var/lib/coreops /var/cache/coreops
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload
+        if [ -z "${2:-}" ]; then
+            deb-systemd-helper enable coreops.service >/dev/null
+        else
+            deb-systemd-helper update-state coreops.service >/dev/null
+        fi
+        if [ -f /etc/coreops/configured ] && [ ! -f /etc/systemd/system/coreops.service ]; then
+            deb-systemd-invoke start coreops.service
+        fi
+    fi
+    echo 'CoreOps installed. Run sudo coreops-setup to configure/import identity and enable capabilities.'
+fi

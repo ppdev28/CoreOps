@@ -1,64 +1,182 @@
 # Security del host
 
-## Implementación y límites
+## Capacidad actual — 2026-11-22
 
-`backend/internal/security` posee comprobaciones basadas en evidencia y acciones verificadas; depende de un puerto `Source`, sin HTTP, comandos ni SDK. `internal/adapters/linuxsecurity` recoge Linux/procfs/systemd/UFW/OpenSSH/fail2ban/journal. `cmd/coreops-api/security.go` adapta HTTP y conserva roles: operator/admin para consultar; sólo admin para modificaciones. La UI sigue en `views/SecurityView.tsx`; no se presenta como un feature frontend ya extraído.
+`internal/security` contiene checks, mutaciones protegidas, postura detallada,
+paginación de journal, monitor/correlación y trabajos CVE. Los adaptadores
+`linuxsecurity` y `securityscan` poseen la infraestructura; HTTP/roles/audit siguen
+en `cmd/coreops-api/security*.go`. El navegador usa DTOs propios y nunca accede
+al socket Docker, journal, comandos o archivos del host.
 
-No es un escáner de vulnerabilidades ni una certificación. Sólo revisa la configuración global de OpenSSH (`sshd -T`); reglas Match, otro archivo de configuración o un daemon distinto pueden diferir. `PermitRootLogin prohibit-password` permite claves de root y no equivale a `no`. Autenticación interactiva puede ser MFA legítimo. Un socket escuchando no demuestra exposición externa. UFW activo no garantiza que todas sus reglas sean adecuadas. fail2ban debe responder y tener alguna jail; esto tampoco demuestra cobertura completa.
+La pantalla conserva su diseño e incorpora cobertura, política SSH contextual,
+journal/señales, informes CVE y verificación de auditoría. Operator/admin consultan;
+sólo admin inicia acciones/escaneos o restablece el cursor. Audit integrity es admin.
+Los endpoints Security emiten Cache-Control no-store/private, incluso en rechazos.
+[Entrega y validación](../security-hardening-validation-2026-11-22.md).
 
-Actualizaciones automáticas requieren política efectiva APT periódica para listas/unattended-upgrade y `apt-daily-upgrade.timer` activo y habilitado persistentemente. El servicio unattended-upgrades por sí solo no programa actualizaciones. La acción sólo habilita/inicia ese temporizador y verifica el resultado; no modifica política ni ejecuta un upgrade manual. El siguiente disparo del temporizador sí puede instalar paquetes según la política existente.
+## Acciones, identidad y auditoría
 
-## Sesiones SSH
+Cierre OpenSSH y activación del timer requieren MutationGuard. Tras obtener la
+evidencia se adquiere el flock persistente de identidad, se releen sesión/rol,
+se guarda intención audit con fsync y se ejecuta la operación acotada bajo ese
+bloqueo. Logout/cambio de rol gana antes y deniega, o completa después de una
+operación ya autorizada. Error de identidad/audit o expiración impide despachar.
+Hay una sola mutación de este servicio a la vez; sin reintentos automáticos.
 
-Se enumeran procesos OpenSSH autenticados, con usuario, UID, terminal(es) real(es), PID/padre, ID estable derivado de boot ID/PID/start ticks y logind ID cuando existe. `notty` identifica conexión sin PTY. Origen y hora proceden de utmp/logind; el peer TCP puede aportar el origen. Un dato no accesible se representa como no disponible. `who -u` sólo enriquece un candidato SSH coincidente: su año no es un PID. Un registro local o logind en closing no crea una sesión SSH. También se muestran terminales de **Tailscale SSH** cuando coinciden el registro utmp, un logind remoto en estado active/online, usuario/UID/TTY/scope y la ascendencia real shell → login → `tailscaled be-child ssh-monitor` → daemon root de `tailscaled.service`. No basta una shell local, un nombre de proceso ni una IP Tailscale. Los registros closing y procesos zombis no crean sesiones. Tailscale sin PTY o conexiones sólo de forwarding quedan fuera de este inventario; no se afirma cobertura de otros servidores SSH.
+El proceso OpenSSH se revalida por boot/PID/start ticks y ejecutables confiables,
+permiso de señal y pidfd + SIGTERM. Protege CoreOps/ancestros/PID 1; sin kill
+numérico, SIGKILL o sudo. HTTP 202 reconoce la solicitud, no prueba cierre: la UI
+espera ausencia en un inventario completo posterior. Tailscale SSH sigue de
+consulta, sin señales a daemon/monitor/shell. Conexiones Tailscale sin PTY o sólo
+forwarding no se inventan a partir de una IP; no se garantiza todo servidor SSH.
 
-Terminar una sesión **OpenSSH** requiere rol admin, revisión explícita, PID e ID coincidentes con inventario fresco, ejecutables OpenSSH confiables del proceso y padre y permiso real de señalización. Se bloquean PID 1, CoreOps y sus ancestros. `pidfd_open` y `pidfd_send_signal(SIGTERM)` evitan señalar un PID reutilizado; se vuelve a verificar la identidad después de abrir el descriptor. Sin pidfd/permisos no hay fallback a kill numérico ni sudo. HTTP 202 sólo significa señal solicitada: la UI confirma cierre cuando un inventario completo posterior ya no contiene esa identidad. Los canales del mismo proceso pueden cerrarse juntos. Las sesiones Tailscale detectadas son de consulta: no se envían señales al daemon/monitor ni a la shell del usuario y no se concede sudo adicional. La auditoría conserva recurso/identidad/resultado HTTP sin claves ni comandos del usuario.
+Audit usa append privado con flock propio, secuencia/hash SHA-256 de los DTOs,
+rotación actual + tres archivos de hasta 8 MiB y verificación antes de intenciones
+durables. Los registros legacy conservan estado legacy_partial. No arrancar
+escritores antiguos contra el mismo audit después de migrar. La cadena detecta
+alteraciones locales de los campos serializados; root/cuenta API pueden rehacerla:
+no sustituye un receptor externo append-only. Archivos/lock/alias de backups
+mantienen el límite admin de logs y quedan protegidos en Files.
 
-## Permisos y operación
+## Evidencia de postura
 
-Fuentes independientes informan `ok`, `partial`, `permission_denied`, `unavailable` o `error`. Fallar la lectura no se convierte en inactive, cero sesiones ni ausencia confirmada de eventos. Los comandos usan argv fijo, entorno mínimo, deadline de 4 s y límite de salida; un overview tiene deadline de 12 s y máximo dos recogidas simultáneas. Se mantienen datos anteriores ante errores de refresco y se bloquean acciones con esos datos antiguos.
+- UFW: estado/reglas reales, no un certificado de exposición o reglas correctas.
+  Se añade inventario nftables con cadenas/hook/policy/número de reglas, incluido
+  Docker cuando está presente. Permisos/otros backends pueden impedir verlo.
+- SSH: checks globales y GET de evaluación sshd -T -C para usuario Linux, IP y host
+  suministrados. Se muestran métodos/AllowUsers/DenyUsers, sin configuración raw.
+  No verifica DNS inverso ni la política upstream Tailscale/ACL.
+- APT: política periódica + timer persistente, origen security reconocido para la
+  distribución/codename observados y revisión de exclusiones. Política incompleta
+  queda desconocida; un origen Example:custom no pasa. Panel con motor instalado,
+  orígenes/exclusiones, última ejecución/resultado y reboot-required. Programación
+  no demuestra que todos los parches estén aplicados; analizar con CVE/Updates.
+- fail2ban: jail, fuentes/logpath/journalmatch, regexes, acciones, umbral/tiempos y
+  contadores de ban. Consultas incompletas quedan partial; no prueba bloqueo real
+  desde otro equipo ni pertinencia de cada regla.
+- Sensores: instalación/estado de auditd, ClamAV, Falco, Suricata, Wazuh, osquery y
+  checks programados AIDE/malware; timer/último resultado y fecha del archivo de
+  firmas cuando son accesibles. Servicio activo no equivale a cobertura probada.
 
-La cuenta del API debe poder ejecutar herramientas estándar y leer procfs. Restricciones hidepid, contenedores sin namespace del host, journal y archivos de configuración pueden limitar evidencia. No ejecutar CoreOps entero como root para corregir una tarjeta.
+Los comandos tienen argv/entorno fijos, límite de salida y 4 s; nuevas lecturas
+HTTP tienen semáforo y deadlines. Fallos no se convierten en inactive/0/healthy.
 
-Helper **opcional**, no instalado automáticamente:
+## Journal y señales
+
+GET `/security/events` admite category all/ssh/tailscale/kernel/audit/auth/sensors,
+direction older/newer, cursor opaco validado y limit 1–200. Lee fuentes fijas de
+journal, incluidas Tailscale, sudo/auth, kernel/firewall, auditd y sensores.
+Forward usa after-cursor y lines=+N: una ráfaga no salta al final perdiendo filas.
+History permite recorrer lo retenido sin el antiguo límite de 120 registros.
+Fechas/IDs/cursor/fuente son reales; mensajes largos/decodificaciones parciales se
+indican. La UI pausa el avance live al navegar historia y conserva páginas ante
+un fallo de lectura.
+
+El monitor del proceso principal consulta cada 10 s aunque la vista esté cerrada,
+hasta 20 páginas/ciclo y deadline 8 s. Guarda `security-monitor.json` 0600 con
+rename/fsync antes de avanzar el cursor; reanuda tras reinicio mientras el journal
+retenga ese cursor. Checkpoint corrupto, permisos, registro inválido o fallo de
+almacenamiento detiene el avance. Una caducidad de retención exige revisión y
+reset admin explícito con reconocimiento de hueco; no se oculta como continuidad.
+No borrar el checkpoint para ocultar una incidencia.
+
+Correlación: hasta 2.000 eventos en memoria del proceso; se reconstruye tras un
+reinicio, no es un SIEM durable. Detecta grupos de cinco fallos auth/IP en cinco
+minutos, denegaciones MAC y avisos de sensores/firmas/integridad. Las señales
+conservan IDs de evidencia y fecha. Ausencia de coincidencias no prueba ausencia
+de amenazas. Depende de permisos, integridad/retención del journal y sensores
+realmente configurados; no implementa captura exhaustiva de tráfico o memoria.
+
+## Escaneos CVE
+
+GET `/security/scans/capabilities` enumera herramienta, identidad host/boot y hasta
+100 IDs locales. GET `/security/scans` devuelve hasta ocho trabajos por proceso.
+POST admin recibe JSON estricto target/hostname/bootId/requestId; requiere objetivo
+actual y guard de sesión/audit. UI pide escribir hostname y revisar. Un trabajo a
+la vez, timeout 6 min, cancelación al parar API, sin retry ni persistencia de
+trabajos tras reinicio; repetir un requestId retenido con el mismo actor/objetivo
+no inicia otro. Un 202 sólo acepta el trabajo.
+
+Trivy se ejecuta con binario/directorios confiables, entorno mínimo y config fija;
+sin auth keys, shell, plugins, flags o rutas elegidos desde navegador. Host: copia
+privada de metadata distro/dpkg, sin recorrer secretos/home. Image: SHA local
+inmutable, sin pull ni acciones de contenedor. Sólo se exportan campos permitidos;
+no env/labels/config raw. Inventario no soportado/fallo/timeout no devuelven limpio.
+
+Informe: fecha de escaneo/DB, OS/EOL, paquetes compatibles, pares paquete/advisory,
+CVE distintas y pares con fix publicado. Prioriza 1.000 hallazgos por gravedad/fix,
+contando todos los recibidos hasta el límite de salida; marca truncamiento.
+Incluye versiones de kernel instaladas que pueden no estar cargadas. CVE/fix del
+feed necesita triaje con proveedor y disponibilidad APT; no aplicar el campo fixed
+como una orden arbitraria. No instala parches ni actualiza imágenes automáticamente.
+
+Instalar **como la cuenta API, sin sudo**:
 
 ```sh
-sudo ./deploy/install-security-helper.sh pepe
+python3 -I deploy/install-security-scanner.py
+# Configurar en el entorno del API y reiniciar conservando su identidad:
+COREOPS_TRIVY_PATH=/home/pepe/.coreops-tools/trivy
+COREOPS_TRIVY_CACHE=/home/pepe/.cache/coreops-trivy
 ```
 
-Sustituir pepe por la cuenta real del API. Instala root-owned `/usr/local/libexec/coreops-security` y sudoers con tres argumentos exactos: `ufw`, `sshd`, `fail2ban`; son consultas. Sólo se usa si la consulta directa devuelve permiso denegado. No permite editar firewall/SSH, ejecutar comandos libres ni terminar procesos.
+El instalador usa Trivy v0.76.2 y Go 1.27.4 para construir el módulo autenticado por
+Go/SumDB; no añade Trivy al go.mod del proyecto. DB OCI oficial descargada por TLS.
+No mezclar permisos root con el cache/binario de la cuenta API.
 
-Si el administrador decide permitir la acción de temporizador, reinstalar explícitamente:
+## Activación privilegiada del host
+
+Helper actualizado de consultas, instalado por un administrador local:
 
 ```sh
-sudo ./deploy/install-security-helper.sh pepe --allow-auto-updates
+sudo sh deploy/install-security-helper.sh pepe --allow-auto-updates
 ```
 
-Este permiso adicional sólo autoriza `enable-auto-updates`. Instalar no cambia servicios. Ejecutar después requiere CoreOps admin y confirmación. Se conserva la política de sudo del host. Para journal, revisar por separado acceso de la cuenta al journal del sistema; pertenecer a systemd-journal concede lectura amplia, no sólo esta pantalla. No se concede aquí.
+Sustituir pepe por la cuenta API. Sudoers sólo admite argv exactos de consultas
+ufw/sshd/fail2ban/fail2ban-details/sshd-context/nft; `enable-auto-updates` mantiene
+su opt-in independiente. Python aislado valida JSON/usuario/IP/host y jails;
+salida/deadline acotados, sin comandos libres, edición de reglas o señales sudo.
+Instalar no cambia ningún servicio. El API actual no puede eludir sudo interactivo.
 
-## Validación
+Perfil adicional **manual y root** para sensores:
 
 ```sh
-cd backend
-go test -race ./...
-go vet ./...
-go build ./...
-# Opcional: servidor SSH propio, loopback, claves temporales; nunca sesiones existentes.
-COREOPS_TEST_OWNED_SSH=1 go test -race ./internal/adapters/linuxsecurity -run TestOwnedSSH -v
-cd ../frontend
-pnpm build
-pnpm check:boundaries
-pnpm format:check
-pnpm test:ui
+sudo python3 -I deploy/install-security-protection.py
+# Con varias rutas por defecto, especificar la interfaz que se quiere analizar:
+# sudo python3 -I deploy/install-security-protection.py --interface INTERFAZ
 ```
 
-Tests cubren permisos HTTP, auditoría, identidad caducada, PID arbitrario, parsers de configuración/proc/utmp, errores de fuentes y adaptación móvil. El ensayo SSH opt-in requiere Linux/OpenSSH y una cuenta no root; usa una conexión sin PTY para funcionar sin escritura privilegiada de utmp; las terminales pts se prueban también en parser y UI. No altera el daemon instalado ni su configuración. Un fallo de preparación debe investigarse, no convertirse en éxito simulado.
+Requiere 3 GiB de RAM/disco disponibles; instala paquetes distro, configura EVE
+alert/anomaly/stats en journal, firmas ClamAV y checks diarios de malware/AIDE con
+límites de recursos. Crea baseline AIDE sólo si no existe; no aceptar cambios de
+integridad sobrescribiendo una base existente. Conserva backups en
+`/var/lib/coreops/security-protection/backups`; no es una transacción APT/config.
+Un fallo exige revisar servicios/backup y continuar deliberadamente. No cambia
+SSH, UFW, Docker o Tailscale. Validar interfaz/rules, firmas, drop counters, timers
+y baseline; tráfico cifrado/carga/rutas fuera de esa interfaz limitan la cobertura.
+Wazuh/Falco/osquery existentes se integran por evidencia; no se instalan en paralelo
+como si varios agentes garantizasen mayor cobertura.
 
-Limitaciones: no inventar historial de sesiones/incidentes ni certificar configuración por usuario; no es auditoría completa del journal. Las identidades siguen el proceso OpenSSH, no cada canal multiplexado. Las acciones conservan la auditoría existente, con sus límites de persistencia/retención. Ver [registro de seguridad](../security.md).
+Perfil OpenSSH para `pepe`, **después de comprobar una clave desde el cliente**:
 
+```sh
+sudo python3 -I deploy/harden-openssh.py apply pepe
+```
 
-## Corrección de detección Tailscale / locales — 2026-11-16
+Comprueba clave autorizada/directorios, rechaza Match sin revisar, guarda backup,
+valida sshd -t/-T y programa rollback de cinco minutos antes de reload. Deshabilita
+password/keyboard-interactive/root y exige publickey para OpenSSH. Mantener la
+sesión anterior; comprobar un login nuevo y ejecutar el comando keep con token
+que imprime el script. Sin keep restaura automáticamente, mientras el host siga
+encendido. No hay sudoers/API para aplicar este perfil. Tailscale SSH es separado.
 
-La sesión real del Mac entraba por Tailscale SSH y no generaba procesos sshd. Se añadió su detección de terminales mediante evidencia cruzada, sin cambiar permisos ni cerrar esa conexión. `loginctl show-session` usa un argumento `--property` por campo: la lista separada por comas devolvía una respuesta vacía en el Ubuntu real. Sólo se consultan IDs derivados de los scopes de candidatos vivos, en una llamada acotada, evitando enumerar sesiones closing antiguas.
+## Validación y límites de despliegue
 
-`who -u` en el entorno mínimo LC_ALL=C devuelve `Nov 16 HH:MM`, con PID en una columna distinta al formato ISO. El parser reconoce ambos formatos, no trata el año como PID y no inventa el año ausente: la fecha completa procede de logind. Pruebas de regresión cubren los formatos, metadatos, proveedor, ascendencia, sesiones locales/stale y acciones deshabilitadas. El ensayo `COREOPS_EXPECT_SSH_TTY=pts/N go test -race ./internal/adapters/linuxsecurity -run TestReadOnlyLiveTailscaleTerminal -v` sólo lee una terminal existente; nunca le envía señales.
+Go full race/vet/build; tests de revoke/role, audit fallido/tamper/retención/alias,
+serialización, cursor/backlog/checkpoint y whitelist de CVE. Ensayo SSH propio
+opt-in, nunca conexiones ajenas. Scans reales de host e imagen local sin mutar
+infraestructura. Web formato/fronteras/build y suite completa, escritorio/móvil;
+no equivale a prueba APK/dispositivo físico. `scripts/security-check.sh` y workflow
+security.yml hacen fallar por avisos conocidos; no usar JSON exit 0 de govulncheck
+como prueba de ausencia. El backend requiere Go >=1.26.11 y las dependencias web
+parcheadas del lockfile. Ver [informe](../security-hardening-validation-2026-11-22.md)
+y [registro global](../security.md) para garantías y controles aún ajenos al slice.

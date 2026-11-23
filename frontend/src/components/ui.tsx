@@ -160,6 +160,8 @@ export function Btn({
   icon,
   disabled,
   style,
+  ariaLabel,
+  title,
 }: {
   children?: ReactNode;
   onClick?: () => void;
@@ -168,6 +170,8 @@ export function Btn({
   icon?: ReactNode;
   disabled?: boolean;
   style?: CSSProperties;
+  ariaLabel?: string;
+  title?: string;
 }) {
   const [hov, setHov] = useState(false);
   const vs: Record<
@@ -215,6 +219,8 @@ export function Btn({
     <button
       className="coreops-button"
       data-variant={variant}
+      aria-label={ariaLabel}
+      title={title}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setHov(true)}

@@ -8,7 +8,7 @@ Un único módulo Go (`backend/go.mod`, Go 1.24), un ejecutable en `cmd/coreops-
 | --- | --- | --- |
 | Aplicaciones | `applications.go`, `compose.go`, `compose_model.go`, `handlers.go` | Agrupaciones, [detalle de miembros](applications.md) y [creación Compose](compose.md) |
 | Contenedores (extracción parcial) | `internal/containers`, `internal/adapters/docker`, `internal/transport/httpapi`; creación/borrado aún en `cmd/coreops-api/container_{create,delete}.go` | [Casos de uso](../../backend/internal/containers/README.md), [adaptador](../../backend/internal/adapters/docker/README.md), [HTTP](../../backend/internal/transport/httpapi/README.md) |
-| Host y servicios | `host.go`, `services.go`, `handlers.go` | Lectura Linux y acciones systemd |
+| Host y servicios | `host.go`, `services.go`, `service_actions.go`, `adapters/linuxservices` | Lecturas Linux y [control systemd restringido](services.md), sin sudo genérico |
 | Almacenamiento/red | `storage.go`, `network.go` | Información host/Docker; errores parciales explícitos |
 | Monitorización/logs | `monitoring.go`, `logs*.go` | Muestreos Docker/host, journald y snapshots de logs; ver [Logs](logs.md) |
 | Máquinas virtuales | `virtual_machines.go` | libvirt mediante `virsh` |

@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxservices"
+	"testing"
+)
 
 func TestParseAptUpgradableLine(t *testing.T) {
 	update, ok := parseAptUpgradableLine("openssl/jammy-security 3.0.2-0ubuntu1.19 amd64 [upgradable from: 3.0.2-0ubuntu1.18]")
@@ -64,12 +67,12 @@ func TestInputValidators(t *testing.T) {
 		"package": {"", "-oAPT::x=1", "a b", "a;b"},
 	}
 	for _, v := range good["service"] {
-		if !systemdUnitPattern.MatchString(v) {
+		if !linuxservices.ValidUnit(v) {
 			t.Errorf("service %q rejected", v)
 		}
 	}
 	for _, v := range bad["service"] {
-		if systemdUnitPattern.MatchString(v) {
+		if linuxservices.ValidUnit(v) {
 			t.Errorf("service %q accepted", v)
 		}
 	}
