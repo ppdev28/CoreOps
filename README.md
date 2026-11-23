@@ -29,6 +29,10 @@ CoreOps is being built around real infrastructure data and real operational acti
 
 ## Current capabilities
 
+System service and private APT packaging are available: [installation and migration](docs/installation.md).
+The `.deb` bundles API/web; runtime does not need Vite, Node or tmux. Public APT
+hosting/signing and the project's distribution license are not configured yet.
+
 The repository already contains UI and backend verticals for several infrastructure areas. The most mature real integration is Docker.
 
 | Area | Current state | What CoreOps provides |

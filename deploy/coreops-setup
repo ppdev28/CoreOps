@@ -1,0 +1,369 @@
+#!/usr/bin/python3 -I
+"""Configure the packaged system service; --dry-run never changes the host."""
+import argparse
+import fcntl
+import getpass
+import grp
+import ipaddress
+import json
+import os
+from pathlib import Path
+import pwd
+import re
+import shlex
+import shutil
+import signal
+import socket
+import stat
+import subprocess
+import tempfile
+import time
+import urllib.error
+import urllib.request
+
+CONFIG = Path('/etc/coreops')
+DATA = Path('/var/lib/coreops')
+CACHE = Path('/var/cache/coreops')
+HELPERS = Path('/usr/libexec/coreops')
+FEATURES = {'docker', 'journal', 'power', 'security', 'security-timer', 'updates', 'tailscale', 'services'}
+SAFE_ENV = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LANG': 'C', 'LC_ALL': 'C'}
+ROLLBACK = None
+
+
+def run(args, **kwargs):
+    return subprocess.run(args, check=True, env=SAFE_ENV, **kwargs)
+
+
+def atomic(path, content, mode=0o600):
+    if path.is_symlink(): raise ValueError(f'Refusing symlink: {path}')
+    fd, name = tempfile.mkstemp(prefix='.' + path.name, dir=path.parent)
+    try:
+        with os.fdopen(fd, 'wb') as file:
+            os.fchmod(file.fileno(), mode)
+            file.write(content.encode() if isinstance(content, str) else content)
+            file.flush(); os.fsync(file.fileno())
+        os.replace(name, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try: os.fsync(directory)
+        finally: os.close(directory)
+    finally:
+        if os.path.exists(name): os.unlink(name)
+
+
+def regular(path, uid=None, limit=65536):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as file:
+        info = os.fstat(file.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > limit:
+            raise ValueError('Not a bounded private regular file: ' + str(path))
+        if uid is not None and not ((info.st_uid == uid and info.st_mode & 0o400) or info.st_mode & 0o004):
+            raise ValueError('Migration process cannot read referenced file: ' + str(path))
+        return file.read(limit + 1)
+
+
+def process_info(pid):
+    process = Path('/proc') / str(pid)
+    if (process / 'comm').read_text().strip() != 'coreops-api':
+        raise ValueError('Migration PID must be the running CoreOps API')
+    uid = process.stat().st_uid
+    if os.geteuid() not in (0, uid): raise ValueError('Cannot inspect another user process')
+    environ = dict(v.split('=', 1) for v in (process / 'environ').read_bytes().decode().split('\0') if '=' in v)
+    env = {k: v for k, v in environ.items() if k.startswith('COREOPS_')}
+    for key, value in environ.items():
+        if key.startswith('CoreOps_'): env.setdefault('COREOPS_' + key[8:], value)
+    source = Path(env.get('COREOPS_DATA_DIR', 'data'))
+    cwd = Path(os.readlink(process / 'cwd'))
+    if not source.is_absolute(): source = cwd / source
+    if source.is_symlink(): raise ValueError('Data directory cannot be a symlink')
+    source = source.resolve()
+    if source.stat().st_uid != uid: raise ValueError('Source data must belong to the API user')
+    start = (process / 'stat').read_text().rsplit(')', 1)[1].split()[19]
+    groups = next(line.split(':', 1)[1].split() for line in (process / 'status').read_text().splitlines() if line.startswith('Groups:'))
+    return {'pid': pid, 'uid': uid, 'gid': process.stat().st_gid,
+            'groups': [int(g) for g in groups], 'data': source, 'env': env, 'start': start,
+            'launch': {'executable': os.readlink(process / 'exe'), 'cwd': str(cwd), 'env': environ,
+                       'uid': uid, 'gid': process.stat().st_gid, 'groups': [int(g) for g in groups]}}
+
+
+def stop_source(info):
+    fd = os.pidfd_open(info['pid'])
+    try:
+        if process_info(info['pid'])['start'] != info['start']:
+            raise ValueError('Migration process changed')
+        signal.pidfd_send_signal(fd, signal.SIGTERM)
+        for _ in range(100):
+            if not Path('/proc', str(info['pid'])).exists(): return
+            time.sleep(.1)
+        raise ValueError('Source did not stop; no copy made. Inspect active jobs/sessions.')
+    finally: os.close(fd)
+
+
+def copy_private_tree(source, destination, uid, gid, source_uid=None):
+    """No links/devices and no secret omissions; restore is a private full copy."""
+    total = 0
+    for parent, directories, files in os.walk(source, followlinks=False):
+        relative = Path(parent).relative_to(source)
+        target = destination / relative
+        target.mkdir(exist_ok=True, mode=0o700)
+        target.chmod(0o700)
+        for name in directories + files:
+            item = Path(parent) / name
+            info = item.lstat()
+            if item.is_symlink() or not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+                raise ValueError('Unsupported data entry: ' + str(item))
+            if item.is_file():
+                total += info.st_size
+                if total > 2 * 1024 ** 3: raise ValueError('Identity/config migration exceeds 2 GiB; review manually')
+                dest = target / name
+                # Source is stopped and locked; O_NOFOLLOW also rejects file swaps.
+                content = regular(item, uid=source_uid, limit=2 * 1024 ** 3)
+                dest.write_bytes(content); dest.chmod(0o600)
+    # Keep staging inaccessible to the target account until copying is complete.
+    for entry in destination.rglob('*'): os.chown(entry, uid, gid)
+    os.chown(destination, uid, gid)
+
+
+def sudo_policy(features):
+    commands = []
+    if 'power' in features:
+        commands += [f'{HELPERS}/coreops-power {a}' for a in ('status', 'poweroff', 'reboot', 'suspend')]
+    if 'security' in features:
+        commands += [f'{HELPERS}/coreops-security {a}' for a in ('ufw', 'sshd', 'fail2ban', 'fail2ban-details', 'sshd-context', 'nft')]
+    if 'security-timer' in features: commands.append(f'{HELPERS}/coreops-security enable-auto-updates')
+    if 'updates' in features: commands.append(f'{HELPERS}/coreops-packages')
+    if 'tailscale' in features: commands += [f'{HELPERS}/coreops-tailscale {a}' for a in ('check', 'apply')]
+    if 'services' in features: commands += [f'{HELPERS}/coreops-services {a}' for a in ('check', 'apply')]
+    return '# Managed by coreops-setup. No unrestricted commands.\n' + (
+        'coreops ALL=(root) NOPASSWD: ' + ', '.join(commands) + '\n' if commands else '')
+
+
+def env_read(path):
+    result = {}
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'): continue
+        key, value = line.split('=', 1)
+        values = shlex.split(value)
+        if len(values) > 1 or not key.startswith('COREOPS_'): raise ValueError('Unsupported environment file syntax')
+        result[key] = values[0] if values else ''
+    return result
+
+
+def env_text(env):
+    lines = []
+    for key, value in sorted(env.items()):
+        if not re.fullmatch(r'COREOPS_[A-Z0-9_]+', key): raise ValueError('Invalid environment key')
+        if '\n' in value or '\r' in value or '\x00' in value: raise ValueError('Multiline environment values are not supported')
+        escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+        lines.append(f'{key}="{escaped}"')
+    return '\n'.join(lines) + '\n'
+
+
+def configure(args):
+    global ROLLBACK
+    features = None if args.enable is None else set(filter(None, args.enable.split(',')))
+    additions = set(filter(None, (getattr(args, 'add', None) or '').split(',')))
+    if args.enable is not None and additions: raise ValueError('Use --enable or --add, not both')
+    if features is not None and features - FEATURES: raise ValueError('Unknown capabilities')
+    if additions - FEATURES: raise ValueError('Unknown capabilities')
+    if args.bind: ipaddress.ip_address(args.bind)
+    source = process_info(args.migrate_pid) if args.migrate_pid else None
+    if source and source['data'] == DATA: raise ValueError('Already uses packaged data; do not migrate onto itself')
+    if source and (CONFIG / 'configured').exists(): raise ValueError('Service already configured; migration refused')
+    if args.dry_run:
+        print(json.dumps({'service': 'coreops', 'data': str(DATA),
+            'sourceData': str(source['data']) if source else None,
+            'willStopSourceAPI': bool(source), 'capabilities': sorted(features or []),
+            'capabilitiesToAdd': sorted(additions), 'preserveExistingCapabilities': features is None,
+            'bind': args.bind or 'preserve/default loopback', 'port': args.port,
+            'rootRequired': True, 'changesMade': False}, indent=2))
+        return
+    if os.geteuid() != 0: raise ValueError('Run with sudo; --dry-run works without root')
+    account = pwd.getpwnam('coreops')
+    if not 0 < account.pw_uid < 1000 or account.pw_dir != str(DATA) or account.pw_shell != '/usr/sbin/nologin':
+        raise ValueError('Unsafe existing coreops service account')
+    if grp.getgrgid(account.pw_gid).gr_name != 'coreops': raise ValueError('Service account needs its dedicated primary group')
+    override = Path('/etc/systemd/system/coreops.service')
+    if override.exists() and override.resolve() != Path('/usr/lib/systemd/system/coreops.service'):
+        raise ValueError('Review/back up the legacy /etc/systemd/system/coreops.service override first')
+    for directory in (CONFIG, DATA, CACHE):
+        if directory.is_symlink() or not directory.is_dir(): raise ValueError('Install the .deb first; unsafe/missing ' + str(directory))
+    if source and (DATA / 'users.json').exists(): raise ValueError('Existing identity would be overwritten; migration refused')
+    env = env_read(CONFIG / 'coreops.env')
+    imported = {}
+    if source:
+        for key, value in source['env'].items():
+            if key in {'COREOPS_ADMIN_USER', 'COREOPS_ADMIN_PASSWORD', 'COREOPS_DATA_DIR', 'COREOPS_WEB_DIR', 'COREOPS_TRIVY_CACHE', 'COREOPS_TRIVY_PATH'}: continue
+            if key.endswith('_FILE') or key == 'COREOPS_OBSERVABILITY_CA_FILE':
+                imported[key] = regular(Path(value), uid=source['uid'])
+                value = str(CONFIG / 'credentials' / key.lower())
+            env[key] = value
+    env.update(COREOPS_DATA_DIR=str(DATA), COREOPS_WEB_DIR='/usr/share/coreops/web', COREOPS_TRIVY_CACHE=str(CACHE / 'trivy'))
+    if args.bind: env['COREOPS_HOST'] = args.bind
+    if args.port: env['COREOPS_PORT'] = str(args.port)
+    ipaddress.ip_address(env.get('COREOPS_HOST', '127.0.0.1'))
+    env_text(env)  # Validate all values before stopping the source API.
+    # Check listener availability before stopping or changing anything. The source
+    # API may own the same port; its explicit migration is the sole exception.
+    if not source:
+        host, port = env.get('COREOPS_HOST', '127.0.0.1'), int(env.get('COREOPS_PORT', '8082'))
+        active = subprocess.run(['systemctl', 'is-active', '--quiet', 'coreops'], env=SAFE_ENV).returncode == 0
+        if not active:
+            family = socket.AF_INET6 if ':' in host else socket.AF_INET
+            with socket.socket(family) as listener: listener.bind((host, port))
+    features_file = CONFIG / 'capabilities.json'
+    if features is None: features = set(json.loads(features_file.read_text())) if features_file.exists() else set()
+    features |= additions
+    if features - FEATURES: raise ValueError('Invalid saved capability policy')
+    for group, feature in [('docker', 'docker'), ('systemd-journal', 'journal'), ('adm', 'journal')]:
+        if feature in features:
+            run(['getent', 'group', group], stdout=subprocess.DEVNULL)
+    # Validate all privileged rules before migration; no service operations here.
+    policy = sudo_policy(features)
+    with tempfile.NamedTemporaryFile(mode='w') as proposed:
+        proposed.write(policy); proposed.flush()
+        run(['visudo', '-cf', proposed.name], stdout=subprocess.DEVNULL)
+    backup = CONFIG / ('backup-' + time.strftime('%Y%m%dT%H%M%S') + '-' + str(os.getpid()))
+    backup.mkdir(mode=0o700)
+    shutil.copy2(CONFIG / 'coreops.env', backup / 'coreops.env')
+    if source:
+        atomic(backup / 'source-launch.json', json.dumps(source['launch']))
+        stop_source(source)
+        ROLLBACK = backup
+        stage = Path(tempfile.mkdtemp(prefix='.coreops-import-', dir=DATA.parent))
+        try:
+            locks = []
+            try:
+                for name in ('.identity.lock', '.audit.lock'):
+                    path = source['data'] / name
+                    created = not path.exists()
+                    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+                    if created: os.fchown(fd, source['uid'], source['gid'])
+                    locks.append(fd); fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                copy_private_tree(source['data'], stage, account.pw_uid, account.pw_gid, source['uid'])
+            finally:
+                for fd in locks: os.close(fd)
+            users = json.loads((stage / 'users.json').read_text())
+            if not users or not any(u.get('role') == 'admin' for u in users.values()):
+                raise ValueError('Imported identity needs an administrator')
+            # Existing empty service home is retained for rollback, never erased.
+            old = DATA.with_name('coreops-before-import-' + str(os.getpid()))
+            os.rename(DATA, old)
+            os.rename(stage, DATA)
+        finally:
+            if stage.exists(): shutil.rmtree(stage)
+    if imported:
+        credentials = CONFIG / 'credentials'
+        if credentials.is_symlink(): raise ValueError('Unsafe credentials directory')
+        credentials.mkdir(exist_ok=True, mode=0o750)
+        os.chown(credentials, 0, account.pw_gid)
+        for key, content in imported.items():
+            path = credentials / key.lower()
+            atomic(path, content, 0o640); os.chown(path, 0, account.pw_gid)
+    # Preserve an explicitly configured scanner, without retaining /home/pepe paths.
+    scanner = source['env'].get('COREOPS_TRIVY_PATH') if source else None
+    if scanner:
+        path = Path(scanner)
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o022 or info.st_uid not in (0, source['uid']):
+            raise ValueError('Unsafe scanner binary')
+        target = Path('/usr/local/lib/coreops')
+        if target.is_symlink(): raise ValueError('Unsafe scanner directory')
+        target.mkdir(mode=0o755, parents=True, exist_ok=True)
+        atomic(target / 'trivy', regular(path, uid=source['uid'], limit=512 * 1024 ** 2), 0o755)
+        env['COREOPS_TRIVY_PATH'] = str(target / 'trivy')
+    if not (DATA / 'users.json').exists() or not json.loads((DATA / 'users.json').read_text()):
+        if not args.admin: raise ValueError('Supply --admin NAME or --migrate-pid PID; identity is never created with a default password')
+        password = getpass.getpass('New CoreOps admin password: ')
+        if password != getpass.getpass('Repeat password: '): raise ValueError('Passwords do not match')
+        run(['runuser', '-u', 'coreops', '--', 'env', '-i', 'PATH=' + SAFE_ENV['PATH'],
+             'COREOPS_DATA_DIR=' + str(DATA), '/usr/bin/coreops-api', 'user', 'add', args.admin, 'admin'], input=password.encode())
+        password = None
+    users = json.loads((DATA / 'users.json').read_text())
+    if not any(u.get('role') == 'admin' for u in users.values()):
+        raise ValueError('The service identity must contain an administrator')
+    for group, feature in [('docker', 'docker'), ('systemd-journal', 'journal'), ('adm', 'journal')]:
+        if feature in features: run(['usermod', '-aG', group, 'coreops'])
+        else:
+            current = subprocess.check_output(['id', '-nG', 'coreops'], text=True, env=SAFE_ENV).split()
+            if group in current: run(['gpasswd', '-d', 'coreops', group], stdout=subprocess.DEVNULL)
+    atomic(Path('/etc/sudoers.d/coreops-service'), policy, 0o440)
+    atomic(features_file, json.dumps(sorted(features)) + '\n')
+    atomic(CONFIG / 'coreops.env', env_text(env))
+    atomic(CONFIG / 'configured', 'Configured by coreops-setup\n')
+    run(['systemctl', 'daemon-reload'])
+    run(['systemctl', 'enable', 'coreops'])
+    run(['systemctl', 'restart', 'coreops'])
+    run(['systemctl', 'is-active', '--quiet', 'coreops'])
+    pid = subprocess.check_output(['systemctl', 'show', 'coreops', '--property=MainPID', '--value'], text=True, env=SAFE_ENV).strip()
+    if not os.path.samestat(os.stat('/usr/bin/coreops-api'), os.stat('/proc/' + pid + '/exe')):
+        raise ValueError('The service is not running the installed executable')
+    running = os.stat('/proc/' + pid)
+    if running.st_uid != account.pw_uid or running.st_gid != account.pw_gid:
+        raise ValueError('Service must run under the dedicated account; review systemd overrides')
+    host = env.get('COREOPS_HOST', '127.0.0.1')
+    if host in ('0.0.0.0', '::'): host = '127.0.0.1' if host == '0.0.0.0' else '::1'
+    if ':' in host: host = '[' + host + ']'
+    url = f"http://{host}:{env.get('COREOPS_PORT', '8082')}"
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    for _ in range(40):
+        try:
+            with opener.open(url + '/api/v1/health/live', timeout=2) as response:
+                live = json.load(response)
+            if live['status'] == 'ok': break
+        except (OSError, ValueError): time.sleep(.25)
+    else: raise ValueError('Service health failed. Inspect journalctl -u coreops; backups/source remain intact')
+    print('CoreOps service active: ' + url)
+    print('Version: ' + live['version'] + '. Config backup: ' + str(backup))
+    print('Source data were retained. Enabled capabilities: ' + ','.join(sorted(features)))
+    ROLLBACK = None
+
+
+def rollback_source(backup):
+    if os.geteuid() != 0: raise ValueError('Rollback needs sudo')
+    record = backup / 'source-launch.json'
+    info = record.lstat()
+    if info.st_uid != 0 or info.st_mode & 0o077: raise ValueError('Unsafe rollback record')
+    launch = json.loads(regular(record, limit=1024 * 1024))
+    run(['systemctl', 'stop', 'coreops'])
+    marker = CONFIG / 'configured'
+    if marker.exists(): os.replace(marker, backup / 'configured-failed')
+    shutil.copy2(backup / 'coreops.env', CONFIG / 'coreops.env')
+    with (backup / 'source-restored.log').open('ab') as log:
+        child = subprocess.Popen([launch['executable']], cwd=launch['cwd'], env=launch['env'],
+            user=launch['uid'], group=launch['gid'], extra_groups=launch['groups'],
+            stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    time.sleep(.5)
+    if child.poll() is not None: raise ValueError('Source restart failed; inspect private source-restored.log')
+    print('Previous API restored as original user; PID ' + str(child.pid) + '. Migration data retained.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--migrate-pid', type=int, help='Stop/import this API, including identity, keys and configuration')
+    permissions = parser.add_mutually_exclusive_group()
+    permissions.add_argument('--enable', help='Replace capabilities with: ' + ','.join(sorted(FEATURES)))
+    permissions.add_argument('--add', help='Add capabilities while preserving existing ones: ' + ','.join(sorted(FEATURES)))
+    parser.add_argument('--bind', help='Explicit local/private IP; defaults to loopback or preserved configuration')
+    parser.add_argument('--port', type=int, choices=range(1024, 65536), metavar='PORT')
+    parser.add_argument('--admin', help='Create first admin, reading password privately from terminal')
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--rollback-source', type=Path, help='Restore the previous API from a private migration backup')
+    args = parser.parse_args()
+    try:
+        lock = None
+        if not args.dry_run and os.geteuid() == 0:
+            lock = os.open('/run/lock/coreops-setup.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if args.rollback_source:
+            rollback_source(args.rollback_source)
+        else: configure(args)
+    except (OSError, ValueError, KeyError, EOFError, KeyboardInterrupt, subprocess.CalledProcessError) as error:
+        if ROLLBACK:
+            try: rollback_source(ROLLBACK)
+            except Exception as rollback_error:
+                print('Rollback also failed: ' + str(rollback_error), file=__import__('sys').stderr)
+        parser.exit(1, str(error) + '\n')
+
+
+if __name__ == '__main__': main()

@@ -75,6 +75,14 @@ Go `internal` restricts consumers outside the backend tree, not sibling imports.
 
 ## Contract and operations
 
+System packaging (2026-11-22) keeps one Go process: optional COREOPS_WEB_DIR serves
+the built client through os.Root alongside the existing API. API/metrics never fall
+back to HTML. Vite/Node are unnecessary at runtime; TLS is a deployment concern.
+Build-time helperpath selects packaged /usr/libexec/coreops versus existing
+/usr/local/libexec, without environment/request-selected executables. Setup and
+APT signing are deployment tools, not privileged browser endpoints.
+[Installation](installation.md), [operations](modules/operations.md).
+
 Terminal passwords (2026-11-22) deliberately reuse the legacy identity store and
 its cross-process lock for ownership/revocation and bounded encrypted persistence.
 The browser keeps only saved-state metadata; retrieval is an explicit admin POST

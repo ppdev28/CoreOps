@@ -77,6 +77,10 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	}
 
 	mux.HandleFunc("GET /api/v1/health", a.health)
+	mux.HandleFunc("GET /api/v1/health/live", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": buildVersion, "commit": buildCommit})
+	})
 	mux.HandleFunc("GET /metrics", a.telemetry.Metrics)
 	mux.HandleFunc("POST /api/v1/auth/login", auth.loginHandler)
 	handle("POST /api/v1/auth/logout", RoleViewer, auth.logoutHandler)

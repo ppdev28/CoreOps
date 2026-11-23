@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/moby/moby/client"
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/helperpath"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/securityscan"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/sysstat"
@@ -27,6 +29,9 @@ import (
 	"github.com/ppdev28/CoreOps/backend/internal/tailscale"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 )
+
+var buildVersion = "dev"
+var buildCommit = "unknown"
 
 type API struct {
 	serviceControl  serviceController
@@ -51,6 +56,10 @@ type API struct {
 }
 
 func main() {
+	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "--version") {
+		_ = json.NewEncoder(os.Stdout).Encode(map[string]string{"version": buildVersion, "commit": buildCommit, "helpers": helperpath.Directory})
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "user" {
 		os.Exit(runUserCLI(os.Args[2:]))
 	}
@@ -99,7 +108,13 @@ func main() {
 	go api.securityMonitor.Run(ctx)
 	api.securityScans = security.NewScanJobs(ctx, &securityscan.Trivy{Binary: envString("COREOPS_TRIVY_PATH", ""), Cache: envString("COREOPS_TRIVY_CACHE", filepath.Join(dataDir, "trivy-cache")), Docker: docker})
 	audit := NewAuditLog(dataDir)
-	handler := withCORS(withLogging(withAudit(audit, api.routes(auth, audit))))
+	web, closeWeb, err := withWeb(api.routes(auth, audit), envString("COREOPS_WEB_DIR", ""))
+	if err != nil {
+		logger.Error("configure web assets", "error", err)
+		os.Exit(1)
+	}
+	defer closeWeb()
+	handler := withCORS(withLogging(withAudit(audit, web)))
 	host := envString("COREOPS_HOST", "127.0.0.1")
 	port := envInt("COREOPS_PORT", 8082)
 	server := &http.Server{Addr: net.JoinHostPort(host, strconv.Itoa(port)), Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 40 * time.Second, WriteTimeout: 45 * time.Second, IdleTimeout: 60 * time.Second}

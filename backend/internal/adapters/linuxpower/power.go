@@ -12,10 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/helperpath"
 	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
 )
 
-const helper = "/usr/local/libexec/coreops-power"
+var helper = helperpath.Path("coreops-power")
 
 type Adapter struct {
 	run     func(context.Context, string, ...string) ([]byte, error)

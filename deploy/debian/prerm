@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+case "$1" in
+    remove|upgrade|deconfigure)
+        # Stopping this unit from its own Terminal/Updates job would kill the
+        # package manager too. Use an independent SSH/console APT session.
+        if grep -q '/coreops.service' /proc/self/cgroup; then
+            echo 'Upgrade/remove CoreOps from an independent SSH or console session, outside its own service.' >&2
+            exit 1
+        fi
+        if [ -d /run/systemd/system ]; then
+            deb-systemd-invoke stop coreops.service
+        fi
+        ;;
+esac

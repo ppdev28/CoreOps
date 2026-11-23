@@ -1,5 +1,10 @@
 # CoreOps API contract
 
+Production packaging adds public GET `/api/v1/health/live` (no-store,
+status/version/commit, independent of Docker); existing health semantics remain.
+COREOPS_WEB_DIR optionally serves the client on the API listener. API/metrics
+never use the SPA fallback. These additions are outside the partial OpenAPI.
+
 Este módulo describe la frontera entre clientes y backend. **No es otro servidor**: el transporte HTTP se ejecuta dentro del único backend Go. No importar Docker, Linux, React ni lógica de producto aquí.
 
 - `openapi.json`: contrato OpenAPI 3.0.3 inicial de health, login/logout/me y list/inspect/start/stop/restart de contenedores.
