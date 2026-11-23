@@ -20,10 +20,12 @@ import (
 	"github.com/ppdev28/CoreOps/backend/internal/monitoring"
 	"github.com/ppdev28/CoreOps/backend/internal/observability"
 	"github.com/ppdev28/CoreOps/backend/internal/security"
+	"github.com/ppdev28/CoreOps/backend/internal/tailscale"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 )
 
 type API struct {
+	tailscale     *tailscale.Service
 	power         *hostpower.Service
 	hostSecurity  *security.Service
 	updateTasks   *updateJobs

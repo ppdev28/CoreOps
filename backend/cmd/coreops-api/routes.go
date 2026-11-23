@@ -4,9 +4,11 @@ import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxpower"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/tailscalelocal"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
 	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
 	"github.com/ppdev28/CoreOps/backend/internal/security"
+	"github.com/ppdev28/CoreOps/backend/internal/tailscale"
 	"github.com/ppdev28/CoreOps/backend/internal/telemetry"
 	"github.com/ppdev28/CoreOps/backend/internal/transport/httpapi"
 	"net/http"
@@ -46,6 +48,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	if a.compose == nil {
 		a.compose = newComposeManager(filepath.Join(auth.dir, "compose"), a.docker)
 	}
+	if a.tailscale == nil {
+		a.tailscale = tailscale.New(tailscalelocal.New())
+	}
 	mux := http.NewServeMux()
 	if a.power == nil {
 		a.power = hostpower.New(linuxpower.New())
@@ -67,6 +72,8 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", auth.loginHandler)
 	handle("POST /api/v1/auth/logout", RoleViewer, auth.logoutHandler)
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
+	handle("GET /api/v1/tailscale", RoleAdmin, a.tailscaleStatus)
+	handle("POST /api/v1/tailscale", RoleAdmin, a.tailscaleAction(auth, audit))
 	handle("GET /api/v1/terminal/passwords/{target}", RoleAdmin, auth.terminalPasswordHandler("status"))
 	handle("POST /api/v1/terminal/passwords/{target}", RoleAdmin, auth.terminalPasswordHandler("save"))
 	handle("POST /api/v1/terminal/passwords/{target}/reveal", RoleAdmin, auth.terminalPasswordHandler("reveal"))

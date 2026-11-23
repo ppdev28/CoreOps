@@ -14,6 +14,7 @@ func TestExtractedModuleDependencies(t *testing.T) {
 		folder    string
 		forbidden []string
 	}{
+		{"../../internal/tailscale", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},
 		{"../../internal/security", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},
 		{"../../internal/containers", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},
 		{"../../internal/observability", []string{"net/http", "os/exec", "github.com/moby/", "/internal/adapters/", "/internal/transport/"}},

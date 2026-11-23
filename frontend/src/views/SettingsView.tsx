@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, isValidElement } from "react";
 import UserManagement from "../components/UserManagement";
+import TailscaleSettings from "../components/TailscaleSettings";
+import "../styles/settings.css";
 import { getSession } from "../lib/auth";
 import { T } from "../lib/tokens";
 import { ACCENT_PRESETS, resolveAppearance } from "../lib/appearance";
@@ -15,6 +17,7 @@ import {
   Database,
   Gauge,
   Users,
+  Network,
 } from "lucide-react";
 import {
   DEFAULT_WEB_SETTINGS,
@@ -26,6 +29,11 @@ import {
 } from "../lib/webSettings";
 
 const SECTIONS = [
+  {
+    id: "Tailscale",
+    icon: <Network size={14} />,
+    description: "Tailnet and device connection",
+  },
   {
     id: "Users",
     icon: <Users size={14} />,
@@ -64,41 +72,33 @@ const SECTIONS = [
 ];
 
 function Toggle({
+  label,
   checked,
   onChange,
 }: {
+  label: string;
   checked: boolean;
-  onChange: (v: boolean) => void;
+  onChange: (value: boolean) => void;
 }) {
   return (
     <button
+      className="settings-toggle"
       type="button"
+      aria-label={label}
       aria-pressed={checked}
       onClick={() => onChange(!checked)}
-      style={{
-        width: 36,
-        height: 20,
-        borderRadius: 10,
-        position: "relative",
-        cursor: "pointer",
-        border: "none",
-        background: checked ? T.primary : T.overlay,
-        transition: "background 180ms",
-        padding: 0,
-      }}
     >
       <span
-        style={{
-          position: "absolute",
-          top: 3,
-          left: checked ? 19 : 3,
-          width: 14,
-          height: 14,
-          borderRadius: "50%",
-          background: "#fff",
-          transition: "left 160ms",
-        }}
-      />
+        className="settings-toggle-track"
+        style={{ background: checked ? T.primary : T.overlay }}
+      >
+        <span
+          style={{
+            transform: checked ? "translateX(16px)" : "translateX(0)",
+            background: checked ? T.onAccent : T.textDim,
+          }}
+        />
+      </span>
     </button>
   );
 }
@@ -113,6 +113,9 @@ function SettingRow({
 }) {
   return (
     <div
+      className={`settings-row ${isValidElement(children) && children.type === Toggle ? "settings-row-toggle" : "settings-row-field"}`}
+      role="group"
+      aria-label={label}
       style={{
         display: "flex",
         alignItems: "center",
@@ -137,21 +140,26 @@ function SettingRow({
           {sub}
         </div>
       </div>
-      <div style={{ flexShrink: 0 }}>{children}</div>
+      <div className="settings-row-control" style={{ flexShrink: 0 }}>
+        {children}
+      </div>
     </div>
   );
 }
 function Select({
+  label,
   value,
   onChange,
   children,
 }: {
+  label: string;
   value: string;
   onChange: (v: string) => void;
   children: React.ReactNode;
 }) {
   return (
     <select
+      aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
@@ -178,6 +186,23 @@ export default function SettingsView({
   addToast: (m: string, t: any) => void;
 }) {
   const [active, setActive] = useState("General");
+  const sectionNav = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const nav = sectionNav.current;
+    if (!nav) return;
+    const reveal = () => {
+      const item = nav.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!item || nav.scrollWidth <= nav.clientWidth) return;
+      const n = nav.getBoundingClientRect(),
+        r = item.getBoundingClientRect();
+      if (r.left < n.left) nav.scrollLeft -= n.left - r.left;
+      else if (r.right > n.right) nav.scrollLeft += r.right - n.right;
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [active]);
   const [settings, setSettings] = useState<WebSettings>(loadWebSettings);
   const [saved, setSaved] = useState(true);
   const patch = (next: Partial<WebSettings>) => {
@@ -198,6 +223,7 @@ export default function SettingsView({
 
   const renderSection = () => {
     if (active === "Users") return <UserManagement />;
+    if (active === "Tailscale") return <TailscaleSettings />;
     if (active === "General")
       return (
         <Card>
@@ -206,6 +232,7 @@ export default function SettingsView({
             sub="Reduce spacing in tables, lists and navigation."
           >
             <Toggle
+              label="Compact interface"
               checked={settings.compact}
               onChange={(v) => patch({ compact: v })}
             />
@@ -215,6 +242,7 @@ export default function SettingsView({
             sub="Allow live views to refresh their server data automatically."
           >
             <Toggle
+              label="Automatic refresh"
               checked={settings.autoRefresh}
               onChange={(v) => patch({ autoRefresh: v })}
             />
@@ -224,6 +252,7 @@ export default function SettingsView({
             sub="Preferred interval for views that support automatic refresh."
           >
             <Select
+              label="Refresh interval"
               value={String(settings.refreshSeconds)}
               onChange={(v) => patch({ refreshSeconds: Number(v) })}
             >
@@ -243,6 +272,7 @@ export default function SettingsView({
             sub="Choose a dark, light, gray, or operating-system controlled appearance."
           >
             <Select
+              label="Theme"
               value={settings.theme}
               onChange={(v) => patch({ theme: v as ThemePreference })}
             >
@@ -347,6 +377,7 @@ export default function SettingsView({
             sub="Disable non-essential transitions and animated interface effects."
           >
             <Toggle
+              label="Reduce motion"
               checked={settings.reduceMotion}
               onChange={(v) => patch({ reduceMotion: v })}
             />
@@ -356,6 +387,7 @@ export default function SettingsView({
             sub="Choose between the standard and compact control-panel layout."
           >
             <Select
+              label="Interface density"
               value={settings.compact ? "compact" : "comfortable"}
               onChange={(v) => patch({ compact: v === "compact" })}
             >
@@ -373,6 +405,7 @@ export default function SettingsView({
             sub="Show toast messages when actions complete or fail."
           >
             <Toggle
+              label="In-app notifications"
               checked={settings.notifications}
               onChange={(v) => patch({ notifications: v })}
             />
@@ -382,6 +415,7 @@ export default function SettingsView({
             sub="Play a subtle sound for important notifications."
           >
             <Toggle
+              label="Notification sound"
               checked={settings.sound}
               onChange={(v) => patch({ sound: v })}
             />
@@ -396,6 +430,7 @@ export default function SettingsView({
             sub="Enable shortcuts such as ⌘ K for the command palette."
           >
             <Toggle
+              label="Keyboard shortcuts"
               checked={settings.shortcuts}
               onChange={(v) => patch({ shortcuts: v })}
             />
@@ -428,6 +463,7 @@ export default function SettingsView({
             sub="Ask for confirmation before stopping, removing or terminating resources."
           >
             <Toggle
+              label="Confirm destructive actions"
               checked={settings.confirmDestructive}
               onChange={(v) => patch({ confirmDestructive: v })}
             />
@@ -491,15 +527,20 @@ export default function SettingsView({
           </div>
         </div>
         <div
+          ref={sectionNav}
+          role="navigation"
+          aria-label="Settings sections"
           className="settings-sections"
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
           {SECTIONS.filter(
             (section) =>
-              section.id !== "Users" || getSession()?.user.role === "admin",
+              !["Users", "Tailscale"].includes(section.id) ||
+              getSession()?.user.role === "admin",
           ).map((section) => (
             <button
               key={section.id}
+              aria-label={section.id}
               aria-current={active === section.id ? "page" : undefined}
               onClick={() => setActive(section.id)}
               style={{
@@ -550,8 +591,9 @@ export default function SettingsView({
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="settings-content" style={{ flex: 1, minWidth: 0 }}>
         <div
+          className="settings-content-header"
           style={{
             display: "flex",
             alignItems: "flex-end",
@@ -571,13 +613,18 @@ export default function SettingsView({
               {active}
             </h2>
             <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>
-              {active === "Users"
-                ? "Manage access to this CoreOps server."
-                : "Configure how CoreOps behaves in this browser."}
+              {active === "Tailscale"
+                ? "Manage Tailscale on this CoreOps server."
+                : active === "Users"
+                  ? "Manage access to this CoreOps server."
+                  : "Configure how CoreOps behaves in this browser."}
             </div>
           </div>
-          {active !== "Users" && (
-            <div style={{ display: "flex", gap: 7 }}>
+          {!["Users", "Tailscale"].includes(active) && (
+            <div
+              className="settings-save-actions"
+              style={{ display: "flex", gap: 7 }}
+            >
               <Btn variant="secondary" size="xs" onClick={reset}>
                 <RotateCcw size={11} /> Reset
               </Btn>

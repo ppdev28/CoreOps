@@ -57,4 +57,12 @@ En este servidor no hay Java/SDK configurados ni dispositivo adb conectado.
 
 ## Validación
 
+Settings (2026-11-22): navegación horizontal con selección visible tras cambiar
+de ancho, campos apilados, botones/toggles con área táctil de 44 px y acciones de
+guardado local accesibles. Tailscale gestiona el servidor, no la VPN del teléfono.
+Probado en Chromium a 320/390/768/1024/1440 px y con plataforma/evento Android
+simulados; sin cambios Kotlin, cap sync ni prueba de dispositivo físico. Para
+llevar los assets a un APK instalado se requiere reconstruir/sincronizar y
+compilar en el toolchain Android. Ver [módulo](tailscale.md).
+
 Build web primero; `pnpm cap:sync` sólo como tarea móvil explícita porque modifica proyectos nativos. Después build Android/iOS en sus toolchains, login/logout/expiración, cambio de servidor, HTTPS, atrás/drawer y recuperación de conexión. No declarar validación nativa por haber compilado Vite. Revisar persistencia y backups en un build release.

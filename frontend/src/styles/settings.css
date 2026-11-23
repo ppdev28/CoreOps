@@ -1,0 +1,151 @@
+.app-workspace .settings-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.app-workspace .settings-content-header {
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start !important;
+}
+.settings-save-actions {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.app-workspace .settings-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px !important;
+}
+.settings-row > div:first-child {
+  overflow-wrap: anywhere;
+}
+.settings-row-control {
+  max-width: 100%;
+  min-width: 0;
+}
+.settings-row-control select {
+  max-width: 100%;
+  width: 180px;
+}
+.app-workspace .settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.settings-toggle-track {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  transition: background 160ms;
+}
+.settings-toggle-track > span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transition: transform 160ms;
+}
+.app-workspace .settings-view .settings-toggle:focus-visible {
+  outline: 2px solid var(--coreops-accent);
+  outline-offset: 1px;
+}
+.settings-sections {
+  position: relative;
+}
+@media (max-width: 767px) {
+  .app-workspace .settings-view {
+    gap: 16px !important;
+  }
+  .app-workspace .settings-navigation {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app-workspace .settings-view .settings-sections {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    gap: 6px !important;
+    padding: 3px 2px 7px;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+    max-width: 100%;
+  }
+  .app-workspace .settings-view .settings-sections button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 44px;
+  }
+  .app-workspace .settings-content-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 10px 0 12px;
+    background: var(--coreops-bg);
+    margin-bottom: 12px !important;
+  }
+  .app-workspace .settings-content-header > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .app-workspace .settings-save-actions {
+    flex-basis: 100%;
+    width: 100%;
+  }
+  .app-workspace .settings-save-actions button {
+    flex: 1;
+    min-height: 44px;
+  }
+  .app-workspace .settings-view .settings-row {
+    padding: 14px !important;
+    gap: 12px !important;
+    flex-wrap: nowrap !important;
+  }
+  .app-workspace .settings-view .settings-row-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-workspace .settings-row-field .settings-row-control {
+    width: 100%;
+  }
+  .app-workspace .settings-row-control select {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 44px;
+  }
+  .app-workspace .settings-row-field .settings-row-control button {
+    min-height: 44px;
+    max-width: 100%;
+    white-space: normal;
+  }
+  .app-workspace .settings-row-toggle .settings-row-control {
+    justify-self: end;
+  }
+  .app-workspace .settings-content .accent-settings {
+    padding: 14px;
+  }
+  .app-workspace .settings-content .appearance-preview {
+    overflow-wrap: anywhere;
+  }
+  .app-workspace .settings-content .accent-presets button {
+    min-width: 0;
+    min-height: 44px;
+  }
+  .app-workspace .settings-content .custom-accent input {
+    min-height: 44px !important;
+    height: 44px;
+  }
+}
