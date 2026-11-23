@@ -45,6 +45,43 @@ for (const size of sizes)
       page,
     }, info) => {
       const control = await openTerminal(page);
+      // Cursor keys must be usable immediately, without scrolling them into view.
+      const enter = page.getByRole("button", { name: "Enter", exact: true });
+      for (const name of [
+        "Arrow up",
+        "Arrow down",
+        "Arrow left",
+        "Arrow right",
+      ]) {
+        const arrow = page.getByRole("button", { name, exact: true });
+        await expect(arrow).toBeInViewport({ ratio: 1 });
+        expect(
+          await arrow.evaluate((button) => {
+            const box = button.getBoundingClientRect();
+            const hit = document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            );
+            return hit === button || button.contains(hit);
+          }),
+          `${name} must not be covered by Enter or clipped by the shortcuts`,
+        ).toBe(true);
+        const arrowBox = (await arrow.boundingBox())!;
+        const enterBox = (await enter.boundingBox())!;
+        expect(
+          arrowBox.x + arrowBox.width <= enterBox.x ||
+            arrowBox.y + arrowBox.height <= enterBox.y,
+        ).toBe(true);
+      }
+      await page
+        .getByRole("button", { name: "Arrow left", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Arrow right", exact: true })
+        .click();
+      await expect
+        .poll(() => control.terminalInputs.join(""))
+        .toBe("\x1b[D\x1b[C");
       for (let count = 1; count < 4; count++)
         await page
           .getByRole("button", { name: "New terminal", exact: true })

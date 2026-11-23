@@ -170,7 +170,9 @@
 }
 .pty-dimensions { flex-shrink: 0; margin-left: auto; font-variant-numeric: tabular-nums; }
 .pty-keys {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "keyboard shortcuts arrows enter";
   align-items: center;
   min-width: 0;
   gap: 6px;
@@ -180,6 +182,7 @@
   background: var(--coreops-bgSidebar);
 }
 .pty-key-scroll {
+  grid-area: shortcuts;
   display: flex;
   flex: 1;
   overflow-x: auto;
@@ -189,7 +192,15 @@
   overscroll-behavior-x: contain;
 }
 .pty-keys button { flex-shrink: 0; background: var(--coreops-raised); font-size: 11px; }
+.pty-keyboard-toggle { grid-area: keyboard; }
+.pty-arrows {
+  grid-area: arrows;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  gap: 4px;
+}
 .app-workspace .pty-terminal .pty-enter-key {
+  grid-area: enter;
   flex-shrink: 0;
   min-width: 48px;
   font-size: 19px;
@@ -264,6 +275,14 @@
   .pty-tools { display: none; }
   .app-workspace .pty-terminal .pty-more { display: inline-flex; }
   .pty-tab button[role="tab"] { max-width: 130px; }
+}
+@media (max-width: 600px) {
+  .pty-keys {
+    grid-template-columns: 44px minmax(0, 1fr) 52px;
+    grid-template-areas:
+      "keyboard shortcuts shortcuts"
+      "arrows arrows enter";
+  }
 }
 @media (max-height: 480px) {
   .pty-toolbar { padding-block: 2px; }

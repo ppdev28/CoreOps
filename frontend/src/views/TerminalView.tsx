@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Copy,
   Eraser,
@@ -1054,10 +1056,6 @@ export default function TerminalView({
               ["Esc", "\x1b"],
               ["Tab", "\t"],
               ["Ctrl C", "\x03"],
-              ["↑", "\x1b[A"],
-              ["↓", "\x1b[B"],
-              ["←", "\x1b[D"],
-              ["→", "\x1b[C"],
               ["Ctrl D", "\x04"],
               ["Ctrl Z", "\x1a"],
               ["Ctrl L", "\x0c"],
@@ -1065,20 +1063,29 @@ export default function TerminalView({
               <button
                 type="button"
                 key={label}
-                aria-label={
-                  (
-                    {
-                      "↑": "Arrow up",
-                      "↓": "Arrow down",
-                      "←": "Arrow left",
-                      "→": "Arrow right",
-                    } as Record<string, string>
-                  )[label] || label
-                }
+                aria-label={label}
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => run("input", value)}
               >
                 {label}
+              </button>
+            ))}
+          </div>
+          <div className="pty-arrows" role="group" aria-label="Cursor movement">
+            {[
+              { label: "Arrow up", value: "\x1b[A", Icon: ArrowUp },
+              { label: "Arrow down", value: "\x1b[B", Icon: ArrowDown },
+              { label: "Arrow left", value: "\x1b[D", Icon: ArrowLeft },
+              { label: "Arrow right", value: "\x1b[C", Icon: ArrowRight },
+            ].map(({ label, value, Icon }) => (
+              <button
+                type="button"
+                key={label}
+                aria-label={label}
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => run("input", value)}
+              >
+                <Icon size={18} />
               </button>
             ))}
           </div>
