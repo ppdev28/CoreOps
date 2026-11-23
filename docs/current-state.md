@@ -1,5 +1,24 @@
 # Current State
 
+## Primera APK Android de release — 2026-11-23
+
+Preparación de `android-v0.1.0` (0.1.0, versionCode 1), como prerelease pública
+sólo del cliente Android. Se configura firma release obligatoria, sin fallback
+unsigned/debug, y manifest release sin debugging ni backup Android. El usuario
+autoriza una nueva identidad de firma: keystore/properties privados 0600 fuera
+del checkout y copia local protegida. No versionar ni adjuntar claves/passwords.
+
+La compilación se realiza desde un export limpio del commit de release, sin
+incorporar los documentos ajenos ni el espacio previo en MainActivity. Incluye
+la web actual, llave Terminal, iconos redondeados y flechas/Enter corregidos.
+No se cambia el backend ni el servicio del servidor. HTTP/LAN se conserva para
+compatibilidad; HTTPS y almacén seguro nativo siguen pendientes (SEC-03).
+
+Publicación mediante etiqueta Android y assets (APK, SHA256SUMS, certificado
+público e información de build). No push a main: el workflow legacy puede
+desplegar/resetear el checkout del servidor. API GitHub mediante gh ya autenticado,
+sin extraer tokens del equipo remoto. [Firma y proceso](modules/mobile.md).
+
 ## Commits de móvil y sincronización web — 2026-11-23
 
 Registrado en `main`, sin cambiar de rama ni hacer push:

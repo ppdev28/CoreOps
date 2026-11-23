@@ -1,6 +1,28 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
+// Signing material stays outside the repository. Environment values override
+// the private properties file, allowing the same configuration in CI.
+def signingPropertiesPath = System.getenv('COREOPS_ANDROID_SIGNING_PROPERTIES') ?:
+    "${System.getProperty('user.home')}/.config/coreops/android-signing/release.properties"
+def signingPropertiesFile = file(signingPropertiesPath)
+def releaseProperties = new Properties()
+if (signingPropertiesFile.isFile()) {
+    signingPropertiesFile.withInputStream { releaseProperties.load(it) }
+}
+def signingValue = { String envName, String propertyName ->
+    System.getenv(envName) ?: releaseProperties.getProperty(propertyName)
+}
+def releaseStore = signingValue('COREOPS_ANDROID_KEYSTORE', 'storeFile')
+def releaseAlias = signingValue('COREOPS_ANDROID_KEY_ALIAS', 'keyAlias')
+def releaseStorePassword = signingValue('COREOPS_ANDROID_STORE_PASSWORD', 'storePassword')
+def releaseKeyPassword = signingValue('COREOPS_ANDROID_KEY_PASSWORD', 'keyPassword')
+def hasReleaseSigning = releaseStore && releaseAlias && releaseStorePassword && releaseKeyPassword
+def releaseStoreFile = releaseStore ? new File(releaseStore) : null
+if (releaseStoreFile != null && !releaseStoreFile.isAbsolute()) {
+    releaseStoreFile = new File(signingPropertiesFile.parentFile, releaseStore)
+}
+
 android {
     namespace = "com.coreops.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -18,8 +40,21 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile releaseStoreFile
+                storePassword releaseStorePassword
+                keyAlias releaseAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -32,6 +67,16 @@ android {
 
     kotlinOptions {
         jvmTarget = '21'
+    }
+}
+
+// Never produce a distributable unsigned APK or silently use the debug key.
+gradle.taskGraph.whenReady { graph ->
+    def buildsRelease = graph.allTasks.any {
+        it.project == project && it.name in ['assembleRelease', 'bundleRelease', 'packageRelease', 'signReleaseBundle']
+    }
+    if (buildsRelease && (!hasReleaseSigning || !releaseStoreFile.isFile())) {
+        throw new GradleException('Release signing is required. Configure COREOPS_ANDROID_SIGNING_PROPERTIES or the COREOPS_ANDROID_* signing variables.')
     }
 }
 

@@ -10,6 +10,15 @@ Fronteras: navegador/WebView → red/proxy TLS → HTTP/auth → capacidad → a
 
 ## Controles presentes
 
+### Firma Android de release — 2026-11-23
+
+El build release requiere keystore explícito y falla cerrado si falta; no usa
+firma debug ni entrega unsigned. `debuggable=false` y backup desactivado en el
+manifest de release. Clave y contraseñas permanecen fuera de Git/artefactos, con
+permisos 0600 y directorio 0700. Certificado público y SHA-256 se pueden publicar.
+Primera distribución prerelease: HTTP/LAN y Bearer en localStorage siguen
+pendientes de SEC-03; firma y backup no sustituyen HTTPS/Keystore.
+
 ### Cliente móvil actualizado — 2026-11-23
 
 La instantánea frontend del servidor incorpora Terminal passwords y los clientes

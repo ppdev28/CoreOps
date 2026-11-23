@@ -12,6 +12,43 @@ El 2026-11-13, con autorización del usuario, se respaldaron los 36 archivos And
 
 Validación de la limpieza: build web correcto; XML válido, sin recursos duplicados ni referencias XML/Kotlin a recursos ausentes; reglas Git comprobadas para fuentes, generados y claves locales. El intento de `bash ./gradlew --no-daemon :app:assembleDebug` se detuvo por ausencia de Java/JAVA_HOME; este servidor tampoco tiene SDK Android configurado. Quedan pendientes el build nativo y las pruebas en dispositivo con Java 21 y SDK 36 disponibles. El respaldo y su manifiesto SHA-256 están fuera de Git, en `/tmp/coreops-android-cleanup-05romax3/`; es una copia temporal y puede desaparecer al limpiar `/tmp`.
 
+## APK de release firmada
+
+`assembleRelease`/`bundleRelease` requieren firma explícita; no se genera una
+APK unsigned ni se reutiliza la clave debug. El build lee por defecto
+`~/.config/coreops/android-signing/release.properties`, o la ruta indicada en
+`COREOPS_ANDROID_SIGNING_PROPERTIES`. Propiedades privadas: `storeFile`,
+`storePassword`, `keyAlias`, `keyPassword`. Las variables
+`COREOPS_ANDROID_KEYSTORE`, `COREOPS_ANDROID_STORE_PASSWORD`,
+`COREOPS_ANDROID_KEY_ALIAS` y `COREOPS_ANDROID_KEY_PASSWORD` prevalecen.
+Rutas relativas del keystore se resuelven desde el directorio del properties.
+No versionar ni adjuntar estos archivos. Conservar backup protegido de clave y
+contraseñas: futuras actualizaciones deben mantener la identidad de firma.
+
+Build desde el commit que se va a etiquetar, con dependencias del lockfile:
+
+```sh
+cd frontend
+pnpm build
+pnpm exec cap sync android
+cd android
+./gradlew --no-daemon :app:assembleRelease :app:lintRelease
+# Validar APK con apksigner verify --verbose --print-certs y zipalign -c.
+```
+
+Release desactiva debugging y backup Android. Conserva compatibilidad HTTP/LAN
+del cliente actual: la primera distribución se publica como prerelease y no
+cierra SEC-03 (HTTPS/almacenamiento seguro). La APK usa la API del servidor
+configurado en login y no incluye backend ni credenciales. Firmas debug/release
+son diferentes: una release no puede sustituir con -r una instalación debug;
+no desinstalar/borrar datos automáticamente para probarla. La validación de
+release usa un emulador aislado cuando esté disponible.
+
+GitHub: etiqueta específica `android-v0.1.0`, APK, SHA-256 y certificado público.
+Publicar sólo la etiqueta no activa el workflow legacy de push a main que puede
+resetear/desplegar el checkout del servidor. No hacer push de main como parte de
+una entrega de APK ni tocar el checkout remoto de trabajo.
+
 ## Flechas y Enter de Terminal — 2026-11-23
 
 La barra web de Terminal separa las cuatro flechas de la tira Esc/Tab/Ctrl.
