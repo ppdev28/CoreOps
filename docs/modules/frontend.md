@@ -16,11 +16,32 @@ React 19, TypeScript estricto, Vite 8, Tailwind 4; pnpm. Preservar el diseño Fi
 
 ## Validación
 
+Settings incorpora Tailscale sólo admin (2026-11-22); DTOs en `lib/tailscale.ts`,
+componente aislado y estilos con tokens existentes. La navegación móvil usa una
+fila horizontal con sección activa visible, campos apilados, controles táctiles
+de 44 px y cabecera de guardado local visible. No aplicar Save/Reset locales a
+Users/Tailscale. `tailscale-settings.spec.ts` cubre las ocho secciones entre
+320–1440 px, roles, confirmación, estado obsoleto, errores y simulación Android.
+La autoridad real y ejecución permanecen en Go; ver [Tailscale](tailscale.md).
+
 `pnpm build` comprueba TypeScript y bundle; `pnpm format:check` es un control separado. Existe un runner Playwright para Dashboard (`pnpm test:dashboard`); aún faltan pruebas del resto de flujos. Incorporar pruebas de mapeo y del flujo de acciones al extraer contenedores, con casos de error/refresh/403 y valores desconocidos; verificar escritorio y móvil. La compilación no valida comportamiento visual.
 
 ## Apariencia compartida
 
-La dirección visual monocroma y redondeada se aplica ahora a toda la aplicación con `.app-workspace`. `lib/appearance.ts` define temas/presets y contraste; `webSettings.ts` valida/persiste `accentColor`; `tokens.ts` aplica los cambios guardados al instante. No añadir paletas fijas por pantalla. Usar `T.primary` para relleno, `T.onAccent` para su texto y `T.accent` para interacción/foco; colores de estado por separado.
+Jerarquía revisada el 2026-11-23 por petición del usuario: Inter Variable mantiene
+la identidad, con títulos 32–34px, secciones 15–16px/650 y métricas 32–42px. Las
+cabeceras comparten tono derivado del tema, divisor y sombra discreta de tarjeta.
+`hierarchy.css` concentra tokens/headers compartidos e inspect; dashboard.css
+conserva su composición. CardHeader legacy ahora usa h2/clases explícitas y Card
+admite className opcional. No aplicar selectores basados en posiciones DOM para
+volver a igualar título, subtítulo y valores. Ver [guía visual](../ui-style.md)
+y [validación](../ui-hierarchy-validation-2026-11-23.md).
+
+La dirección monocroma y redondeada se aplica con `.app-workspace`. `appearance.ts`
+define temas/presets/contraste; webSettings valida/persiste accentColor y tokens
+aplica preferencias al instante. No añadir paletas fijas por pantalla. Usar
+T.primary/T.onAccent para relleno/texto y T.accent para interacción/foco; los colores
+de estado permanecen separados.
 
 `styles/application.css` concentra el responsive general; los grids se identifican con `data-layout` y superficies con `data-surface`. Evitar mínimos intrínsecos que desborden una columna (`minmax(0,1fr)`); las tablas densas pueden desplazarse en su propio contenedor. Mantener accesibles los controles en horizontal y sin teclado/ratón.
 

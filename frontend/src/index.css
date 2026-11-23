@@ -3,6 +3,7 @@
 @import './styles/material.css';
 @import './styles/dashboard.css';
 @import './styles/application.css';
+@import './styles/hierarchy.css';
 
 /* ── Design tokens ─────────────────────────────────────────────── */
 @theme inline {

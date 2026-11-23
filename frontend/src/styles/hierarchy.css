@@ -1,0 +1,157 @@
+/* Typography and surface hierarchy, shared by legacy and Dashboard primitives.
+   Every tone derives from the selected theme; accent remains user controlled. */
+.app-workspace {
+  --coreops-font-ui: 'Inter Variable', Inter, system-ui, sans-serif;
+  --coreops-surface-header: color-mix(in srgb, var(--coreops-raised) 95%, var(--coreops-text));
+  --coreops-card-elevation: 0 4px 14px rgb(0 0 0 / 8%);
+  --coreops-heading-size: 15px;
+}
+
+.app-workspace .coreops-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--coreops-border);
+  background: var(--coreops-surface-header);
+}
+
+.app-workspace .coreops-card-heading { min-width: 0; }
+.app-workspace .coreops-card-title {
+  margin: 0;
+  color: var(--coreops-text);
+  font: 650 var(--coreops-heading-size)/1.4 var(--coreops-font-ui);
+  letter-spacing: -.015em;
+  overflow-wrap: anywhere;
+}
+.app-workspace .coreops-card-subtitle {
+  margin: 5px 0 0;
+  color: var(--coreops-textDim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Inspect identity is the page title; image/ID are secondary technical metadata. */
+.app-workspace .native-container-detail { padding: 26px 28px 36px; }
+.app-workspace .native-container-detail-header {
+  padding: 22px;
+  margin-bottom: 20px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 22px;
+  background: var(--coreops-raised);
+  box-shadow: var(--coreops-card-elevation);
+  align-items: center;
+  gap: 24px;
+}
+.app-workspace .native-container-detail-title { flex: 1; gap: 16px; }
+.app-workspace .native-container-detail-title > div:last-child { min-width: 0; }
+.app-workspace .native-container-detail-icon {
+  width: 48px;
+  height: 48px;
+  flex-basis: 48px;
+  border-radius: 14px;
+  border-color: var(--coreops-border);
+  background: var(--coreops-overlay);
+  color: var(--coreops-textSub);
+}
+.app-workspace .container-detail-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--coreops-textDim);
+  font: 600 10px/1.4 var(--coreops-font-ui);
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.app-workspace .native-container-name-row { flex-wrap: wrap; gap: 10px; }
+.app-workspace .native-container-name-row h1 {
+  font: 700 32px/1.2 var(--coreops-font-ui);
+  letter-spacing: -.04em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-workspace .native-container-detail-title p {
+  max-width: 100%;
+  margin: 7px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-workspace .native-container-detail-title code {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--coreops-overlay);
+}
+.app-workspace .native-container-actions { max-width: 48%; gap: 8px; }
+.app-workspace .native-container-actions > button { min-height: 36px; }
+.app-workspace .native-container-tabs {
+  gap: 20px;
+  margin-bottom: 22px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--coreops-borderStrong);
+  border-radius: 0;
+  background: transparent;
+}
+.app-workspace .native-container-tabs button {
+  padding: 0 2px 12px;
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font: 500 13px/1.4 var(--coreops-font-ui);
+}
+.app-workspace .native-container-tabs button.active {
+  border-bottom-color: var(--coreops-accent);
+  background: transparent;
+  color: var(--coreops-text);
+  font-weight: 650;
+}
+.app-workspace .native-container-grid { gap: 20px; }
+.app-workspace .native-detail-row { padding: 13px 20px; border-color: var(--coreops-borderMuted); }
+.app-workspace .native-detail-row > span { color: var(--coreops-textDim); font-size: 12px; line-height: 1.6; }
+.app-workspace .native-detail-row > strong { color: var(--coreops-text); font-size: 12px; line-height: 1.6; font-weight: 500; }
+.app-workspace .container-runtime-card { display: flex; flex-direction: column; }
+.app-workspace .native-runtime-grid { flex: 1; }
+.app-workspace .native-runtime-grid > div { padding: 20px; gap: 8px; align-content: start; }
+.app-workspace .native-runtime-grid span { font-size: 12px; line-height: 1.5; }
+.app-workspace .native-runtime-grid strong {
+  color: var(--coreops-text);
+  font: 600 16px/1.4 var(--coreops-font-ui);
+}
+.app-workspace .native-runtime-grid [data-runtime="networks"] strong,
+.app-workspace .native-runtime-grid [data-runtime="mounts"] strong { font-size: 28px; line-height: 1.2; letter-spacing: -.04em; }
+.app-workspace .native-runtime-grid [data-runtime="command"] strong {
+  font: 400 12px/1.6 'JetBrains Mono', monospace;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-workspace .native-code-block { padding: 18px 20px; font-size: 12px; line-height: 1.8; }
+.app-workspace .native-code-block div + div { margin-top: 10px; }
+.app-workspace .native-code-block span { width: 92px; font: 600 10px/1.6 var(--coreops-font-ui); letter-spacing: .06em; }
+.app-workspace .native-empty-detail { padding: 24px 20px; font-size: 12px; }
+.app-workspace .native-inspect-header > .coreops-card-header { flex: 1; border-bottom: 0; background: transparent; }
+.app-workspace .native-inspect-header { background: var(--coreops-surface-header); }
+.app-workspace .native-network-card-title strong, .app-workspace .native-ports h3 { font-family: var(--coreops-font-ui); font-size: 14px; font-weight: 650; }
+
+@media (max-width: 1000px) {
+  .app-workspace .native-container-detail-header { flex-direction: column; align-items: stretch; gap: 18px; }
+  .app-workspace .native-container-actions { max-width: none; justify-content: flex-start; border-top: 1px solid var(--coreops-border); padding-top: 16px; }
+}
+@media (max-width: 600px) {
+  .app-workspace .native-container-detail-header { padding: 18px 16px; border-radius: 18px; }
+  .app-workspace .native-container-detail-title { gap: 12px; align-items: flex-start; }
+  .app-workspace .native-container-detail-icon { width: 40px; height: 40px; flex-basis: 40px; }
+  .app-workspace .native-container-name-row h1 { font-size: 27px !important; }
+  .app-workspace .native-container-actions > button { min-height: 42px; }
+  .app-workspace .native-container-tabs { gap: 18px; margin-bottom: 18px; }
+  .app-workspace .coreops-card-header { padding: 15px 16px; }
+  .app-workspace .native-detail-row, .app-workspace .native-runtime-grid > div { padding: 14px 16px; }
+  .app-workspace .native-runtime-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-workspace .native-runtime-grid [data-runtime="state"],
+  .app-workspace .native-runtime-grid [data-runtime="command"] { grid-column: 1 / -1; }
+  .app-workspace .native-container-grid { gap: 16px; }
+}

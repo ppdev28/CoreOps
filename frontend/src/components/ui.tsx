@@ -258,13 +258,15 @@ export function Btn({
 export function Card({
   children,
   style,
+  className = "",
 }: {
   children: ReactNode;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <div
-      className="coreops-card"
+      className={`coreops-card ${className}`.trim()}
       style={{
         background: T.raised,
         border: `1px solid ${T.border}`,
@@ -288,24 +290,10 @@ export function CardHeader({
   sub?: string;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 16px",
-        borderBottom: `1px solid ${T.border}`,
-      }}
-    >
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>
-          {title}
-        </div>
-        {sub && (
-          <div style={{ fontSize: 11, color: T.textDim, marginTop: 1 }}>
-            {sub}
-          </div>
-        )}
+    <div className="coreops-card-header card-header">
+      <div className="coreops-card-heading">
+        <h2 className="coreops-card-title">{title}</h2>
+        {sub && <p className="coreops-card-subtitle">{sub}</p>}
       </div>
       {action}
     </div>

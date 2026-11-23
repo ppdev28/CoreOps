@@ -26,7 +26,6 @@ import {
 import {
   Card as BaseCard,
   CardHeader as BaseHeader,
-  CardTitle,
   CardDescription,
 } from "./ui/card";
 import { Button } from "./ui/button";
@@ -103,8 +102,12 @@ export function CardHeader({
   return (
     <BaseHeader className="mono-card-header">
       <div>
-        <CardTitle>{title}</CardTitle>
-        {sub && <CardDescription>{sub}</CardDescription>}
+        <h2 className="mono-card-title">{title}</h2>
+        {sub && (
+          <CardDescription className="mono-card-description">
+            {sub}
+          </CardDescription>
+        )}
       </div>
       {action}
     </BaseHeader>
@@ -132,7 +135,7 @@ export function MetricCard({
   const points = history?.map((value, i) => ({ sample: i, value }));
   return (
     <Card className="mono-metric">
-      <div className="metric-card">
+      <div className="metric-card" data-metric={label}>
         <div className="metric-heading">
           <span>
             {icon}

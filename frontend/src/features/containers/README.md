@@ -1,5 +1,13 @@
 # Feature: contenedores
 
+Jerarquía visual (2026-11-23): inspect distingue identidad, imagen/ID, acciones,
+navegación y secciones mediante `styles/hierarchy.css` y CardHeader compartido h2.
+El nombre usa Inter Variable y env/paths/ID conservan mono; datos largos se ajustan.
+Runtime usa marcas data-runtime explícitas para estados/conteos/comando, sin
+inventar mediciones. Pestañas conservan callbacks y exponen aria-pressed; no se
+introduce un tablist que requiera otra interacción de teclado. Roles/lifecycle/
+API y reconciliación se mantienen. [Validación](../../../../docs/ui-hierarchy-validation-2026-11-23.md).
+
 Terminal (2026-11-17): inspect y menú reciben `onTerminal(id,name)` desde App.
 Admin y estado running en UI; el backend vuelve a validar rol/estado antes de exec.
 App compone una petición al workspace Terminal persistente sin importar sus

@@ -1,6 +1,9 @@
 # CoreOps application visual system
 
-Updated 2026-11-13 on `feature/ui-redesign`. The rounded monochrome Dashboard direction now applies to **every screen**, following the user's expanded scope. The default remains neutral; accent colors and Dark/Gray/Light/System are configurable under Settings → Appearance.
+Updated 2026-11-23 on `develop`. The rounded monochrome direction applies to every
+screen. The user requested clearer typography and separation after the flat
+redesign: retain the identity while restoring hierarchy and restrained elevation.
+Neutral remains the default; accent and Dark/Gray/Light/System remain configurable.
 
 The favicon in `frontend/public/favicon.svg` uses the same neutral server-outline identity; its relative link supports the configured Vite base and the browser theme color matches the dark canvas.
 
@@ -11,8 +14,14 @@ The common material covers Dashboard, Host, Containers and inspect, Applications
 - `src/lib/appearance.ts`: pure palette policy, eight accent presets, color validation, contrast calculation and theme resolution.
 - `src/lib/webSettings.ts`: local persistence and validation (`accentColor` defaults to `neutral`; custom values must be six-digit hex). Existing settings migrate implicitly through defaults.
 - `src/lib/tokens.ts`: cached, live shared tokens and root CSS variables; saved changes and System preference changes update every view without reloading. Semantic status tokens remain independent of accent.
-- `src/styles/themes.css`, `dashboard.css`, `application.css`: foundation variables, flat material/components and application-wide responsive rules. `.app-workspace` covers the shell/login; `.dashboard-popover` gives portaled popovers the same resolved tokens. `material.css` contains earlier shared definitions overridden by the flat material.
-- `src/components/ui.tsx`: existing public visual primitives now use flat rounded cards, pill buttons/filters/tabs and shared appearance. Their props and operational callbacks are preserved.
+- `src/styles/themes.css`, `dashboard.css`, `application.css`: foundation variables,
+  Dashboard components and responsive rules. `hierarchy.css` defines shared card
+  headings/surface tokens and scoped container inspection typography/layout.
+  `.app-workspace` covers shell/login; portaled popovers share resolved tokens.
+  `material.css` contains earlier definitions; avoid restoring its beveled shadows.
+- `src/components/ui.tsx`: existing primitives share rounded surfaces and appearance.
+  CardHeader renders a semantic h2, optional subtitle and action area. Card accepts
+  an optional className for scoped composition; callbacks/contracts are preserved.
 - `src/components/ui/`: locally owned shadcn/ui primitives (MIT); Dashboard uses these plus TanStack Table v8.
 - `src/components/tremor/`: vendored Tremor Raw LineChart/SparkLineChart and helpers, with licenses retained. Dashboard preserves real sample gaps and chart range state. `dashboard-theme.ts` now re-exports the common tokens rather than defining another palette.
 - `src/components/dashboard.tsx`: reusable Dashboard product components. `dashboard/ServerSelector.tsx` supplies the current-host popover throughout the shell.
@@ -22,7 +31,36 @@ The common material covers Dashboard, Host, Containers and inspect, Applications
 
 Dark uses `#090909` canvas, `#171717` cards, `#222222` nested surfaces, `#272727` secondary controls and `#2d2d2d` borders. Gray uses brighter graphite surfaces. Light uses neutral pale surfaces and dark text. System tracks the OS's light/dark preference.
 
-Major cards have roughly 24–26px radii, nested surfaces 16–20px, and compact controls full pill corners. Surfaces are flat with restrained borders and no neumorphic bevels. Keyboard focus remains explicit. Terminal input focus is drawn on its surrounding input surface, avoiding nested rings.
+Major cards keep 24–26px radii and compact controls keep pill corners. Card headers
+use a theme-derived tone and dividing rule; bodies remain calm. A small shared
+shadow separates surfaces without bevels. Header color mixes the current raised
+surface with 5% text, so dark/gray/light and custom accent preferences keep working.
+Focus remains explicit. Terminal input focus is drawn on its surrounding surface.
+
+## Readability and hierarchy — 2026-11-23
+
+Keep the existing local Inter Variable font: use its weight range to distinguish
+headings from data rather than introduce another font download. JetBrains Mono is
+reserved for IDs, images, paths, commands and configuration values.
+
+| Role | Desktop | Mobile / behavior |
+| --- | --- | --- |
+| Dashboard title | 34px / 700 | 28px |
+| Container identity | 32px / 700, Inter Variable | 27px, long names wrap |
+| Card title | 15–16px / 650, semantic h2 | Same hierarchy, wrapping actions |
+| Primary metric | 32–42px / 650, tabular | 32px; network rates use a smaller scale |
+| Labels / secondary text | 11–12px, secondary tone | Retain readable size |
+| Technical detail value | 12px mono / 500, primary tone | Wrap or scroll in its own region |
+
+Dashboard separates headers from charts/tables, strengthens metric labels/values,
+and keeps stale/unavailable/history states explicit. Sorting labels inherit one
+typographic style; row hover derives from the theme instead of a fixed dark fill.
+Container inspect has a separate identity/actions surface, underlined selected
+navigation with aria-pressed, clearer information rows and prominent real runtime
+counts. On small phones state/command span the width; network/mount counts share
+a row. No changes to lifecycle actions, permissions, data or source availability.
+
+[Visual validation, snapshots and deployment](ui-hierarchy-validation-2026-11-23.md).
 
 Accent presets: **Neutral, Blue, Indigo, Violet, Teal, Green, Amber, Rose**, plus a custom color picker. The selection is saved alongside the theme and survives reload/navigation. The preview is explicitly a draft until Save. Neutral adapts its button fill to light/dark. Custom fills retain the chosen color; foreground is selected for contrast, and text/focus accents are lightened/darkened when needed to reach 4.5:1 against card surfaces. Status success/warning/error colors do not change with accent.
 
@@ -60,6 +98,11 @@ An existing Chromium can be selected with `COREOPS_CHROMIUM_PATH=/path/to/chrome
 
 The 15 Playwright tests use intercepted API fixtures and wait for actual screen content after lazy loading. They cover all 14 navigation destinations plus container inspection at 320×740, 390×844, 844×390, 768×1024, 1024×768, 1280×800, 1920×1080 and 2560×1440; they check page overflow and runtime errors. Other tests cover live presets/custom accents, persistence, malformed settings, System changes, login, sorting, role restrictions, chart ranges/gaps and healthy/issue/empty/disconnected/stale states. Tables can legitimately scroll horizontally inside their regions.
 
-Screenshots live in ignored `frontend/test-results/dashboard/` artifacts. Fixture terminal responses are intercepted, including its initial identity query; no real infrastructure command is run by these tests. Real authenticated API integration, native builds and physical device coverage are not claimed. Existing warnings: `uuid@7.0.3` deprecation from Capacitor CLI → xcode, and Playwright terminal color-environment notices.
+Screenshots live in ignored test artifacts. The November 23 hierarchy slice passed
+25 relevant UI cases, including all screens at eight sizes and appearance/roles/
+inspect/terminal transitions. Before/after visual review covers dark/gray/light,
+320/390/1440px; long-name/data review covers 30 tab/viewport combinations at
+320–1920px. Fixture calls/terminals are intercepted. Native/device coverage is
+separate. The runner's NO_COLOR/FORCE_COLOR notices remain unrelated to product UI.
 
 Source references: [shadcn Table](https://ui.shadcn.com/docs/components/radix/table), [Tremor Raw](https://www.tremor.so/docs/getting-started/installation), [TanStack v8](https://tanstack.com/table/v8/docs/overview). Retain notices in `frontend/licenses/` when editing vendored components.

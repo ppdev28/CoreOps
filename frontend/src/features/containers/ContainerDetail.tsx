@@ -157,6 +157,7 @@ export default function ContainerDetail({
             <Box size={20} />
           </div>
           <div>
+            <span className="container-detail-eyebrow">Container</span>
             <div className="native-container-name-row">
               <h1>{container.name}</h1>
               <StatusBadge status={status as any} />
@@ -230,6 +231,7 @@ export default function ContainerDetail({
           <button
             key={item}
             className={tab === item ? "active" : ""}
+            aria-pressed={tab === item}
             onClick={() => setTab(item)}
           >
             {item}
@@ -258,25 +260,25 @@ export default function ContainerDetail({
             </div>
           </Card>
 
-          <Card>
+          <Card className="container-runtime-card">
             <CardHeader title="Runtime" />
             <div className="native-runtime-grid">
-              <div>
+              <div data-runtime="state">
                 <Server size={16} />
                 <span>State</span>
                 <strong>{container.state}</strong>
               </div>
-              <div>
+              <div data-runtime="networks">
                 <Network size={16} />
                 <span>Networks</span>
                 <strong>{Object.keys(container.networks).length}</strong>
               </div>
-              <div>
+              <div data-runtime="mounts">
                 <Box size={16} />
                 <span>Mounts</span>
                 <strong>{container.mounts.length}</strong>
               </div>
-              <div>
+              <div data-runtime="command">
                 <Terminal size={16} />
                 <span>Command</span>
                 <strong>{container.config.cmd.join(" ") || "—"}</strong>
