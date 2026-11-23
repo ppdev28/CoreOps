@@ -222,18 +222,17 @@ class MainActivity : BridgeActivity() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
             setBackgroundColor(SURFACE)
         }
 
         val logo = ImageView(this).apply {
-            setImageResource(R.drawable.ic_coreops_logo)
-            background = ResourcesCompat.getDrawable(resources, R.drawable.ic_coreops_background, theme)
-            setPadding(dp(7), dp(7), dp(7), dp(7))
+            setImageResource(R.drawable.ic_coreops_icon)
+            contentDescription = "CoreOps"
         }
         header.addView(
             logo,
-            LinearLayout.LayoutParams(dp(30), dp(30))
+            LinearLayout.LayoutParams(dp(34), dp(34))
         )
 
         val brand = TextView(this).apply {
