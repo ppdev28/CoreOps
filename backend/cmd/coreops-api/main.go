@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,6 +29,8 @@ import (
 )
 
 type API struct {
+	serviceControl  serviceController
+	serviceMutation sync.Mutex
 	tailscale       *tailscale.Service
 	power           *hostpower.Service
 	hostSecurity    *security.Service

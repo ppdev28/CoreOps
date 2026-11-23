@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Layers,
   Play,
@@ -11,6 +11,7 @@ import {
 import { T } from "../lib/tokens";
 import { getServices, runServiceAction, type ServiceAction } from "../lib/api";
 import type { ConfirmDialog, SystemService } from "../lib/types";
+import { getSession } from "../lib/auth";
 import {
   Card,
   Btn,
@@ -37,6 +38,14 @@ export default function ServicesView({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const executing = useRef(false);
+  const role = getSession()?.user.role;
+  const canOperate = role === "operator" || role === "admin";
+  const setupReason =
+    services.length > 0 &&
+    services.every((service) => service.management?.available === false)
+      ? services[0].management?.reason
+      : undefined;
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -79,6 +88,12 @@ export default function ServicesView({
   );
 
   const action = (service: SystemService, operation: ServiceAction) => {
+    if (
+      !canOperate ||
+      service.management?.available === false ||
+      executing.current
+    )
+      return;
     const verb =
       operation === "start"
         ? "Started"
@@ -86,19 +101,23 @@ export default function ServicesView({
           ? "Stopped"
           : "Restarted";
     const execute = async () => {
+      if (executing.current) return;
+      executing.current = true;
       setPending(`${service.name}:${operation}`);
+      setError(null);
       try {
         await runServiceAction(service.name, operation);
         addToast(`${verb} ${service.name}`, "success");
         await load(true);
       } catch (err) {
-        addToast(
+        const message =
           err instanceof Error
             ? err.message
-            : `Failed to ${operation} ${service.name}`,
-          "error",
-        );
+            : `Failed to ${operation} ${service.name}`;
+        setError(message);
+        addToast(message, "error");
       } finally {
+        executing.current = false;
         setPending(null);
       }
     };
@@ -117,7 +136,6 @@ export default function ServicesView({
 
   const statusColor = (s: string) =>
     s === "active" ? T.green : s === "failed" ? T.red : T.textDim;
-  const busy = (name: string, op: ServiceAction) => pending === `${name}:${op}`;
 
   return (
     <div style={{ padding: "22px 24px" }}>
@@ -230,8 +248,9 @@ export default function ServicesView({
         />
       </div>
 
-      {error && (
+      {(error || (canOperate && setupReason)) && (
         <div
+          role="alert"
           style={{
             display: "flex",
             alignItems: "center",
@@ -246,7 +265,7 @@ export default function ServicesView({
           }}
         >
           <AlertTriangle size={14} />
-          <span style={{ flex: 1 }}>{error}</span>
+          <span style={{ flex: 1 }}>{error || setupReason}</span>
           <Btn size="xs" variant="secondary" onClick={() => void load()}>
             Retry
           </Btn>
@@ -391,32 +410,53 @@ export default function ServicesView({
                     </Td>
                     <Td dim>{s.uptime}</Td>
                     <Td>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        {s.status === "active" ? (
-                          <Btn
-                            size="xs"
-                            variant="danger"
-                            icon={<Square size={10} />}
-                            disabled={pending !== null}
-                            onClick={() => action(s, "stop")}
-                          />
-                        ) : (
+                      {canOperate ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {s.status === "active" ? (
+                            <Btn
+                              size="xs"
+                              variant="danger"
+                              icon={<Square size={10} />}
+                              ariaLabel={`Stop ${s.name}`}
+                              title={s.management?.reason || `Stop ${s.name}`}
+                              disabled={
+                                pending !== null ||
+                                s.management?.available === false
+                              }
+                              onClick={() => action(s, "stop")}
+                            />
+                          ) : (
+                            <Btn
+                              size="xs"
+                              variant="secondary"
+                              icon={<Play size={10} />}
+                              ariaLabel={`Start ${s.name}`}
+                              title={s.management?.reason || `Start ${s.name}`}
+                              disabled={
+                                pending !== null ||
+                                s.management?.available === false
+                              }
+                              onClick={() => action(s, "start")}
+                            />
+                          )}
                           <Btn
                             size="xs"
                             variant="secondary"
-                            icon={<Play size={10} />}
-                            disabled={pending !== null}
-                            onClick={() => action(s, "start")}
+                            icon={<RotateCw size={10} />}
+                            ariaLabel={`Restart ${s.name}`}
+                            title={s.management?.reason || `Restart ${s.name}`}
+                            disabled={
+                              pending !== null ||
+                              s.management?.available === false
+                            }
+                            onClick={() => action(s, "restart")}
                           />
-                        )}
-                        <Btn
-                          size="xs"
-                          variant="secondary"
-                          icon={<RotateCw size={10} />}
-                          disabled={pending !== null}
-                          onClick={() => action(s, "restart")}
-                        />
-                      </div>
+                        </div>
+                      ) : (
+                        <span style={{ color: T.textDim, fontSize: 11 }}>
+                          Read only
+                        </span>
+                      )}
                     </Td>
                   </tr>
                 ))}

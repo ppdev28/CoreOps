@@ -21,3 +21,18 @@ Cambiar contrato, DTOs TypeScript, mapeadores y tests juntos. No importar modelo
 Desde `backend/`: `go test ./...` valida OpenAPI y respuestas reales de handlers/middleware con runtimes falsos, incluidos roles, errores, cancelación y auditoría. `contracts_test.go` usa kin-openapi v0.135.0, versión compatible con Go 1.24, sólo en tests; no forma parte del binario de producción.
 
 Desde `frontend/`: `pnpm check:boundaries`, `pnpm format:check`, `pnpm build`, `pnpm test:ui`. El build incluye los DTOs de este directorio por importación de tipos; ejecutar desde un checkout que incluya `api/` y `frontend/`. CI ejecuta contrato y controles de dependencias. No es validación automática de todo endpoint legacy ni generación de clientes.
+
+
+## Services — permiso explícito (2026-11-23)
+
+Rutas existentes conservadas: `GET /api/v1/services` viewer;
+`POST /api/v1/services/{name}/{start|stop|restart}` operator/admin.
+El inventario añade el objeto opcional `management: {available: boolean, reason?: string}`.
+Es una indicación preliminar, no garantía de que la unidad sea controlable;
+el helper revalida archivos/alias al ejecutar. Sin permiso conserva lecturas.
+Las acciones aceptan cuerpo vacío u objeto vacío, sin query, y unidades `.service`
+ASCII simples. 200 conserva `{ok,name,action}` tras ejecución síncrona confirmada;
+400 validación, 403 permiso/protección, 404 no encontrada, 409 operación en curso,
+503 audit/helper no disponible o resultado incierto. Sin reintento automático.
+Sesión/rol frescos bajo bloqueo de identidad e intención durable antes del efecto;
+`Cache-Control: no-store`. [Política completa](../docs/modules/services.md).

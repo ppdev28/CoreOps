@@ -1,30 +1,41 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxservices"
 )
 
 type SystemService struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Enabled     bool   `json:"enabled"`
-	CPU         string `json:"cpu"`
-	Memory      string `json:"memory"`
-	Uptime      string `json:"uptime"`
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Status      string             `json:"status"`
+	Enabled     bool               `json:"enabled"`
+	CPU         string             `json:"cpu"`
+	Memory      string             `json:"memory"`
+	Uptime      string             `json:"uptime"`
+	Management  *ServiceManagement `json:"management,omitempty"`
 }
 
-var systemdUnitPattern = regexp.MustCompile(`^[a-zA-Z0-9@_.:-]+\.service$`)
+type ServiceManagement struct {
+	Available bool   `json:"available"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+type serviceController interface {
+	Check(context.Context) error
+	Execute(context.Context, string, string) error
+}
 
 func collectServices(ctx context.Context) ([]SystemService, error) {
-	out, err := runSystemctl(ctx, "list-units", "--type=service", "--all", "--no-legend", "--no-pager")
+	out, err := runSystemctl(ctx, "list-units", "--type=service", "--all", "--plain", "--no-legend", "--no-pager")
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +43,7 @@ func collectServices(ctx context.Context) ([]SystemService, error) {
 	services := make([]SystemService, 0, len(lines))
 	for _, line := range lines {
 		fields := strings.Fields(line)
-		if len(fields) < 4 || !systemdUnitPattern.MatchString(fields[0]) {
+		if len(fields) < 4 || !linuxservices.ValidUnit(fields[0]) {
 			continue
 		}
 		name := fields[0]
@@ -58,7 +69,10 @@ func collectServices(ctx context.Context) ([]SystemService, error) {
 }
 
 func inspectSystemdService(ctx context.Context, name string) (SystemService, error) {
-	out, err := runSystemctl(ctx, "show", name, "--no-pager", "--property=Description,ActiveState,UnitFileState,MainPID,CPUUsageNSec,MemoryCurrent,ActiveEnterTimestamp")
+	if !linuxservices.ValidUnit(name) {
+		return SystemService{}, linuxservices.ErrInvalid
+	}
+	out, err := runSystemctl(ctx, "show", "--property=Id,LoadState,Transient,Description,ActiveState,UnitFileState,MainPID,CPUUsageNSec,MemoryCurrent,ActiveEnterTimestamp", "--", name)
 	if err != nil {
 		return SystemService{}, err
 	}
@@ -86,27 +100,28 @@ func inspectSystemdService(ctx context.Context, name string) (SystemService, err
 	if status == "active" {
 		uptime = formatServiceUptime(values["ActiveEnterTimestamp"])
 	}
-	return SystemService{Description: values["Description"], Status: status, Enabled: enabled, CPU: cpu, Memory: memory, Uptime: uptime}, nil
-}
-
-func serviceAction(ctx context.Context, name, action string) error {
-	if !systemdUnitPattern.MatchString(name) {
-		return fmt.Errorf("invalid systemd service name")
+	management := &ServiceManagement{Available: true}
+	if linuxservices.Protected(name) || linuxservices.Protected(values["Id"]) {
+		management.Available = false
+		management.Reason = "Use independent SSH for CoreOps and the control center for host power."
+	} else if values["LoadState"] != "loaded" || values["Transient"] != "no" {
+		management.Available = false
+		management.Reason = "Only loaded, persistent system services can be managed."
 	}
-	switch action {
-	case "start", "stop", "restart":
-	default:
-		return fmt.Errorf("invalid service action")
-	}
-	_, err := runSystemctl(ctx, action, name)
-	return err
+	return SystemService{Description: values["Description"], Status: status, Enabled: enabled, CPU: cpu, Memory: memory, Uptime: uptime, Management: management}, nil
 }
 
 func runSystemctl(ctx context.Context, args ...string) (string, error) {
 	commandCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(commandCtx, "systemctl", args...)
-	out, err := cmd.CombinedOutput()
+	cmd := exec.CommandContext(commandCtx, "/usr/bin/systemctl", args...)
+	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C"}
+	cmd.WaitDelay = time.Second
+	var output serviceReadOutput
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	err := cmd.Run()
+	out := output.Bytes()
 	if err != nil {
 		message := strings.TrimSpace(string(out))
 		if message == "" {
@@ -115,6 +130,15 @@ func runSystemctl(ctx context.Context, args ...string) (string, error) {
 		return "", fmt.Errorf("systemctl: %s", message)
 	}
 	return string(out), nil
+}
+
+type serviceReadOutput struct{ bytes.Buffer }
+
+func (b *serviceReadOutput) Write(p []byte) (int, error) {
+	if b.Len()+len(p) > 512*1024 {
+		return 0, fmt.Errorf("systemctl output limit exceeded")
+	}
+	return b.Buffer.Write(p)
 }
 
 func formatBytes(bytes int64) string {

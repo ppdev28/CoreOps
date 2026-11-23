@@ -5,6 +5,7 @@ import (
 	dockeradapter "github.com/ppdev28/CoreOps/backend/internal/adapters/docker"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxpower"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxsecurity"
+	"github.com/ppdev28/CoreOps/backend/internal/adapters/linuxservices"
 	"github.com/ppdev28/CoreOps/backend/internal/adapters/tailscalelocal"
 	"github.com/ppdev28/CoreOps/backend/internal/containers"
 	"github.com/ppdev28/CoreOps/backend/internal/hostpower"
@@ -24,6 +25,9 @@ import (
 //	operator container/service/VM actions and sensitive reads (logs, env vars)
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
+	if a.serviceControl == nil {
+		a.serviceControl = linuxservices.New()
+	}
 	if a.files != nil {
 		a.files.privateDir = auth.dir
 	}
@@ -113,9 +117,9 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	handle("GET /api/v1/virtual-machines", RoleViewer, a.listVirtualMachines)
 	handle("POST /api/v1/virtual-machines/{name}/{action}", RoleOperator, a.virtualMachineAction)
 	handle("GET /api/v1/services", RoleViewer, a.listServices)
-	handle("POST /api/v1/services/{name}/start", RoleOperator, a.startService)
-	handle("POST /api/v1/services/{name}/stop", RoleOperator, a.stopService)
-	handle("POST /api/v1/services/{name}/restart", RoleOperator, a.restartService)
+	handle("POST /api/v1/services/{name}/start", RoleOperator, a.serviceAction(auth, audit, "start"))
+	handle("POST /api/v1/services/{name}/stop", RoleOperator, a.serviceAction(auth, audit, "stop"))
+	handle("POST /api/v1/services/{name}/restart", RoleOperator, a.serviceAction(auth, audit, "restart"))
 	handle("GET /api/v1/storage", RoleViewer, a.storage)
 	handle("GET /api/v1/files", RoleAdmin, a.files.list)
 	handle("GET /api/v1/files/preview", RoleAdmin, a.files.preview(auth.dir))
