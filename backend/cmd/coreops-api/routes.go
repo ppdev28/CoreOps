@@ -20,6 +20,9 @@ import (
 //	operator container/service/VM actions and sensitive reads (logs, env vars)
 //	admin    shell access, security changes, package updates, audit log
 func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
+	if a.files != nil {
+		a.files.privateDir = auth.dir
+	}
 	a.auditLogPath = audit.path
 	if a.hostSecurity == nil {
 		a.hostSecurity = security.New(linuxsecurity.New())
@@ -64,6 +67,10 @@ func (a *API) routes(auth *AuthStore, audit *AuditLog) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", auth.loginHandler)
 	handle("POST /api/v1/auth/logout", RoleViewer, auth.logoutHandler)
 	handle("GET /api/v1/auth/me", RoleViewer, meHandler)
+	handle("GET /api/v1/terminal/passwords/{target}", RoleAdmin, auth.terminalPasswordHandler("status"))
+	handle("POST /api/v1/terminal/passwords/{target}", RoleAdmin, auth.terminalPasswordHandler("save"))
+	handle("POST /api/v1/terminal/passwords/{target}/reveal", RoleAdmin, auth.terminalPasswordHandler("reveal"))
+	handle("DELETE /api/v1/terminal/passwords/{target}", RoleAdmin, auth.terminalPasswordHandler("delete"))
 	handle("GET /api/v1/users", RoleAdmin, auth.usersHandler)
 	handle("POST /api/v1/users", RoleAdmin, auth.createUserHandler)
 

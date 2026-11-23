@@ -73,6 +73,13 @@ Go `internal` restricts consumers outside the backend tree, not sibling imports.
 
 ## Contract and operations
 
+Terminal passwords (2026-11-22) deliberately reuse the legacy identity store and
+its cross-process lock for ownership/revocation and bounded encrypted persistence.
+The browser keeps only saved-state metadata; retrieval is an explicit admin POST
+before xterm paste. This is not a new generic secrets service or an extracted
+identity module. Network filtering stays client-side over the existing socket
+DTO; Linux/Docker attribution remains in Go. See the module guides for limits.
+
 Container Terminal (2026-11-17) adds the separate `containers.TerminalRuntime`
 port and SDK-free TTY session interface, implemented in `adapters/docker`.
 The existing WebSocket transport composes it with the legacy host PTY and keeps

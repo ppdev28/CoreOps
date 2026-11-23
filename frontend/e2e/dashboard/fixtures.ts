@@ -422,6 +422,7 @@ export async function mockDashboard(
         exitCode: 0,
         cwd: "/home/operator",
       };
+    else if (path.startsWith("/terminal/passwords/")) body = { saved: false };
     else if (path === "/updates/jobs/current")
       return route.fulfill({ contentType: "application/json", body: "null" });
     else if (path === "/updates")

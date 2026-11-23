@@ -1,5 +1,64 @@
 # Terminal interactiva
 
+## Contraseña guardada y pegado explícito — 2026-11-22
+
+La toolbar añade una llave para guardar una contraseña; una vez guardada, la misma
+llave la pega en la pestaña activa **sin Enter**. El botón de ajustes permite
+reemplazar, refrescar estado u olvidar. Guardar no envía bytes a la PTY. Nunca se
+copia al portapapeles ni se persiste el valor en localStorage/sessionStorage.
+El diálogo no precarga la contraseña existente. La app no intenta reconocer un
+prompt: el usuario debe comprobarlo, porque una shell/programa remoto puede
+mostrar o registrar lo pegado. Esto tampoco configura sudo, usuarios Linux o SSH.
+
+Cada contraseña pertenece al usuario CoreOps y al target explícito: `host` o
+`container-<ID>`; las pestañas del mismo target comparten su valor. Una shell host
+puede ejecutar SSH hacia otro equipo: el target de guardado sigue siendo la shell
+CoreOps, no un destino SSH descubierto. IDs cortos/completos diferentes son targets
+distintos; la UI usa el ID recibido del inventario. Cambiar pestaña/servidor/usuario,
+ocultar Terminal o cerrar sesión aborta el pegado pendiente y limpia el formulario.
+Un guard comprueba además la pestaña/destino actuales y una conexión viva antes de
+usar `xterm.paste`. Los secretos con saltos de línea o controles se rechazan tanto
+en servidor como en cliente; no se añaden comandos, framing manual ni Enter.
+
+API sólo admin, con revalidación bajo el bloqueo persistente de identidad:
+
+- GET `/api/v1/terminal/passwords/{target}`: sólo `{saved}`.
+- POST a esa ruta: JSON estricto `{password}`, máximo 4 KiB; 1–1024 bytes UTF-8
+  sin caracteres de control/saltos de línea.
+- POST `.../{target}/reveal`: devuelve el valor únicamente tras la acción explícita.
+- DELETE `.../{target}`: olvida el valor de ese usuario/destino.
+
+No admite queries o parámetros de shell. Respuestas no-store/private; sin reintento
+automático. Audit registra actor, acción y target, nunca valor/cuerpo ni texto
+pegado; conserva los límites existentes de durabilidad del audit HTTP. 404 al
+consultar estado puede indicar API antigua: reconstruir/reiniciar backend.
+
+`terminal_passwords.go` guarda AES-256-GCM con nonce aleatorio y AAD que liga cuenta
+(incluida su fecha de creación) y destino. No comparte secretos entre admins ni
+con una cuenta borrada/recreada con el mismo nombre. Usuarios legacy sin fecha
+usan su hash de autenticación como identidad de generación; cambiar su password
+invalida el acceso a esos registros antiguos. Un máximo de 512 registros cifra el
+estado global; entradas de cuentas eliminadas pueden quedar cifradas e inaccesibles
+hasta mantenimiento del almacén. No es una bóveda de extremo a extremo.
+
+Archivos en `COREOPS_DATA_DIR`: `terminal-passwords.json` y
+`.terminal-passwords.key`, ambos 0600, propiedad de la cuenta API, sin symlink.
+Se crean sólo al guardar y se actualizan bajo el mismo flock que HTTP/CLI. El
+JSON usa persistencia atómica/fsync; la clave también se sincroniza. Al perder una
+clave con registros existentes o detectar corrupción/permisos inseguros se falla
+cerrado, sin regenerarla ni borrar contraseñas automáticamente. Respaldar clave y
+datos juntos, protegiendo también la identidad. El cifrado no protege contra root,
+compromiso de la cuenta API o un admin con acceso a su shell/sistema de archivos.
+No sustituye HTTPS/WSS para transportar secretos ni Keychain/Keystore del cliente.
+
+Files rechaza vista previa, download-ticket y borrado de los dos archivos,
+incluidos hard links; también bloquea uploads a sus nombres en el directorio
+privado. No implica aislamiento frente a la terminal privilegiada. Tests de
+`terminal_passwords_test.go` cubren permisos, revocación, cuentas/targets, reinicio,
+concurrencia, corrupción/clave perdida y protección Files. Playwright verifica
+ausencia de Enter, almacenamiento local, cambio de pestaña y errores. Usar sólo
+contraseñas/cuentas de prueba en una API aislada para validar la PTY real.
+
 ## Terminal de contenedores — 2026-11-17
 
 El botón Terminal de inspect y el menú de contenedores abren una pestaña con el

@@ -20,6 +20,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { checkTerminalAvailability, openTerminalSession } from "../lib/api";
 import { getSession } from "../lib/auth";
+import TerminalPasswordControls from "../components/TerminalPasswordControls";
 import {
   Popover,
   PopoverContent,
@@ -42,6 +43,7 @@ type Pane = {
 };
 type Handle = {
   input: (data: string) => void;
+  paste: (data: string) => boolean;
   clear: () => void;
   copy: () => void;
   search: () => void;
@@ -225,6 +227,12 @@ function TerminalPane({
     };
     handles.current.set(pane.id, {
       input,
+      paste: (data) => {
+        if (!live.current || socket.readyState !== WebSocket.OPEN) return false;
+        term.paste(data);
+        if (!touchInput()) term.focus();
+        return true;
+      },
       keyboard: () => {
         if (document.activeElement === term.textarea) term.blur();
         else term.focus();
@@ -577,6 +585,8 @@ export default function TerminalView({
   ).current;
   const root = useRef<HTMLDivElement>(null);
   const handles = useRef(new Map<number, Handle>());
+  const activeContext = useRef({ active, visible });
+  activeContext.current = { active, visible };
   const [pendingClose, setPendingClose] = useState<number | null>(null);
   const [availability, setAvailability] = useState("checking");
   const [connectionError, setConnectionError] = useState("");
@@ -726,6 +736,7 @@ export default function TerminalView({
   const run = (action: keyof Handle, value?: string) => {
     const handle = handles.current.get(active);
     if (action === "input") handle?.input(value ?? "");
+    else if (action === "paste") handle?.paste(value ?? "");
     else if (action === "zoom") handle?.zoom(Number(value));
     else handle?.[action]();
   };
@@ -883,6 +894,44 @@ export default function TerminalView({
           <Plus size={17} />
         </button>
         <div className="pty-tools">{tools()}</div>
+        <TerminalPasswordControls
+          key={active}
+          target={
+            panes.find((pane) => pane.id === active)
+              ? panes.find((pane) => pane.id === active)?.containerId
+                ? `container-${panes.find((pane) => pane.id === active)!.containerId}`
+                : "host"
+              : null
+          }
+          label={
+            panes.find((pane) => pane.id === active)?.containerName
+              ? `Container: ${panes.find((pane) => pane.id === active)!.containerName}`
+              : "Host terminal on this CoreOps server"
+          }
+          visible={visible}
+          disabled={
+            availability !== "ready" ||
+            !panes.length ||
+            !!panes.find((pane) => pane.id === active)?.ended
+          }
+          onPaste={(password, target) => {
+            if (
+              activeContext.current.active !== active ||
+              !activeContext.current.visible
+            )
+              return false;
+            const pane = panes.find((item) => item.id === active);
+            if (
+              !visible ||
+              !pane ||
+              pane.ended ||
+              (pane.containerId ? `container-${pane.containerId}` : "host") !==
+                target
+            )
+              return false;
+            return handles.current.get(pane.id)?.paste(password) ?? false;
+          }}
+        />
         <Popover open={toolsOpen && visible} onOpenChange={setToolsOpen}>
           <PopoverTrigger asChild>
             <button
