@@ -22,6 +22,13 @@ un error después de despachar deja resultado incierto. No hay reintentos
 automáticos, ni cola persistente, ni garantía de deduplicación tras reiniciar el
 API o caducar la ventana. Las acciones respetan inhibidores de systemd.
 
+El helper llama a logind mediante `PowerOffWithFlags`, `RebootWithFlags` o
+`SuspendWithFlags`, sin autorización interactiva y con el flag
+`SD_LOGIND_ROOT_CHECK_INHIBITORS` (1). Conserva la protección de inhibidores también
+como root; no usa force/skip-inhibitors ni reintenta con otro método si falla.
+Un logind sin soporte rechaza la operación. La ruta directa sin helper conserva
+su comprobación conservadora de systemctl.
+
 `PowerControls.tsx` aparece bajo el usuario en su menú superior derecho. Exige
 escribir el nombre del servidor; cancelar no envía una orden. En Android, el
 icono de cuenta de la toolbar emite `coreops-control-center` y abre la misma UI
@@ -57,3 +64,35 @@ deduplicación concurrente y resultado incierto. Playwright cubre confirmación,
 cancelación, permisos, estados deshabilitados y evento Android a 320/1440 px.
 Nunca validar enviando una orden al servidor de trabajo. Un build web no valida
 el APK, polkit, sudoers instalado ni que el hardware pueda despertar a distancia.
+
+## Corrección Restart — 2026-11-22
+
+Dos POST reales llegaron al helper y devolvieron 503 con intención audit previa.
+El helper instalado usaba `systemctl --check-inhibitors=yes`: además de inhibidores,
+esa opción comprueba sesiones de otros UID; al ejecutar como root, las sesiones SSH
+de pepe se consideran ajenas. El host tenía sesiones tty de pepe, permisos helper
+correctos y sólo inhibidores delay observados. La comprobación está documentada
+en el [código oficial de systemd v259](https://github.com/systemd/systemd/blob/v259/src/systemctl/systemctl-logind.c#L207-L238).
+
+El helper corregido utiliza la llamada logind anterior: la confirmación de UI ya
+advierte del cierre de sesiones; un inhibidor real sigue pudiendo rechazar la
+operación. La [definición oficial de flags](https://github.com/systemd/systemd/blob/v259/src/basic/login-util.h)
+confirma el bit 1 para la comprobación root. No se amplía sudoers ni se concede
+busctl arbitrario a la cuenta API.
+
+Activar desde el repositorio con `sudo sh deploy/install-power-helper.sh pepe`.
+No requiere recompilar API o frontend ni reinicia el host durante instalación.
+La sesión Codex no dispone de sudo no interactivo para reinstalarlo; mientras
+no se ejecute ese paso el helper efectivo sigue siendo el anterior.
+
+`python3 -B -m unittest deploy/test_power_helper.py` verifica cinco escenarios en
+una copia privada con ejecutables de prueba: sesiones presentes/delay, tres métodos
+permitidos con flag fijo, rechazo de block sin retry/fallback, status sin mutación,
+argumentos inválidos y falta de root. Nunca ejecutar acciones reales de energía
+para validar esta corrección.
+
+Validado: cinco pruebas Python, shell syntax y diff check correctos; suites Go de
+hostpower/linuxpower completas con race y handlers HTTP de energía focalizados
+correctos; seis escenarios UI de energía/roles/Android simulado correctos. Sólo
+avisos NO_COLOR/FORCE_COLOR del runner. Sin reinicio real, cambio API/web/APK,
+instalación root, commit o push.

@@ -19,5 +19,13 @@ if [ "$1" = status ]; then
     printf '{"protocol":1,"states":{"poweroff":"%s","reboot":"%s","suspend":"%s"}}\n' "$(capability CanPowerOff)" "$(capability CanReboot)" "$(capability CanSuspend)"
     exit 0
 fi
-# Respect inhibitors and return after queue acceptance. Never use force/ignore.
-exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C /usr/bin/systemctl --no-ask-password --check-inhibitors=yes --no-block "$1"
+# systemctl --check-inhibitors=yes also refuses logged-in users, including the
+# administrator's own SSH sessions when invoked through sudo. Ask logind directly:
+# flag 1 (SD_LOGIND_ROOT_CHECK_INHIBITORS) preserves its inhibitor checks for root.
+# No interactive authorization, skip-inhibitors flag, force or fallback dispatch.
+case "$1" in
+    poweroff) method=PowerOffWithFlags ;;
+    reboot) method=RebootWithFlags ;;
+    suspend) method=SuspendWithFlags ;;
+esac
+exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C /usr/bin/busctl --system --timeout=4 --allow-interactive-authorization=no call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager "$method" t 1
