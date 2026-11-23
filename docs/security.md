@@ -10,6 +10,91 @@ Fronteras: navegador/WebView → red/proxy TLS → HTTP/auth → capacidad → a
 
 ## Controles presentes
 
+### Endurecimiento aplicado al slice Security — 2026-11-22
+
+Se cierran los hallazgos específicos de la revisión previa: MutationGuard bajo
+flock de identidad hasta terminar el efecto, intención audit durable que falla
+cerrado, rotación/cadena local/verificación, cabeceras privadas, postura contextual
+y fuentes ampliadas. Journal paginado con checkpoint/monitor y señales acotadas;
+escaneos CVE reales de host/imágenes locales, con estado/frescura/cobertura claros.
+Go >=1.26.11 y x/sys 0.44.0, transitivos npm corregidos y checks CI/local sin avisos
+conocidos en esta ejecución. [Contrato](modules/host-security.md) y
+[validación/estado de activación](security-hardening-validation-2026-11-22.md).
+
+Sensores nuevos y endurecimiento OpenSSH son perfiles manuales root, preparados
+con pruebas/validación/backup y rollback SSH. No están activos sólo por existir
+el código; sudo interactivo local impide instalarlos desde esta sesión. Usuario
+para el perfil SSH: pepe, con preflight público válido (no demuestra posesión de
+la clave cliente). El helper existente necesita actualización para nft/jail/Match.
+El scanner ya funciona sin sudo con un binario privado. El host tiene reinicio
+pendiente. No se mutaron reglas, SSH, contenedores ni paquetes del host.
+
+Las señales no equivalen a IDS/antimalware si esos sensores no están desplegados;
+CVE son advisories de paquetes instalados y requieren triaje. La cadena local
+no protege frente a root/cuenta API ni sustituye un sink externo. Los hallazgos
+globales de terminal legacy, sesión/TLS, autoridad Docker y otros módulos no se
+cierran por esta entrega. Las secciones siguientes conservan la revisión anterior.
+
+### Revisión previa, antes de aplicar correcciones — 2026-11-22
+
+Código completo del slice, tests de núcleo/adaptador/HTTP, SSH propio de loopback
+y API/Chromium reales de sólo lectura revisados. Todas las fuentes respondieron
+en esta consulta: UFW activo con 15 reglas, una jail sshd, APT/timer programados,
+107 eventos de la ventana y cero sesiones soportadas detectadas. OpenSSH global
+reportó PasswordAuthentication yes y PermitRootLogin prohibit-password; la vista
+los marca correctamente con atención. No prueba que root pueda autenticarse
+con todas las reglas efectivas ni que exista un ataque.
+
+Quedan P1 en acciones Security: la revocación durante la consulta no impide el
+despacho posterior, y un fallo de audit no lo bloquea. Reproducidos con handlers y
+fuentes falsas, sin señales reales ni identidades del usuario. Cobertura P2:
+journal sin tailscaled/kernel/auditd, sólo 120 registros; APT sin revisar orígenes,
+exclusiones o instalación efectiva; fail2ban sin verificar filtros/acciones de cada
+jail; UFW sin evaluar Docker/NAT o exposición externa. GET Security no establece
+Cache-Control. No es un motor de CVE/IDS ni una evaluación completa del host.
+
+El binario activo usa Go 1.26.8. govulncheck v1.10.0 detectó 16 IDs (13 con traza
+de símbolos); incluyen condiciones HTTP/2/TLS y avisos Windows que requieren
+triaje de plataforma/configuración, no 16 exploits demostrados. Los avisos stdlib
+consultados se corrigen hasta Go 1.26.11: actualizar toolchain y recompilar en una
+entrega propia. pnpm audit detectó cuatro avisos transitivos de herramientas de
+desarrollo (uno high y tres moderate), sin prueba de explotación en el bundle.
+La consulta separada --prod devolvió cero avisos conocidos, 100 dependencias.
+No se cambian versiones ni lockfile en esta revisión. [Evidencias, prioridades,
+IDs y referencias primarias](network-desktop-security-review-2026-11-22.md).
+
+### Gestión local de Tailscale — 2026-11-22
+
+GET/POST sólo admin, DTOs saneados sin claves/raw prefs, Unix socket fijo, sin
+redirects/proxy HTTP del entorno, cuerpos y concurrencia acotados. Cambios con
+hostname escrito, revisión del snapshot, relectura, sesión revalidada e intención
+auditada con fsync antes de despachar; deduplicación limitada en memoria, sin
+garantía durable ni exclusión de CLI externos. PATCH sólo de campos explícitos;
+sin logout, auth keys, cambio de control plane, operator, Serve/Funnel o exit node.
+Las URLs efímeras de login se limitan al origen HTTPS autorizado y sólo se muestran
+en NeedsLogin; no se guardan ni auditan.
+
+Lectura del socket no implica permiso de escritura. Si es necesario, el helper
+root de argv fijo y JSON con allowlist independiente concede sólo esta capacidad;
+requiere instalación local con sudo y no modifica la conexión al instalarlo.
+No se instaló ni se cambió Tailscale en la validación del servidor. La UI advierte
+antes de operaciones que pueden cortar el acceso remoto. No resuelve los hallazgos
+abiertos de sesiones, TLS o autoridad general de la cuenta API. [Contrato y
+activación](modules/tailscale.md).
+
+### Contraseñas de Terminal — 2026-11-22
+
+Nueva capacidad admin explícita, aislada por cuenta/target y revalidada bajo flock
+de identidad. AES-256-GCM, nonces aleatorios, AAD de cuenta/destino, archivos 0600,
+escrituras atómicas y fallo cerrado ante clave ausente/corrupción/permisos. Files
+no puede previsualizar/descargar/borrar el almacén o clave ni precrear esos nombres
+por upload en el directorio privado. No hay secretos en preferencias, portapapeles,
+URLs o audit; el pegado usa xterm sin Enter y se cancela al cambiar el contexto.
+La shell puede mostrar/registrar lo pegado: se requiere una acción del usuario.
+La cuenta API/root puede leer clave y datos, y el admin ya dispone de su terminal;
+no se afirma aislamiento del sistema, cifrado extremo a extremo o Keystore. TLS y
+los hallazgos de sesión/autoridad/audit conservan su alcance. [Contrato y límites](modules/terminal.md#contraseña-guardada-y-pegado-explícito--2026-11-22).
+
 ### Usuarios HTTP, sesión móvil y energía — 2026-11-18
 
 GET/POST users sólo admin, JSON limitado, passwords persistidos por el store
@@ -48,13 +133,15 @@ Bind loopback por defecto; Bearer opaco de 32 bytes con hash en servidor; PBKDF2
 | SEC-03 / P0 | `shared/platform/session.ts` (fachada `lib/auth.ts`): Bearer en localStorage; URL acepta HTTP; Android permite cleartext y backup | Sesión ligada al servidor; HTTPS para release; decisión de sesión web y almacén seguro nativo con migración/borrado probados. Si se adoptan cookies HttpOnly, diseñar CSRF y compatibilidad nativa. |
 | SEC-04 / P0 | Unit con grupo docker, sudo en security/updates, sin sudoers versionado | Matriz operación → privilegio → mecanismo y pruebas de denegación; sin shell ni comandos genéricos en sudoers. Docker sigue siendo autoridad de host. |
 | SEC-05 / P1 | `auth.go`: rate limit por IP+usuario; mapas en memoria y PBKDF2 por login | Acotar memoria, concurrencia y tasa global; pruebas con nombres variables y proxy; no confiar indiscriminadamente en X-Forwarded-For. |
-| SEC-06 / P1 | `audit.go`: append posterior a acción, errores sólo en slog; contenido de terminal redactado; GET omitidos salvo ciclo de vida PTY | Política de fallo, redacción, rotación, retención e integridad; definir auditoría de lecturas sensibles y probar fallos sin fingir durabilidad. |
+| SEC-06 / P1 — mitigado en Security/energía/Tailscale/Services | Security usa intención durable y falla cerrado; audit común añade flock, hash/secuencia, rotación privada y verificación admin. Legacy explícito, sin garantía contra root | Mantener pruebas de IO/tamper/revocación; extender guards a mutaciones legacy que aún sólo auditan después y configurar receptor externo para integridad independiente. |
 | SEC-07 / P1 | Inspect de contenedores: env/labels y metadata legacy sin redacción; `internal/transport/httpapi` conserva err.Error en errores JSON legacy | DTOs explícitos, clasificación/redacción de secretos, errores públicos seguros y política de no-cache para datos sensibles; pruebas por rol. |
-| SEC-08 / P1 | `security.go`: valida rango PID, después envía señal | Resolver y revalidar sesión/identidad del proceso objetivo, prevenir señal a procesos ajenos y probar PID reutilizado. |
-| SEC-09 / P1 | `security.go`: errores de comandos descartados en varias consultas; fallback config UFW | Representar desconocido/configurado/efectivo por separado; fallo de permisos no debe convertirse en falso estado saludable ni inactivo. |
+| SEC-08 / P1 — mitigado 2026-11-16, verificado 2026-11-22 | Inventario fresco, ID de boot/PID/start, ejecutables OpenSSH confiables, protección de ancestros y pidfd + SIGTERM; sin kill numérico/sudo; Tailscale de consulta | Regresiones y ensayo SSH propio correctos. No confundir identidad del proceso con revalidación de la sesión CoreOps; SEC-13 sigue abierto. |
+| SEC-09 / P1 — mitigado para fuentes, verificado 2026-11-22 | Estado por fuente, comprobaciones null/unknown, errores de permisos explícitos y datos anteriores marcados como obsoletos | Mantener regresiones; no equivale a cubrir todos los logs, reglas o vulnerabilidades. Límites de APT/journal/fail2ban en informe nuevo. |
 | SEC-10 / P1 | HTTP WriteTimeout 45 s; updates refresh 90 s/apply 20 min; salida CombinedOutput | Diseñar operaciones largas con estado consultable, límites de salida y concurrencia; probar desconexión/reintento sin doble ejecución. |
 | SEC-11 / P1 | CORS fijo de desarrollo + configuración; sin política integral de headers en backend | Definir TLS, proxy, orígenes por entorno, CSP/no-cache y límites por endpoint; verificar política efectiva de frontend/proxy, no sólo API. |
-| SEC-12 / P1 | Workflow genera `scp-api`; unit apunta a `/opt/coreops/coreops-api`; reset hard en checkout | Instalación/release aislada, binario versionado, frontend entregado y rollback probados. |
+| SEC-12 / P1 — mitigado en artefactos, activación pendiente 2026-11-22 | Paquete con binario/web/unit coherentes, cuenta dedicada, migración/rollback, MainPID/inode/version y APT firmado; deploy SSH/reset-hard retirado | Pruebas Go/Python, dpkg y APT reales aislados, setup en contenedor con systemctl simulado. Falta instalar/validar systemd/TLS en host, custodia de firma/licencia/publicación y downgrade histórico. [Guía](installation.md). |
+| SEC-13 / P1 — corregido 2026-11-22 | Revalidación y efecto bajo el flock persistente de identidad, sesión/rol/expiración frescos y audit durable previo | Tests de revoke durante evidencia, logout serializado con efecto, audit fallido y roles correctos. Operaciones ya autorizadas terminan antes de que se confirme una revocación posterior. |
+| SEC-14 / P1 — corregido en fuentes/build 2026-11-22 | Go mínimo 1.26.11, x/sys 0.44.0, CLI Capacitor 8.6.2/transitivos parcheados; govulncheck y pnpm audit sin avisos conocidos, workflow preparado | Mantener scanner periódico/lockfile; recompilar/desplegar artefacto probado. Esto no parchea todos los paquetes/imágenes del host ni garantiza avisos futuros nulos. |
 
 P0 debe tratarse antes de ampliar exposición o capacidades de alto riesgo. La revisión inicial documentó estos hallazgos. La entrega PTY posterior mitiga parte de SEC-02/06; ver el estado concreto a continuación.
 
@@ -152,3 +239,18 @@ Guía y límites en [Security](modules/host-security.md). Esto no cierra SEC-02/
 ## Detección de Tailscale SSH — 2026-11-16
 
 El inventario admite terminales Tailscale SSH con evidencia conjunta de utmp/logind remoto y activo, UID/TTY/scope y ascendencia hasta un monitor SSH/daemon root de Tailscale. No clasifica shells locales ni sesiones closing como SSH. Se corrigen propiedades loginctl separadas por comas y formato de fecha C de who. Las filas Tailscale son de consulta, sin señales a shell/monitor/daemon, sudo ni modificación de permisos; el cierre OpenSSH mantiene la validación y pidfd existentes. No se afirma cobertura Tailscale sin PTY ni de otras implementaciones. Ver [guía](modules/host-security.md).
+
+
+## Services bajo cuenta dedicada — 2026-11-23
+
+La migración a coreops omitía el permiso para las acciones systemd. Se añade
+capacidad opt-in `services` y broker root-owned con sudo exacto check/apply,
+JSON estricto, unidades/acciones acotadas, identidad canónica, archivos/drop-ins
+confiables y protecciones de CoreOps/energía (incluidos alias). Sin polkit
+interactivo ni sudo genérico. `--add` conserva las capacidades existentes.
+Services revalida operator/admin/sesión/expiración con flock hasta el efecto y
+exige intención durable previa; extiende SEC-06/SEC-13 a estas tres acciones,
+sin declarar corregidas todas las mutaciones legacy ni SEC-03/04.
+No es aislamiento de ejecutables de servicios ni del grupo Docker. La activación
+en el host requiere instalar el nuevo paquete y setup con sudo local; pruebas
+root en contenedor usan systemctl simulado. [Guía](modules/services.md).

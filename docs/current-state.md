@@ -1,5 +1,238 @@
 # Current State
 
+## Consolidación en Git — 2026-11-23
+
+Las entregas pendientes desde `5f2d7f4` quedan registradas en 12 commits sobre
+`develop`: Applications/logos, Network/filtros, contraseñas Terminal, fuente
+Updates, regresiones UI, Tailscale/Settings, Security, Restart, Services,
+jerarquía visual, instalación systemd/APT y documentación compartida.
+Consultar `git log --oneline 5f2d7f4..HEAD` para los identificadores completos.
+Las referencias anteriores a «sin commit» describen el estado de cada entrega
+antes de esta consolidación. No se ha hecho push ni cambiado el despliegue.
+
+El contenido funcional conserva la validación de la entrega Services siguiente.
+Al separar los archivos compartidos se compilaron también las cinco versiones
+intermedias Go (Terminal, Tailscale, Security, Services e instalación), mediante
+copias temporales del índice con `go test -run '^$' ./...`; sin ejecutar sus tests
+ni operar infraestructura. No se añadieron binarios, paquetes o datos privados.
+
+## Reparación de Services con cuenta dedicada — 2026-11-23
+
+La migración omitió permisos para start/stop/restart: systemctl directo como
+coreops solicitaba autenticación interactiva. Nueva capacidad opt-in services,
+helper check/apply root-owned, stdin JSON estricto, unidad canónica/archivos y
+protecciones de CoreOps/energía; adapter Go con límites y sin reintentos. Acciones
+operator/admin revalidadas bajo flock, intención durable previa y concurrencia
+acotada; UI indica ausencia de permiso y mantiene error visible.
+
+`--add services` conserva permisos existentes, usuarios/sesiones/claves. Paquete
+listo: `dist/packages/coreops_0.1.0~dev20261123.1_amd64.deb`. Instalar desde SSH
+independiente con `python3 scripts/install-system.py --package dist/packages/coreops_0.1.0~dev20261123.1_amd64.deb --add services`.
+No repetir migración. Host comprobado ahora: **0.1.0~dev20261123**, coreops.service
+active/running bajo coreops, ALSA active/exited. La activación de esta reparación
+sigue pendiente de sudo interactivo; no se han mutado servicios del host.
+Estas observaciones sustituyen las versiones/instalación pendiente históricas
+que figuran más abajo. Vite sigue independiente del paquete instalado.
+
+Validado: Go full race/vet/build, 36 Python, formato/fronteras/build web, 22 UI,
+.deb inspeccionado e integración API→sudo→helper en contenedor descartable con
+systemctl simulado. No implica ensayo de systemd real ni cambio de permisos host.
+[Guía](modules/services.md), [validación](services-permissions-validation-2026-11-23.md).
+Develop, sin commit/push, cambios previos preservados.
+
+## Jerarquía visual recuperada — 2026-11-23
+
+En develop, cambios previos conservados sin commit. Por petición del usuario se
+refuerzan Dashboard e inspect: títulos 32–34px, secciones 15–16px/650, métricas
+32–42px, valores técnicos mono/12px y etiquetas secundarias diferenciadas. Headers
+de tarjeta tienen tono/divisor y elevación discreta; inspect separa identidad,
+acciones, navegación subrayada y Runtime. CardHeader compartido usa h2/clases y
+Card admite className; preferencias/roles/datos/operaciones se conservan.
+
+Validado: formato/fronteras/build web, 25 UI relevantes (incluyen todas las vistas
+en ocho formatos), 15 vistas por fase antes/después en dark/gray/light y 30 casos
+de datos largos/pestañas 320–1920px, sin overflow ni errores JS.
+[Guía](ui-style.md), [informe](ui-hierarchy-validation-2026-11-23.md).
+
+Estado real comprobado: usuario ya instaló coreops.service, activo bajo coreops y
+paquete 0.1.0~dev20261122. Vite 5173 muestra código nuevo; 8082 conserva assets
+del paquete instalado hasta upgrade con sudo. No migrar identidad de nuevo.
+La sesión actual no tiene sudo no interactivo; preservar servicio/datos/terminales
+del usuario. Sin APK, commit, push o publicación APT.
+Paquete listo: dist/packages/coreops_0.1.0~dev20261123_amd64.deb. Inspección y
+API/web extraídas con host/Docker reales y cuenta temporal correctas a 320/1440px;
+cero mutaciones salvo login. Actualizar por apt install desde SSH independiente;
+instalación activa todavía 0.1.0~dev20261122.
+
+## Servicio del sistema y APT propio — 2026-11-22
+
+En develop, conservando entregas anteriores sin commit. Paquete coreops amd64/arm64
+con web/API en un listener, cuenta/state/config dedicados y helpers root-owned en
+/usr/libexec/coreops. Setup migra por pidfd, conserva identidad/sesiones/claves y
+configuración, aplica permisos explícitos y comprueba MainPID/inode/liveness.
+Backups/rollback del API original ante fallo; CLI version y health/live nuevos.
+
+Un comando: `python3 scripts/install-system.py --migrate-running --enable docker,journal,power,security,security-timer,updates,tailscale`.
+Dry-run sin sudo disponible; instalación real **pendiente de sudo interactivo**.
+API/tmux anteriores activos, no se han instalado unit/grupos/permisos en el host.
+El perfil de empaquetado incluye el helper Restart corregido. Ver [guía](installation.md).
+
+APT propio elegido: genera índices, firmas, hashes inmutables y clave pública;
+cliente verifica fingerprint/HTTPS/Signed-By/pin. Sin dominio, clave de producción
+o licencia elegida todavía; no afirmar que apt install coreops funciona sin dar
+de alta el repositorio. CI main/develop y artifacts amd64/arm64, sin el deploy SSH
+legacy/reset-hard. Firma/publicación no ejecutadas remotamente.
+
+Validado: Go full race/vet/build, 26 Python, paquetes inspeccionados, APT real
+aislado con descarga/firma/tamper, ciclo instalación/reinstalación/remove/purge en
+contenedor, migración/rollback real con systemctl simulado y API/web Chromium
+320/1440 sin Vite. No systemd PID 1 real, arm64 nativo, TLS o dispositivo físico.
+[Informe](system-install-validation-2026-11-22.md). Sin commit/push.
+
+## Corrección Restart del centro de control — 2026-11-22
+
+En develop, preservando cambios anteriores. Dos intentos reales llegaron al helper
+y terminaron en 503; el helper root usaba una opción de systemctl que también
+rechaza sesiones SSH de pepe por pertenecer a otro UID. Se cambia el helper a
+los tres métodos logind WithFlags con flag 1: respeta inhibidores root, sin force,
+skip, autorización interactiva ni fallback. UI/API y sudoers conservan contrato.
+Activación pendiente de sudo local: `sudo sh deploy/install-power-helper.sh pepe`.
+Instalar no reinicia; no hace falta recompilar API/web. Ver [guía](modules/host-power.md).
+No se ha enviado ninguna operación de energía para probarlo.
+Validado: 5 Python, Go race de core/adaptador/handlers y 6 UI correctos; syntax y
+diff check correctos. Sólo avisos NO_COLOR/FORCE_COLOR del runner. Sin commit/push.
+
+## Security endurecido y ampliado — 2026-11-22
+
+Runtime actual `%0`: `/tmp/coreops-security-runtime-1ayzi8m_/coreops-api`, Go 1.26.11,
+SHA probado; entorno/identidad/frontend conservados, scanner habilitado y health
+proxy 200. Nuevas rutas sin sesión 401.
+
+Entrega sobre develop, sin cambiar de rama ni descartar cambios previos aceptados.
+Security aplica guard admin bajo flock hasta el efecto, audit durable previo con
+fallo cerrado, cadena/rotación/verificación local y no-store privado. Amplía APT
+(orígenes ligados a distro/exclusiones/ejecución/reboot), contexto SSH, jails/nft y
+sensores. Journal paginado, monitor 10 s con checkpoint durable y señales acotadas;
+jobs CVE para inventario OS e imágenes SHA locales, sin pull/mutaciones de Docker.
+
+Dependencias corregidas: Go >=1.26.11/x/sys 0.44.0 y CLI Capacitor 8.6.2/transitivos;
+govulncheck/pnpm audit sin avisos conocidos. Workflow periódico/PR/main/develop y
+script reproducible. Tests Go race/vet/build, regresiones de autorización/audit/
+cursores/scanner y 13 Python correctos. UI 160/163 iniciales + 3/3 repetidos tras
+ERR_NETWORK_CHANGED de módulos confirmado en trazas. Sin build nativo/APK.
+
+Integración real: 1.594 paquetes OS y 71 de una imagen local existente, scans CVE
+completos; kernel cargado 7.0.0-43-generic y muchos hallazgos de kernels 6.8 aún
+instalados, no todos equivalen a ataques activos. Monitor/cursor/audit correctos,
+role viewer 403/operator 200, cero errores JS y sin modificar servicios, paquetes,
+SSH, firewall o Tailscale. Identidad/API/Vite de prueba retirados.
+
+Trivy privado instalado en /home/pepe/.coreops-tools/trivy con DB actualizada.
+Helper nuevo, sensores y perfil SSH pepe están preparados pero requieren sudo
+local; sólo la clave pública de pepe se pudo prevalidar, no posesión del cliente.
+No afirmar IDS/antimalware activos ni endurecimiento SSH aplicado. Reboot pendiente.
+[Guía](modules/host-security.md), [validación y runtime final](security-hardening-validation-2026-11-22.md),
+[seguridad global](security.md). Cambios sin commit/push; preservar los anteriores.
+
+## Network desktop y revisión Security — 2026-11-22
+
+Se mantiene develop y todo el trabajo previo aceptado pendiente de commit.
+Network sólo cambia CSS desde 1024 px: filtros en dos filas, panel delimitado,
+campos/etiquetas más legibles y agrupación alineada. Capturas de controles a
+320/390/768 px idénticas antes/después. Sin cambios de API o lógica de filtrado.
+
+Security revisado de extremo a extremo y con host real: todas las fuentes ok,
+UFW activo con 15 reglas, una jail sshd y APT/timer programados. OpenSSH global
+PasswordAuthentication yes y PermitRootLogin prohibit-password, correctamente
+marcados con atención. Cero sesiones soportadas detectadas; no implica inventario
+exhaustivo de cualquier conexión. Ventana de 107 eventos en esta consulta.
+
+Hallazgos pendientes, sin cambiar Security: revalidación de actor antes del
+despacho (SEC-13), audit previo durable (SEC-06), cobertura journal/APT/fail2ban/
+Docker parcial y Cache-Control ausente. govulncheck detecta 16 IDs (13 con traza),
+con condiciones/plataformas que requieren triaje; API compilada con Go 1.26.8.
+pnpm audit: cuatro avisos en tooling dev, uno high y tres moderate. SEC-14 y
+[revisión detallada](network-desktop-security-review-2026-11-22.md) registran IDs,
+prioridades y versiones; no se actualizó toolchain, lockfile o paquetes del host.
+
+Validado: web fronteras/formato/build, 16/16 pruebas UI Network/Security, race
+focalizado backend, SSH propio loopback con pidfd y tres reproducciones mediante
+fakes/overlay temporal. API/Chromium reales sólo lectura, sin errores JS ni POST
+Security; identidad temporal retirada, Tailscale intacto. Vite 5173 sirve el CSS;
+API previa conservada, sin reinicio, APK, commit o push.
+
+## Tailscale en Settings y responsive móvil — 2026-11-22
+
+API activa en tmux `%0`: `/tmp/coreops-tailscale-runtime-_2hh1cds/coreops-api`,
+binario probado verificado por SHA-256. Entorno, usuarios/sesiones y frontend
+conservados; health proxy 200 y Tailscale sin sesión 401.
+
+Se mantiene `develop` y la entrega anterior aceptada pendiente de commit.
+Settings → Tailscale sólo admin muestra daemon, IP/DNS, avisos y dispositivos
+visibles con filtros. Permite conectar/desconectar, preparar login y editar
+hostname, DNS, rutas aceptadas, SSH y bloqueo entrante mediante cambios parciales,
+confirmación escrita y permisos/audit previos. Núcleo/adaptador independientes;
+sin claves, logout ni acceso directo del navegador a infraestructura.
+
+Settings mejora navegación horizontal en móvil, campos apilados, espacios y áreas
+táctiles de 44 px, con guardado local accesible. Ver [módulo](modules/tailscale.md)
+y [validación](tailscale-settings-validation-2026-11-22.md).
+
+En la prueba real Tailscale 1.104.7 estaba Running con 27 peers visibles y SSH
+activo. Se conservan nodo/preferencias: cero solicitudes de mutación. La cuenta
+API pepe puede leer pero no escribir; helper restringido preparado, no instalado.
+Activación local con `sudo sh deploy/install-tailscale-helper.sh pepe`, después
+refrescar la sección; instalar no cambia la conexión.
+
+Validado: Go full race, regresiones focalizadas tras guards finales, vet/build,
+fronteras/formato/build web y 5/5 tests del helper simulado. Playwright 153/154
+iniciales + 1/1 repetido por ERR_NETWORK_CHANGED de carga de módulos confirmado
+en traza; 14/14 nuevos correctos. Sin cap sync/build APK ni prueba en móvil físico.
+Detalle de incidencias en el informe. Cambios pendientes de commit, sin push.
+
+## Applications, Network, contraseña Terminal y fuente Updates — 2026-11-22
+
+Rama real confirmada: `develop`, inicialmente limpia, sin cambiar de rama. Se
+mantienen los commits anteriores de main integrados en este checkout. Applications
+combina filtros por categoría/estado/miembros y búsqueda por metadatos reales de
+contenedores, con ordenación y Clear filters. Incorpora 40 logos locales y reserva
+Lucide, sin mostrar una URL como texto cuando falla una imagen; se reutilizan en
+los miembros. Fallos del inventario de miembros no ocultan el catálogo de apps.
+
+Network usa tabla de bindings con grupos plegables por protocolo/origen/contenedor/
+proceso, búsqueda, rangos, estado, dirección de bind y orden. La asociación Docker
+considera protocolo+puerto+IP y deja desconocida una atribución ambigua o fallida;
+el parser conserva el nombre completo del proceso. No mide exposición a Internet.
+
+Terminal guarda una contraseña cifrada por usuario/destino en el servidor y la
+llave la pega mediante xterm sin Enter. Permite reemplazar/olvidar; un cambio de
+pestaña/contexto cancela el pegado. API admin y revalidación bajo flock, AES-GCM,
+clave/JSON 0600, sin valor en preferencias, portapapeles o audit. Files protege
+clave y almacén. No es aislamiento frente a root/cuenta API/terminal admin; TLS
+sigue siendo necesario para secretos en tránsito. Updates añade A−/A+, 10–24 px,
+guardado automático en preferencias locales (12 px por defecto).
+
+Validado: Go full race/vet/build; fronteras/formato/build web; suite de 139 escenarios
+UI (135 pasaron inicialmente y cuatro, con ERR_NETWORK_CHANGED verificado en las
+trazas de carga, pasaron al repetirlos). Tras un ajuste final que conserva filtros
+activos vacíos al refrescar, 8/8 escenarios de filtros/fuente correctos, incluida
+una regresión nueva: 140 casos cubiertos en total. Pruebas específicas incluyen
+320/1440 px y múltiples tamaños Terminal. API/identidad temporales con Docker y
+ss reales verificaron 22 aplicaciones, 75 bindings y PTY propia con lectura oculta:
+pegado exacto, sin Enter automático, sin eco ni secreto en almacenes del navegador.
+No se mutaron contenedores, puertos, paquetes o contraseñas reales del usuario.
+
+API actual en tmux `%0`: `/tmp/coreops-nov22-runtime-d9jkt3ft/coreops-api`, igual
+por SHA-256 al binario probado. Entorno, users.json/sessions.json y frontend
+conservados; launch privado eliminado. Health del proxy 200 y rutas nuevas sin
+sesión 401. Recursos/identidad de validación retirados. No build/sync nativo ni
+dispositivo Android; recompilar APK para llevar estos assets al móvil. Cambios de
+esta entrega pendientes de commit, sin push.
+
+Guías: [Applications](modules/applications.md), [Network](modules/network.md),
+[Terminal](modules/terminal.md), [Updates](modules/updates.md),
+[seguridad](security.md). [Informe](usability-validation-2026-11-22.md).
+
 ## Commits por funcionalidad — 2026-11-18
 
 - `2cf3edd` — fix(mobile): bind login sessions to the selected server
