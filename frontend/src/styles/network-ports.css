@@ -1,0 +1,256 @@
+.listening-ports {
+  min-width: 0;
+  color: var(--coreops-textSub);
+}
+.ports-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 0;
+  flex-wrap: wrap;
+}
+.ports-heading h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--coreops-text);
+  margin-bottom: 6px;
+}
+.ports-heading p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--coreops-textDim);
+  max-width: 430px;
+}
+.listening-ports label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--coreops-textDim);
+  min-width: 0;
+}
+.listening-ports input,
+.listening-ports select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--coreops-border);
+  border-radius: 8px;
+  background: var(--coreops-bg);
+  color: var(--coreops-textSub);
+  font: inherit;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+.ports-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 18px;
+}
+.ports-search {
+  grid-column: span 2;
+}
+.ports-search span {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ports-search svg {
+  position: absolute;
+  left: 9px;
+}
+.ports-search input {
+  padding-left: 30px;
+}
+.ports-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 18px 16px;
+  color: var(--coreops-textDim);
+  font-size: 11px;
+}
+.ports-summary > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ports-summary button {
+  font: inherit;
+  color: var(--coreops-textSub);
+  border: 1px solid var(--coreops-border);
+  border-radius: 8px;
+  background: var(--coreops-raised);
+  padding: 6px 10px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.listening-ports [role="alert"] {
+  margin: 0 18px 16px;
+  color: var(--coreops-red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ports-table-scroll {
+  overflow: auto;
+  max-height: 560px;
+  border-top: 1px solid var(--coreops-border);
+}
+.ports-table-scroll table {
+  width: 100%;
+  min-width: 670px;
+  border-collapse: collapse;
+}
+.ports-table-scroll thead {
+  position: sticky;
+  top: 0;
+  background: var(--coreops-raised);
+  z-index: 1;
+}
+.ports-table-scroll tbody > tr:not(.ports-group):hover {
+  background: var(--coreops-hover);
+}
+.ports-group th {
+  padding: 0;
+  background: var(--coreops-bg);
+  border-block: 1px solid var(--coreops-border);
+  text-align: left;
+}
+.ports-group button {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-height: 40px;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: 0;
+  color: var(--coreops-textSub);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.ports-group span {
+  font-size: 10px;
+  color: var(--coreops-textDim);
+}
+.ports-empty {
+  text-align: center;
+  padding: 30px;
+  color: var(--coreops-textDim);
+  font-size: 12px;
+}
+@media (min-width: 1024px) {
+  .ports-heading {
+    align-items: center;
+    padding: 20px 22px 0;
+    gap: 24px;
+  }
+  .ports-heading h2 {
+    font-size: 14px;
+  }
+  .ports-heading p {
+    max-width: none;
+  }
+  .ports-heading > label {
+    display: grid;
+    grid-template-columns: auto minmax(140px, 180px);
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .listening-ports label {
+    font-size: 11px;
+    gap: 8px;
+  }
+  .listening-ports input,
+  .listening-ports select {
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    transition: border-color 140ms, box-shadow 140ms;
+  }
+  .listening-ports select {
+    cursor: pointer;
+  }
+  .listening-ports input:hover,
+  .listening-ports select:hover {
+    border-color: var(--coreops-textDim);
+  }
+  .listening-ports input:focus-visible,
+  .listening-ports select:focus-visible,
+  .ports-summary button:focus-visible {
+    outline: 2px solid var(--coreops-accent);
+    outline-offset: 2px;
+  }
+  .ports-controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 16px;
+    margin: 20px 22px 14px;
+    padding: 18px;
+    border: 1px solid var(--coreops-border);
+    border-radius: 14px;
+    background: var(--coreops-bg);
+  }
+  .ports-controls input,
+  .ports-controls select {
+    background: var(--coreops-raised);
+  }
+  .ports-search input {
+    padding-left: 36px;
+  }
+  .ports-search svg {
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    color: var(--coreops-textDim);
+  }
+  .ports-summary {
+    min-height: 50px;
+    padding: 0 22px 14px;
+    gap: 16px;
+  }
+  .ports-summary button {
+    min-height: 36px;
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+  .listening-ports [role="alert"] {
+    margin-inline: 22px;
+  }
+}
+@media (max-width: 600px) {
+  .ports-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+    gap: 12px;
+  }
+  .ports-heading {
+    padding: 14px 14px 0;
+  }
+  .ports-heading > label {
+    width: 100%;
+  }
+  .ports-search {
+    grid-column: 1/-1;
+  }
+  .listening-ports input,
+  .listening-ports select,
+  .ports-summary button,
+  .ports-group button {
+    min-height: 44px;
+  }
+  .ports-summary {
+    padding: 0 14px 14px;
+  }
+  .ports-heading p {
+    max-width: none;
+  }
+}

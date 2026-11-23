@@ -143,20 +143,28 @@ func collectOpenPorts(ctx context.Context, docker *client.Client) ([]OpenPort, e
 	if err != nil {
 		return nil, fmt.Errorf("list listening ports: %w", err)
 	}
-	containerByPort := map[uint16]string{}
-	if result, err := docker.ContainerList(ctx, client.ContainerListOptions{All: true}); err == nil {
-		for _, c := range result.Items {
-			name := ""
-			if len(c.Names) > 0 {
-				name = strings.TrimPrefix(c.Names[0], "/")
-			}
+	bindings := []publishedPortBinding{}
+	listed, listErr := docker.ContainerList(ctx, client.ContainerListOptions{})
+	if listErr == nil {
+		for _, c := range listed.Items {
+			name := firstContainerName(c)
 			for _, p := range c.Ports {
-				if p.PublicPort > 0 && name != "" {
-					containerByPort[p.PublicPort] = name
+				if p.PublicPort > 0 {
+					bindings = append(bindings, publishedPortBinding{Port: p.PublicPort, Proto: strings.ToUpper(string(p.Type)), Address: p.IP.String(), Name: name})
 				}
 			}
 		}
 	}
+	return parseOpenPorts(out, bindings, listErr == nil), nil
+}
+
+type publishedPortBinding struct {
+	Port                 uint16
+	Proto, Address, Name string
+}
+
+func portAddress(address string) string { return strings.ToLower(strings.Trim(address, "[]")) }
+func parseOpenPorts(out string, bindings []publishedPortBinding, dockerKnown bool) []OpenPort {
 	result := make([]OpenPort, 0)
 	for _, line := range strings.Split(out, "\n") {
 		fields := strings.Fields(line)
@@ -170,20 +178,39 @@ func collectOpenPorts(ctx context.Context, docker *client.Client) ([]OpenPort, e
 		if port == 0 {
 			continue
 		}
+		address := parseEndpointAddress(local)
 		process := "—"
-		if idx := strings.Index(line, "users:((\""); idx >= 0 {
-			rest := line[idx+10:]
-			if end := strings.Index(rest, "\""); end > 0 {
+		const processPrefix = `users:(("`
+		if idx := strings.Index(line, processPrefix); idx >= 0 {
+			rest := line[idx+len(processPrefix):]
+			if end := strings.Index(rest, `"`); end > 0 {
 				process = rest[:end]
 			}
 		}
-		container := "Host"
-		if name := containerByPort[port]; name != "" {
-			container = name
+		owner := "—"
+		if dockerKnown {
+			owner = "Host"
+			matches := map[string]bool{}
+			for _, binding := range bindings {
+				if binding.Port != port || strings.TrimSuffix(binding.Proto, "6") != strings.TrimSuffix(proto, "6") {
+					continue
+				}
+				a, b := portAddress(address), portAddress(binding.Address)
+				if a == b || (a == "*" && (b == "0.0.0.0" || b == "::" || b == "")) {
+					matches[binding.Name] = true
+				}
+			}
+			if len(matches) == 1 {
+				for name := range matches {
+					owner = name
+				}
+			} else if len(matches) > 1 {
+				owner = "—"
+			}
 		}
-		result = append(result, OpenPort{Port: port, Proto: proto, Process: process, Container: container, Address: parseEndpointAddress(local), State: state})
+		result = append(result, OpenPort{Port: port, Proto: proto, Process: process, Container: owner, Address: address, State: state})
 	}
-	return result, nil
+	return result
 }
 
 var endpointPortPattern = regexp.MustCompile(`:(\d+)$`)
