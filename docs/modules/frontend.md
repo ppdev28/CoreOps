@@ -1,5 +1,22 @@
 # Frontend
 
+## Instantánea web para Android — 2026-11-23
+
+El cliente del Mac (`main`) incorpora el frontend actual del checkout `develop`
+del servidor, incluidos sus cambios pendientes de Applications/logos, Network,
+Security, Settings/Tailscale, Updates, Terminal passwords y jerarquía visual.
+Se sincronizan fuentes, assets/licencias, pruebas y manifests/lockfile, sin
+cambiar ramas ni copiar backend/estado/credenciales. La fuente remota se conserva
+intacta. Usar la API reciente del servidor: las rutas nuevas no existen todavía
+en el backend local de este checkout.
+
+`TerminalPasswordControls` y `lib/terminalPasswords.ts` usan transporte/sesión
+compartidos y el contrato remoto documentado en [Terminal](terminal.md).
+La llave permanece visible en la toolbar compacta; ocultar Terminal o cambiar
+pestaña cancela pegados pendientes, sin persistir el secreto en el navegador.
+Build → cap sync → build Android es la secuencia necesaria para entregar esos
+cambios al dispositivo. [Flujo móvil](mobile.md).
+
 ## Responsabilidad y estado
 
 React 19, TypeScript estricto, Vite 8, Tailwind 4; pnpm. Preservar el diseño Figma. `App.tsx` compone navegación, sesión y shell, con carga diferida de vistas. `features/containers/` ya contiene API, mapeo, modelos y pantallas propias; `shared/api` contiene transporte y `shared/platform` la única sesión existente. `views/`, `components/` y las fachadas `lib/*` permanecen para el resto. El almacenamiento sigue siendo localStorage; la extracción no cambia SEC-03.

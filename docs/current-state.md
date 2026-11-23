@@ -1,5 +1,115 @@
 # Current State
 
+## Commits de móvil y sincronización web — 2026-11-23
+
+Registrado en `main`, sin cambiar de rama ni hacer push:
+
+- `920e269` — identidad nativa/iconos redondeados, launcher y generador/licencias.
+- `c7cbd38` — frontend actual del servidor y llave de contraseñas de Terminal.
+- `9e548d6` — flechas siempre visibles y Enter separado.
+
+La documentación de estas entregas y su validación se registra en un commit
+separado. No se incluyen APKs, dist, assets generados por Capacitor, secretos ni
+binarios Go. Permanecen fuera los documentos previos sin seguimiento del usuario
+(`docs/README.md`, `docs/archive/`, `docs/review-2026-10.md`, `docs/roadmap.md`) y el
+espacio previo en `class  MainActivity`. Build web/Android, lint y las 26 pruebas
+focalizadas ya se verificaron antes de registrar los cambios; no hubo nuevas
+modificaciones de runtime durante la separación de commits.
+
+## Flechas y Enter de Terminal móvil — 2026-11-23
+
+Se reproduce el recorte de flechas en 320/390 px: el grupo direccional estaba
+mezclado con Esc/Tab/Ctrl dentro de una tira desplazable junto a Enter. Las cuatro
+flechas pasan a un grupo fijo con iconos Lucide y Enter conserva una celda propia.
+Hasta 600 px hay dos filas: teclado/atajos arriba, flechas/Enter abajo. En anchos
+mayores se mantiene una fila. Áreas táctiles de al menos 44 px y mismo protocolo,
+foco, permisos y comportamiento de contraseñas.
+
+`terminal-responsive.spec.ts` comprueba visibilidad completa inicial de las cuatro
+flechas, hit testing para detectar controles tapados, separación de Enter y bytes
+izquierda/derecha. Falló antes del ajuste en ambos móviles; después se ejecutan
+las regresiones de Terminal/contraseñas/contenedores y se reconstruye/sincroniza
+la APK Android. Preservar la sincronización web y los iconos de entregas previas;
+no sobreescribir Terminal desde el snapshot antiguo del servidor.
+
+Validado: 26/26 escenarios focalizados de Terminal (incluidos contenedores,
+contraseñas, teclado/foco/orientación y ocho tamaños), build/fronteras/formato web,
+cap sync Android, assembleDebug y lintDebug (0 errores, 14 avisos de mantenimiento;
+además flatDir/configuration-on-demand y NO_COLOR/FORCE_COLOR del runner).
+Los 86 assets se verifican idénticos en dist, copia Capacitor y APK. Instalada con
+-r en el Redmi, datos conservados. Comprobación visual y bounds nativos de las
+cuatro flechas separadas de Enter, con teclado Android cerrado y abierto.
+Sin comandos ni operaciones de contraseñas reales. Capturas privadas bajo
+`/tmp/coreops-arrows-fixed-*` y pruebas en `/tmp/coreops-terminal-arrows-verified`.
+No build iOS ni cambios en el servidor; preservar el resto del trabajo pendiente.
+
+## Sincronización del frontend web en Android — 2026-11-23
+
+La primera APK de iconos se construyó/sincronizó correctamente, pero desde el
+frontend antiguo del Mac: faltaba la llave de contraseñas de Terminal y otras
+mejoras del checkout del servidor. Se importa una instantánea explícita del
+frontend actual de `~/proyectos/CoreOps` en `ppserver` (`develop`, incluidos sus
+cambios pendientes) a este checkout `main`, sin cambiar ramas ni tocar el remoto.
+Se conservan los iconos nativos redondeados. A petición del usuario se retira el
+logo de la toolbar Android; permanece en drawer y launcher.
+
+Sincronizados código/assets/licencias/pruebas web y package/lockfile: llave de
+Terminal, Applications/logos, Network/puertos, Security, Settings/Tailscale,
+Updates y jerarquía visual. CLI Capacitor 8.6.2 con instalación frozen-lockfile.
+El contrato `api/typescript` no cambia. No se copia backend: las capacidades
+recientes requieren la API actual del servidor; el Go local sigue en su versión
+anterior y no debe declararse compatible por haber compilado la APK.
+
+Se ejecuta build antes de cap sync Android y se comprueba igualdad byte a byte
+de los 85 assets entre `dist` y el proyecto Android, incluida la llave compilada.
+Copias previas y snapshot de origen bajo `/tmp/coreops-*-20261123*`, fuera de Git.
+Guías: [Móvil](modules/mobile.md), [Terminal](modules/terminal.md),
+[Frontend](modules/frontend.md). No commit/push ni reinicio/cambios del servidor.
+
+Validación final: pnpm install --frozen-lockfile, build, fronteras, formato y
+cap sync Android correctos. AssembleDebug/lintDebug correctos (0 errores,
+13 avisos de mantenimiento; además flatDir/configuration-on-demand). Los 85
+assets de dist coinciden byte a byte tanto en Capacitor como dentro del APK.
+APK instalada con -r conservando datos. Redmi real: Dashboard actualizado,
+logo ausente de toolbar, llave y gestión de contraseña existentes visibles;
+se abrió/cerró el diálogo sin revelar, pegar, reemplazar ni borrar el secreto.
+La shell vacía creada para esta comprobación se cierra sin ejecutar comandos.
+
+Playwright: 162/163 en la suite completa, incluidos los seis casos de passwords.
+El único fallo fue esperar Settings en navegación tablet-portrait; dos
+repeticiones aisladas pasaron (2/2), sin causa confirmada. No describirlo como
+163/163 en primera ejecución. Avisos adicionales NO_COLOR/FORCE_COLOR y gráficos
+de tamaño cero en vistas ocultas. Capturas privadas /tmp/coreops-sync-*.png y
+repetición /tmp/coreops-tablet-sync-recheck. Sin build/dispositivo iOS.
+
+## Identidad visual nativa — 2026-11-23
+
+Trabajo en `main` del Mac, sin cambiar de rama ni sincronizar el checkout
+`develop` del servidor, que contiene trabajo posterior pendiente. Se conserva
+el cambio previo de espacio en la declaración de `MainActivity` y los documentos
+sin seguimiento del usuario.
+
+Android usa la identidad grafito/blanca del favicon web en drawer, toolbar,
+launcher adaptativo/legacy y recursos raster; añade icono monocromo Android 13.
+Los 16 símbolos de navegación y los dos de toolbar se derivan de Lucide, con
+trazo 2, extremos/uniones redondeados y la misma semántica de la web (incluidos
+Radar para Observability y Activity para Monitoring). El icono iOS 1024 se
+regenera opaco desde la misma fuente. No se modifican API, roles ni navegación.
+
+`frontend/scripts/sync-native-icons.mjs` regenera vectores/densidades desde
+`public/favicon.svg` y Lucide instalado; requiere Chromium de Playwright.
+Licencias ISC/MIT conservadas y empaquetadas con Android. Ver [Móvil](modules/mobile.md).
+
+Validado: build/formato/fronteras web, cap sync Android, assembleDebug y lintDebug
+(0 errores, 13 avisos: dependencias, recursos sin uso, bitmap legacy, convenciones
+Kotlin/toolbar y textos no traducidos; además flatDir/configuration-on-demand).
+APK debug instalada con `adb install -r` en Redmi Note 8 Pro Android, conservando
+los datos. Revisión visual real del drawer y toolbar; se corrigieron recorte del
+logo y separación del título. Icono iOS verificado RGB 1024 sin canal alpha,
+sin compilar iOS ni validar en dispositivo. APK previa en
+`/tmp/coreops-before-icon-update.apk` y capturas en `/tmp/coreops-icons-*.png`;
+son artefactos temporales, fuera de Git. No commit/push ni cambios en el servidor.
+
 ## Commits por funcionalidad — 2026-11-18
 
 - `2cf3edd` — fix(mobile): bind login sessions to the selected server

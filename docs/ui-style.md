@@ -1,6 +1,15 @@
 # CoreOps application visual system
 
-Updated 2026-11-13 on `feature/ui-redesign`. The rounded monochrome Dashboard direction now applies to **every screen**, following the user's expanded scope. The default remains neutral; accent colors and Dark/Gray/Light/System are configurable under Settings → Appearance.
+Updated 2026-11-23: the Mac client now includes the current web frontend from
+`develop` on the server, preserving the rounded monochrome identity. Inter
+Variable retains clearer title/section/metric hierarchy; `styles/hierarchy.css`
+adds shared header tones, dividers and restrained card elevation. Dashboard and
+container inspection include those current refinements. Neutral remains the
+default; accent and Dark/Gray/Light/System remain configurable.
+
+The Android launcher/drawer use the same favicon identity, with rounded Lucide
+navigation symbols. The native top bar keeps its text title, menu and account
+control; the app logo was removed there at the user's request. See [Mobile](modules/mobile.md).
 
 The favicon in `frontend/public/favicon.svg` uses the same neutral server-outline identity; its relative link supports the configured Vite base and the browser theme color matches the dark canvas.
 
@@ -11,7 +20,7 @@ The common material covers Dashboard, Host, Containers and inspect, Applications
 - `src/lib/appearance.ts`: pure palette policy, eight accent presets, color validation, contrast calculation and theme resolution.
 - `src/lib/webSettings.ts`: local persistence and validation (`accentColor` defaults to `neutral`; custom values must be six-digit hex). Existing settings migrate implicitly through defaults.
 - `src/lib/tokens.ts`: cached, live shared tokens and root CSS variables; saved changes and System preference changes update every view without reloading. Semantic status tokens remain independent of accent.
-- `src/styles/themes.css`, `dashboard.css`, `application.css`: foundation variables, flat material/components and application-wide responsive rules. `.app-workspace` covers the shell/login; `.dashboard-popover` gives portaled popovers the same resolved tokens. `material.css` contains earlier shared definitions overridden by the flat material.
+- `src/styles/themes.css`, `dashboard.css`, `application.css`, `hierarchy.css`: foundation variables, typography/surface hierarchy and application-wide responsive rules. `.app-workspace` covers the shell/login; `.dashboard-popover` gives portaled popovers the same resolved tokens. `material.css` contains earlier shared definitions overridden by the flat material.
 - `src/components/ui.tsx`: existing public visual primitives now use flat rounded cards, pill buttons/filters/tabs and shared appearance. Their props and operational callbacks are preserved.
 - `src/components/ui/`: locally owned shadcn/ui primitives (MIT); Dashboard uses these plus TanStack Table v8.
 - `src/components/tremor/`: vendored Tremor Raw LineChart/SparkLineChart and helpers, with licenses retained. Dashboard preserves real sample gaps and chart range state. `dashboard-theme.ts` now re-exports the common tokens rather than defining another palette.
@@ -22,7 +31,7 @@ The common material covers Dashboard, Host, Containers and inspect, Applications
 
 Dark uses `#090909` canvas, `#171717` cards, `#222222` nested surfaces, `#272727` secondary controls and `#2d2d2d` borders. Gray uses brighter graphite surfaces. Light uses neutral pale surfaces and dark text. System tracks the OS's light/dark preference.
 
-Major cards have roughly 24–26px radii, nested surfaces 16–20px, and compact controls full pill corners. Surfaces are flat with restrained borders and no neumorphic bevels. Keyboard focus remains explicit. Terminal input focus is drawn on its surrounding input surface, avoiding nested rings.
+Major cards have roughly 24–26px radii, nested surfaces 16–20px, and compact controls full pill corners. Surfaces use restrained borders and subtle card elevation, with no neumorphic bevels. Keyboard focus remains explicit. Terminal input focus is drawn on its surrounding input surface, avoiding nested rings.
 
 Accent presets: **Neutral, Blue, Indigo, Violet, Teal, Green, Amber, Rose**, plus a custom color picker. The selection is saved alongside the theme and survives reload/navigation. The preview is explicitly a draft until Save. Neutral adapts its button fill to light/dark. Custom fills retain the chosen color; foreground is selected for contrast, and text/focus accents are lightened/darkened when needed to reach 4.5:1 against card surfaces. Status success/warning/error colors do not change with accent.
 

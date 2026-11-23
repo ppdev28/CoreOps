@@ -10,6 +10,17 @@ Fronteras: navegador/WebView → red/proxy TLS → HTTP/auth → capacidad → a
 
 ## Controles presentes
 
+### Cliente móvil actualizado — 2026-11-23
+
+La instantánea frontend del servidor incorpora Terminal passwords y los clientes
+actuales Security/Tailscale. La llave sólo usa la API autenticada; no añade un
+almacén de secretos en Android ni persiste la contraseña en localStorage. Pegado
+explícito sin Enter, cancelación al cambiar pestaña/ocultar y formulario sin
+precargar secretos. Ver [Terminal](modules/terminal.md) y [Móvil](modules/mobile.md).
+El cifrado/persistencia y las capacidades nuevas pertenecen a la API actual del
+servidor: este trabajo no incorpora ese backend al checkout local, no amplía
+permisos y no cierra controles pendientes por actualizar la UI.
+
 ### Usuarios HTTP, sesión móvil y energía — 2026-11-18
 
 GET/POST users sólo admin, JSON limitado, passwords persistidos por el store

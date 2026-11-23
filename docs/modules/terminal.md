@@ -1,5 +1,106 @@
 # Terminal interactiva
 
+## Flechas siempre visibles — 2026-11-23
+
+El grupo `.pty-arrows` queda fuera de `.pty-key-scroll`. Las cuatro direcciones
+se ven completas sin desplazar los atajos y usan iconos SVG con etiquetas
+accesibles. Enter tiene su propia celda en el grid: no se superpone al grupo.
+Hasta 600 px se usan dos filas (teclado/atajos, flechas/Enter); en pantallas más
+anchas se mantiene una fila. Esc/Tab/Ctrl conservan desplazamiento horizontal.
+Controles direccionales de al menos 44 px, onPointerDown conserva foco y las
+secuencias ANSI existentes no cambian. ResizeObserver adapta la PTY a la altura.
+
+La regresión en ocho tamaños exige visibilidad inicial completa, hit testing sin
+solapes y bytes izquierda/derecha correctos; las acciones de Playwright no deben
+ocultar el error desplazando primero la flecha automáticamente. Se reprodujo el
+fallo previo tanto a 320 como 390 px. Mantener pruebas de teclado visual,
+orientación, modo foco y contraseñas al cambiar esta barra.
+
+Validación final: 26/26 escenarios focalizados, build/formato/fronteras y build/
+sync/lint Android correctos. Redmi real comprobado con teclado cerrado/abierto:
+cuatro flechas completas y Enter separado, sin ejecutar comandos. Assets dist,
+Capacitor y APK idénticos; lint 0 errores/14 avisos de mantenimiento. No iOS.
+
+## Contraseñas de Terminal en el cliente móvil — 2026-11-23
+
+El frontend local incorpora el control ya existente en el checkout del servidor:
+`TerminalPasswordControls.tsx`, `lib/terminalPasswords.ts` y sus estilos/pruebas.
+La llave se conserva en la toolbar de Terminal también a 320 px, fuera del
+popover de herramientas. Comparte servidor/sesión/API con web; no se guardan
+contraseñas en almacenamiento nativo ni en localStorage.
+
+**Alcance:** se sincroniza frontend, no se incorpora el backend posterior al
+checkout local. El servidor actualizado del usuario ya expone estas rutas; un
+backend local antiguo devolverá 404 y la UI explica que necesita actualizarse.
+La descripción siguiente corresponde al contrato del servidor de referencia,
+no declara que `terminal_passwords.go` exista en este checkout del Mac.
+
+Validación de este cliente: los seis escenarios Playwright de passwords pasan,
+incluidos 320 px, no Enter/almacenamiento navegador, cambio de pestaña, errores,
+API antigua y roles. En el Redmi se comprobó llave habilitada, target host con
+contraseña existente y apertura/cierre de gestión sin revelar/pegar/modificar.
+Se cierra la shell vacía de validación sin comandos. Compilación/sync/instalación
+y límites de la suite completa en [Móvil](mobile.md).
+
+### Contrato de referencia del servidor
+
+La toolbar añade una llave para guardar una contraseña; una vez guardada, la misma
+llave la pega en la pestaña activa **sin Enter**. El botón de ajustes permite
+reemplazar, refrescar estado u olvidar. Guardar no envía bytes a la PTY. Nunca se
+copia al portapapeles ni se persiste el valor en localStorage/sessionStorage.
+El diálogo no precarga la contraseña existente. La app no intenta reconocer un
+prompt: el usuario debe comprobarlo, porque una shell/programa remoto puede
+mostrar o registrar lo pegado. Esto tampoco configura sudo, usuarios Linux o SSH.
+
+Cada contraseña pertenece al usuario CoreOps y al target explícito: `host` o
+`container-<ID>`; las pestañas del mismo target comparten su valor. Una shell host
+puede ejecutar SSH hacia otro equipo: el target de guardado sigue siendo la shell
+CoreOps, no un destino SSH descubierto. IDs cortos/completos diferentes son targets
+distintos; la UI usa el ID recibido del inventario. Cambiar pestaña/servidor/usuario,
+ocultar Terminal o cerrar sesión aborta el pegado pendiente y limpia el formulario.
+Un guard comprueba además la pestaña/destino actuales y una conexión viva antes de
+usar `xterm.paste`. Los secretos con saltos de línea o controles se rechazan tanto
+en servidor como en cliente; no se añaden comandos, framing manual ni Enter.
+
+API sólo admin, con revalidación bajo el bloqueo persistente de identidad:
+
+- GET `/api/v1/terminal/passwords/{target}`: sólo `{saved}`.
+- POST a esa ruta: JSON estricto `{password}`, máximo 4 KiB; 1–1024 bytes UTF-8
+  sin caracteres de control/saltos de línea.
+- POST `.../{target}/reveal`: devuelve el valor únicamente tras la acción explícita.
+- DELETE `.../{target}`: olvida el valor de ese usuario/destino.
+
+No admite queries o parámetros de shell. Respuestas no-store/private; sin reintento
+automático. Audit registra actor, acción y target, nunca valor/cuerpo ni texto
+pegado; conserva los límites existentes de durabilidad del audit HTTP. 404 al
+consultar estado puede indicar API antigua: reconstruir/reiniciar backend.
+
+`terminal_passwords.go` guarda AES-256-GCM con nonce aleatorio y AAD que liga cuenta
+(incluida su fecha de creación) y destino. No comparte secretos entre admins ni
+con una cuenta borrada/recreada con el mismo nombre. Usuarios legacy sin fecha
+usan su hash de autenticación como identidad de generación; cambiar su password
+invalida el acceso a esos registros antiguos. Un máximo de 512 registros cifra el
+estado global; entradas de cuentas eliminadas pueden quedar cifradas e inaccesibles
+hasta mantenimiento del almacén. No es una bóveda de extremo a extremo.
+
+Archivos en `COREOPS_DATA_DIR`: `terminal-passwords.json` y
+`.terminal-passwords.key`, ambos 0600, propiedad de la cuenta API, sin symlink.
+Se crean sólo al guardar y se actualizan bajo el mismo flock que HTTP/CLI. El
+JSON usa persistencia atómica/fsync; la clave también se sincroniza. Al perder una
+clave con registros existentes o detectar corrupción/permisos inseguros se falla
+cerrado, sin regenerarla ni borrar contraseñas automáticamente. Respaldar clave y
+datos juntos, protegiendo también la identidad. El cifrado no protege contra root,
+compromiso de la cuenta API o un admin con acceso a su shell/sistema de archivos.
+No sustituye HTTPS/WSS para transportar secretos ni Keychain/Keystore del cliente.
+
+Files rechaza vista previa, download-ticket y borrado de los dos archivos,
+incluidos hard links; también bloquea uploads a sus nombres en el directorio
+privado. No implica aislamiento frente a la terminal privilegiada. Tests de
+`terminal_passwords_test.go` cubren permisos, revocación, cuentas/targets, reinicio,
+concurrencia, corrupción/clave perdida y protección Files. Playwright verifica
+ausencia de Enter, almacenamiento local, cambio de pestaña y errores. Usar sólo
+contraseñas/cuentas de prueba en una API aislada para validar la PTY real.
+
 ## Terminal de contenedores — 2026-11-17
 
 El botón Terminal de inspect y el menú de contenedores abren una pestaña con el
@@ -119,7 +220,7 @@ Tras actualizar ese proceso y conservar Host en Vite, se verificó upgrade 101 p
 
 ## Ajuste responsive — 2026-11-15
 
-Implementado en `feature/kubernetes-observability`, manteniendo la rama y el protocolo/roles del backend. La barra de pestañas permanece en una sola fila: en móvil las herramientas pasan a un popover accesible; la pestaña activa y su cierre se desplazan a la vista. Los controles táctiles tienen un mínimo de 44 × 44 px. Enter y el botón de teclado permanecen fijos mientras Esc/Tab/Ctrl/flechas se desplazan horizontalmente. Copia, búsqueda, limpieza y zoom siguen disponibles en todos los tamaños.
+Implementado en `feature/kubernetes-observability`, manteniendo la rama y el protocolo/roles del backend. La barra de pestañas permanece en una sola fila: en móvil las herramientas pasan a un popover accesible; la pestaña activa y su cierre se desplazan a la vista. Los controles táctiles tienen un mínimo de 44 × 44 px. El comportamiento inicial mantenía Enter y teclado fijos con Esc/Tab/Ctrl/flechas desplazables; el ajuste del 2026-11-23 deja también las cuatro flechas siempre visibles. Copia, búsqueda, limpieza y zoom siguen disponibles en todos los tamaños.
 
 Móvil/puntero táctil no enfoca el input al abrir o cambiar de shell, evitando solicitar el teclado automáticamente. El botón de teclado alterna foco/blur; la apertura/cierre físico del teclado sigue dependiendo del navegador/SO. Las teclas auxiliares conservan el estado de foco y no lo fuerzan. Se desactivan autocapitalización, autocorrección y spellcheck. El input de búsqueda mantiene 16 px para evitar zoom automático de iOS.
 
